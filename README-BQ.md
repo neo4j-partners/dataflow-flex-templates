@@ -20,19 +20,21 @@ run on Dataflow.
 
 ### Creating and running a Flex Template
 
-* Set environment variables that will be used in the build process.
-```sh
-export PROJECT=neo4jbusinessdev
-export GS_WORKING_DIR=gs://dataflow-experiments-gs/dataflow-working
-export APP_NAME=bigquery-to-neo4j
-export JOB_NAME=test-bq-to-neo4j-auradb
-export REGION=us-central1
-```
+
 
 > <details><summary>
 > <i>(Optional)</i> Run the Apache Beam pipeline locally for development.
 > <i>(Click to expand)</i>
 > </summary>
+>
+> * Set environment variables that will be used in the build process.
+> ```sh
+> export PROJECT=neo4jbusinessdev
+> export GS_WORKING_DIR=gs://dataflow-experiments-gs/dataflow-working
+> export APP_NAME=bigquery-to-neo4j
+> export JOB_NAME=test-bq-to-neo4j-auradb
+> export REGION=us-central1
+> ```
 >
 > ```sh
 > # If you omit the --bootstrapServer argument, it connects to localhost.
@@ -49,8 +51,8 @@ export REGION=us-central1
 >     --region=$REGION \
 >     --readQuery=\"SELECT customer_id,contact_name,company_name,seller_id,seller_first_name, \
 >     seller_last_name,seller_title,product_id,product_name,category_name,supplier_name, \
->     supplier_postal_code, supplier_country,order_id,order_date, shipped_date,required_date, \
->     quantity,unit_price,discount FROM northwind.V_CUSTOMER_ORDERS LIMIT 10\" \
+>     supplier_postal_code, supplier_country,order_id, \
+>     quantity,1 as unit_price, 0 as discount FROM northwind.V_CUSTOMER_ORDERS LIMIT 10\" \
 >     --jobSpecUri=gs://dataflow-experiments-gs/dataflow-job-specs/testing/bq/jobSpec.json \
 >     --neo4jConnectionUri=gs://dataflow-experiments-gs/dataflow-job-specs/testing/common/neo4jConnection.json"
 > ```

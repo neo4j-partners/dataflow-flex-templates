@@ -12,6 +12,7 @@ import org.apache.beam.repackaged.core.org.apache.commons.lang3.StringUtils;
 import org.apache.beam.sdk.io.neo4j.Neo4jIO;
 import org.apache.beam.sdk.coders.SerializableCoder;
 import org.apache.beam.sdk.schemas.Schema;
+import org.apache.beam.sdk.schemas.SchemaCoder;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.transforms.ParDo;
@@ -72,22 +73,20 @@ public class Neo4JTargetWriter {
                 if (StringUtils.isEmpty(targetName)){
                     targetName = "Target "+targetNum;
                 }
+                LOG.info("==================================================");
                 LOG.info("Writing target "+targetName+": "+ gson.toJson(target));
 
                 String SQL = Neo4jUtils.getTargetSql( sourceSchema, target);
-                LOG.info("SQL: "+SQL);
 
                 PCollection<Row> sqlTransformedSource = null;
                 // conditionally apply sql to rows..
                 if(!SQL.equals(Neo4jUtils.DEFAULT_STAR_QUERY)){
-                    LOG.info("Applying SQL transformation to "+targetName);
+                    LOG.info("Applying SQL transformation to "+targetName+": "+SQL);
                     sqlTransformedSource = sourceRowsCollection.apply(targetNum+": SQLTransform "+targetName,  SqlTransform.query(SQL));
-                    sqlTransformedSource.setCoder(SerializableCoder.of(Row.class));
                 } else {
                     LOG.info("Skipping SQL transformation to "+targetName);
-                    final DoFn<Row,  Row> cloneFn = new CloneFn(sourceRowsCollection.getSchema());
+                    final DoFn<Row,  Row> cloneFn = new CloneFn(sourceSchema);
                     sqlTransformedSource = sourceRowsCollection.apply(targetNum+": Cloning: "+targetName, ParDo.of(cloneFn));
-                    sqlTransformedSource.setCoder(SerializableCoder.of(Row.class));
                 }
 
                 /////////////////////////////////
@@ -95,7 +94,7 @@ public class Neo4JTargetWriter {
                 final Schema targetSchema = BeamSchemaUtils.toNeo4jTargetSchema(target);
                 final DoFn<Row,  Row> castToTargetRow = new CastTargetRowFn(target, targetSchema);
                 PCollection<Row> targetRowsCollection = sqlTransformedSource.apply(targetNum+": Cast "+targetName+" rows", ParDo.of(castToTargetRow));
-                targetRowsCollection.setCoder(SerializableCoder.of(Row.class));
+                targetRowsCollection.setCoder(SchemaCoder.of(targetSchema));
                 targetRowsCollection.setRowSchema(targetSchema);
 
                 // indices and constraints

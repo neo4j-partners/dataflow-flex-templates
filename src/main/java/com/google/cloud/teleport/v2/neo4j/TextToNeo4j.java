@@ -9,6 +9,7 @@ import com.google.cloud.teleport.v2.neo4j.common.model.Source;
 import com.google.cloud.teleport.v2.neo4j.text.options.TextToNeo4jImportOptions;
 import com.google.cloud.teleport.v2.neo4j.text.transforms.LineParsingFn;
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import org.apache.beam.repackaged.core.org.apache.commons.lang3.StringUtils;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.PipelineResult;
@@ -53,7 +54,7 @@ public class TextToNeo4j {
 
     public void run() {
 
-        final Gson gson = new Gson();
+        final Gson gson = new GsonBuilder().setPrettyPrinting().create();
 
         Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
 
@@ -64,16 +65,17 @@ public class TextToNeo4j {
         final String jobName = pipelineOptions.getJobName() + "-" + System.currentTimeMillis();
         pipelineOptions.setJobName(jobName);
 
-        // Create a pipeline using the options
-
-        //TODO: check if connectionUri provided
-        final String neoConnectionUri = pipelineOptions.getNeo4jConnectionUri();
-        this.neoConnection = new ConnectionParams(neoConnectionUri);
-        LOG.info("NeoConnection: " + gson.toJson(this.neoConnection));
+        if (StringUtils.isEmpty(pipelineOptions.getNeo4jConnectionUri())) {
+            throw new RuntimeException("Neo4j connection URI not provided.");
+        }
 
         if (StringUtils.isEmpty(pipelineOptions.getJobSpecUri())) {
             throw new RuntimeException("Job spec URI not provided.");
         }
+
+        final String neoConnectionUri = pipelineOptions.getNeo4jConnectionUri();
+        this.neoConnection = new ConnectionParams(neoConnectionUri);
+        LOG.info("NeoConnection: " + gson.toJson(this.neoConnection));
 
         final String jobSpecUri = pipelineOptions.getJobSpecUri();
         this.jobSpec = new JobSpecRequest(jobSpecUri);

@@ -29,13 +29,13 @@ import com.google.cloud.teleport.v2.neo4j.common.model.ConnectionParams;
 import com.google.cloud.teleport.v2.neo4j.common.model.JobSpecRequest;
 import com.google.datastore.v1.Entity;
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import org.apache.beam.repackaged.core.org.apache.commons.lang3.StringUtils;
-import org.apache.beam.sdk.coders.SerializableCoder;
+import org.apache.beam.sdk.coders.RowCoder;
 import org.apache.beam.sdk.io.FileSystems;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.ParDo;
-import org.apache.beam.sdk.values.PBegin;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.Row;
 import org.apache.beam.sdk.values.TupleTag;
@@ -76,15 +76,17 @@ public class BigQueryToNeo4j {
 
 
   public void run() {
-    final Gson gson = new Gson();
+
+    final Gson gson = new GsonBuilder().setPrettyPrinting().create();
+
+    Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
 
     // Execute a pipeline on Dataflow
     Pipeline pipeline = Pipeline.create(pipelineOptions);
     FileSystems.setDefaultPipelineOptions(pipelineOptions);
 
     final String jobName = pipelineOptions.getJobName() + "-" + System.currentTimeMillis();
-
-    // Create a pipeline using the options
+    pipelineOptions.setJobName(jobName);
 
     //TODO: check if connectionUri provided
     final String neoConnectionUri = pipelineOptions.getNeo4jConnectionUri();
@@ -111,8 +113,6 @@ public class BigQueryToNeo4j {
     //////// new stuff start
     LOG.info("Data pipeline options: " + pipelineOptions);
 
-    final PBegin begin = pipeline.begin();
-    // Read all the lines from a file
 
     //TODO: consider adding these?
     TupleTag<Entity> successTag = new TupleTag<Entity>() {};
@@ -121,7 +121,7 @@ public class BigQueryToNeo4j {
 
     org.apache.beam.sdk.schemas.Schema sourceSchema =  null;
 
-    // TODO: can this be done more elegantly? Consider BigQueryQuerySourceDef.getBeamSchema(BigQueryOptions bqOptions)
+    // TODO: can this be done more elegantly? Consider BigQuerySourceDef.getBeamSchema(BigQueryOptions bqOptions)
     // Zero row query for getting metadata from connection context
     // we are not using the bulk query engine here, just the default service
     String queryZeroRows="SELECT * FROM ("+pipelineOptions.getReadQuery()+") LIMIT 0";
@@ -132,10 +132,10 @@ public class BigQueryToNeo4j {
       LOG.info("Getting metadata from query: "+queryZeroRows);
       TableResult zeroRowQueryResult = bigquery.query(queryConfig);
       com.google.cloud.bigquery.Schema zeroRowQueryResultSchema = zeroRowQueryResult.getSchema();
-      FieldList bqFieldList=zeroRowQueryResultSchema.getFields();
-      sourceSchema= BeamSchemaUtils.fromBqFieldList( bqFieldList);
+      sourceSchema= BeamSchemaUtils.toBeamSchema( zeroRowQueryResultSchema);
+      LOG.info("Calculated source schema: "+sourceSchema.getFieldCount()+" fields: "+StringUtils.join(sourceSchema.getFieldNames(),","));
     } catch (Exception ex){
-      LOG.error("Cannot parse query ");
+      LOG.error("Cannot parse query: "+ex.getMessage());
       throw new RuntimeException("Exception parsing query: "+pipelineOptions.getReadQuery());
     }
 
@@ -150,12 +150,14 @@ public class BigQueryToNeo4j {
                             .usingStandardSql()
                             .withTemplateCompatibility());
 
-    LOG.info("BQ Rows collection, source schema cols: "+sourceSchema.getFieldCount()+", cols: "+ StringUtils.join(sourceSchema.getFieldNames(),","));
+    bqRowsCollection.setRowSchema(sourceSchema);
 
+    LOG.info("BQ Rows collection, source schema cols: "+sourceSchema.getFieldCount()+", cols: "+ StringUtils.join(sourceSchema.getFieldNames(),","));
     final DoFn<TableRow, Row> tableRow2RowFn = new TableRow2RowFn(sourceSchema);
     PCollection<Row> sourceRowsCollection = bqRowsCollection.apply( "Map table rows", ParDo.of(tableRow2RowFn));
     sourceRowsCollection.setRowSchema(sourceSchema);
-    sourceRowsCollection.setCoder(SerializableCoder.of(Row.class));
+    //this is a strangely necessary step (below)
+    sourceRowsCollection.setCoder(RowCoder.of(sourceSchema));
 
     Neo4JTargetWriter.writeTargets( jobSpec,
             neo4jConnection,

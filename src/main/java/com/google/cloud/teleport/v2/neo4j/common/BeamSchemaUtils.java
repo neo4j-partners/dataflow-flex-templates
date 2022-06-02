@@ -1,17 +1,14 @@
 package com.google.cloud.teleport.v2.neo4j.common;
 
-import com.google.cloud.bigquery.FieldList;
 import com.google.cloud.bigquery.LegacySQLTypeName;
 import com.google.cloud.teleport.v2.neo4j.common.model.Mapping;
 import com.google.cloud.teleport.v2.neo4j.common.model.Targets;
 import com.google.cloud.teleport.v2.neo4j.common.model.enums.PropertyType;
-import org.apache.avro.LogicalTypes;
 import org.apache.beam.repackaged.core.org.apache.commons.lang3.StringUtils;
 import org.apache.beam.sdk.schemas.Schema;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.sql.JDBCType;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -22,11 +19,12 @@ public class BeamSchemaUtils {
         return StringUtils.join(schema.getFields(), ",");
     }
 
-    public static Schema fromBqFieldList(FieldList fieldList){
+    public static Schema toBeamSchema(com.google.cloud.bigquery.Schema bqSchema){
         List<Schema.Field> schemaFieldList = new ArrayList<>();
-        for (int i = 0; i < fieldList.size(); i++) {
-            com.google.cloud.bigquery.Field field=fieldList.get(i);
+        for (int i = 0; i < bqSchema.getFields().size(); i++) {
+            com.google.cloud.bigquery.Field field=bqSchema.getFields().get(i);
             Schema.Field schemaField= Schema.Field.of(field.getName(), getFieldType(field.getType()));
+            //TODO: set not required
             schemaFieldList.add(schemaField);
         }
         return new Schema(schemaFieldList);

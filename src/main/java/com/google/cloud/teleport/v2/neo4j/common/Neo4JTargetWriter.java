@@ -4,6 +4,7 @@ package com.google.cloud.teleport.v2.neo4j.common;
 import com.google.cloud.teleport.v2.neo4j.common.model.ConnectionParams;
 import com.google.cloud.teleport.v2.neo4j.common.model.JobSpecRequest;
 import com.google.cloud.teleport.v2.neo4j.common.model.Targets;
+import com.google.cloud.teleport.v2.neo4j.common.model.enums.TargetType;
 import com.google.cloud.teleport.v2.neo4j.common.transforms.CloneFn;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -12,8 +13,11 @@ import org.apache.beam.sdk.io.neo4j.Neo4jIO;
 import org.apache.beam.sdk.coders.SerializableCoder;
 import org.apache.beam.sdk.schemas.Schema;
 import org.apache.beam.sdk.transforms.DoFn;
+import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.values.PCollection;
+import org.apache.beam.sdk.values.PDone;
+import org.apache.beam.sdk.values.PInput;
 import org.apache.beam.sdk.values.Row;
 import org.neo4j.driver.Config;
 import org.neo4j.driver.SessionConfig;
@@ -47,7 +51,7 @@ public class Neo4JTargetWriter {
         // Direct connect utility...
         Neo4jDirectConnect neo4jDirectConnect = new Neo4jDirectConnect(neoConnection.serverUrl, neoConnection.database, neoConnection.username, neoConnection.password);
 
-        if (jobSpec.commands.resetDb){
+        if (jobSpec.config.resetDb){
             LOG.info("Resetting database");
             try {
                 LOG.info("Executing cypher: " + Neo4jUtils.CYPHER_DELETE_ALL);
@@ -107,23 +111,41 @@ public class Neo4JTargetWriter {
                     }
                 }
 
+                //set batch sizes
+                int batchSize=jobSpec.config.nodeBatchSize;
+                int parallelism=jobSpec.config.nodeParallelism;
+
+                if (target.type== TargetType.relationship){
+                    batchSize=jobSpec.config.edgeBatchSize;
+                    parallelism=jobSpec.config.edgeParallelism;
+                }
+
                 // data loading
                 String unwindCypher = CypherGenerator.getUnwindCreateCypher(target);
                 LOG.info("Unwind cypher: "+unwindCypher);
                 /////////////////////////
                 // Batch load data rows using Matt's Neo4jIO connector
                 /////////////////////////
-                targetRowsCollection.apply(
-                        Neo4jIO.<Row>writeUnwind()
-                                .withCypher(unwindCypher)
-                                .withBatchSize(5000)
-                                .withSessionConfig(sessionConfig)
-                                .withUnwindMapName("rows")
-                                .withParametersFunction(
-                                        row -> {
-                                            return CypherGenerator.getUnwindRowDataMapper(row,target);
-                                        })
-                                .withDriverConfiguration(driverConfiguration));
+                final PTransform writeNeo4jIO=Neo4jIO.<Row>writeUnwind()
+                        .withCypher(unwindCypher)
+                        .withBatchSize(batchSize)
+                        .withSessionConfig(sessionConfig)
+                        .withUnwindMapName("rows")
+                        .withParametersFunction(
+                                row -> {
+                                    return CypherGenerator.getUnwindRowDataMapper(row, target);
+                                })
+                        .withDriverConfiguration(driverConfiguration);
+
+                targetRowsCollection.apply(targetNum+": Neo4j write "+targetName, writeNeo4jIO);
+                //TODO: not sure how to do parallelism here
+                /*
+                if (parallelism>1){
+                    targetRowsCollection.apply("Neo4j "+targetName, ParDo.of(writeNeo4jIO));
+                } else {
+                    targetRowsCollection.apply("Neo4j "+targetName, writeNeo4jIO);
+                }
+                 */
             } else {
                 LOG.info("Target is inactive: "+target.name);
             }

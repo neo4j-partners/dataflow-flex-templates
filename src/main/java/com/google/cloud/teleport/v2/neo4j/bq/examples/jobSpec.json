@@ -1,6 +1,10 @@
 {
   "config": {
-    "reset_db": true
+    "reset_db": true,
+    "node_write_batch_size": 5000,
+    "edge_write_batch_size": 1000,
+    "node_write_paralellism": 5,
+    "edge_write_paralellism": 1
   },
   "source": {
     "type": "bigquery",

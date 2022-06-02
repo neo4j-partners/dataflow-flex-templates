@@ -16,7 +16,7 @@ public class JobSpecRequest {
     //initialize defaults;
     public Source source;
     public List<Targets> targets = new ArrayList<>();
-    public Config commands=new Config();
+    public Config config =new Config();
 
     public JobSpecRequest(final String jobSpecUri) {
         String jobSpecJsonStr = "{}";
@@ -32,7 +32,7 @@ public class JobSpecRequest {
             final JSONObject jobSpecObj = new JSONObject(jobSpecJsonStr);
 
             if (jobSpecObj.has("config")) {
-                commands = new Config(jobSpecObj.getJSONObject("config"));
+                config = new Config(jobSpecObj.getJSONObject("config"));
             }
 
             if (jobSpecObj.has("source")) {

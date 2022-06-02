@@ -4,6 +4,7 @@ package com.google.cloud.teleport.v2.neo4j.common;
 import com.google.cloud.teleport.v2.neo4j.common.model.ConnectionParams;
 import com.google.cloud.teleport.v2.neo4j.common.model.JobSpecRequest;
 import com.google.cloud.teleport.v2.neo4j.common.model.Targets;
+import com.google.cloud.teleport.v2.neo4j.common.transforms.CloneFn;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import org.apache.beam.repackaged.core.org.apache.commons.lang3.StringUtils;
@@ -15,6 +16,7 @@ import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.Row;
 import org.neo4j.driver.Config;
+import org.neo4j.driver.SessionConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.beam.sdk.extensions.sql.*;
@@ -38,6 +40,10 @@ public class Neo4JTargetWriter {
                 Neo4jIO.DriverConfiguration.create(neoConnection.serverUrl, neoConnection.username, neoConnection.password)
                         .withConfig(Config.defaultConfig());
 
+        final SessionConfig sessionConfig=SessionConfig.builder()
+                .withDatabase(neoConnection.database)
+                .build();
+
         // Direct connect utility...
         Neo4jDirectConnect neo4jDirectConnect = new Neo4jDirectConnect(neoConnection.serverUrl, neoConnection.database, neoConnection.username, neoConnection.password);
 
@@ -54,14 +60,14 @@ public class Neo4JTargetWriter {
         }
 
         // Now write these rows to Neo4j Customer nodes
-        int targetNum=1;
+        int targetNum=0;
         for (Targets target : jobSpec.targets) {
             if (target.active) {
                 String targetName=target.name;
+                targetNum++;
                 if (StringUtils.isEmpty(targetName)){
                     targetName = "Target "+targetNum;
                 }
-                targetNum++;
                 LOG.info("Writing target "+targetName+": "+ gson.toJson(target));
 
                 String SQL = Neo4jUtils.getTargetSql( sourceSchema, target);
@@ -71,12 +77,12 @@ public class Neo4JTargetWriter {
                 // conditionally apply sql to rows..
                 if(!SQL.equals(Neo4jUtils.DEFAULT_STAR_QUERY)){
                     LOG.info("Applying SQL transformation to "+targetName);
-                    sqlTransformedSource = sourceRowsCollection.apply("Applying SQL to "+targetName,  SqlTransform.query(SQL));
+                    sqlTransformedSource = sourceRowsCollection.apply(targetNum+": SQLTransform "+targetName,  SqlTransform.query(SQL));
                     sqlTransformedSource.setCoder(SerializableCoder.of(Row.class));
                 } else {
                     LOG.info("Skipping SQL transformation to "+targetName);
-                    //TODO: a simple clone transform would work here, how is that done?
-                    sqlTransformedSource = sourceRowsCollection.apply("Applying SQL to "+targetName,  SqlTransform.query(SQL));
+                    final DoFn<Row,  Row> cloneFn = new CloneFn(sourceRowsCollection.getSchema());
+                    sqlTransformedSource = sourceRowsCollection.apply(targetNum+": Cloning: "+targetName, ParDo.of(cloneFn));
                     sqlTransformedSource.setCoder(SerializableCoder.of(Row.class));
                 }
 
@@ -84,7 +90,7 @@ public class Neo4JTargetWriter {
                 // Target schema transform
                 final Schema targetSchema = BeamSchemaUtils.toNeo4jTargetSchema(target);
                 final DoFn<Row,  Row> castToTargetRow = new CastTargetRowFn(target, targetSchema);
-                PCollection<Row> targetRowsCollection = sqlTransformedSource.apply("Cast "+targetName+" rows", ParDo.of(castToTargetRow));
+                PCollection<Row> targetRowsCollection = sqlTransformedSource.apply(targetNum+": Cast "+targetName+" rows", ParDo.of(castToTargetRow));
                 targetRowsCollection.setCoder(SerializableCoder.of(Row.class));
                 targetRowsCollection.setRowSchema(targetSchema);
 
@@ -111,6 +117,7 @@ public class Neo4JTargetWriter {
                         Neo4jIO.<Row>writeUnwind()
                                 .withCypher(unwindCypher)
                                 .withBatchSize(5000)
+                                .withSessionConfig(sessionConfig)
                                 .withUnwindMapName("rows")
                                 .withParametersFunction(
                                         row -> {

@@ -1,12 +1,11 @@
-package com.google.cloud.teleport.v2.neo4j.bq.bq.options;
+package com.google.cloud.teleport.v2.neo4j.bq.options;
 
-import org.apache.beam.runners.dataflow.options.DataflowPipelineOptions;
 import org.apache.beam.sdk.options.Description;
 import org.apache.beam.sdk.options.Default;
 import org.apache.beam.sdk.options.PipelineOptions;
 import org.apache.beam.sdk.options.Validation;
 
-public interface BigQueryToNeo4jImportOptions extends DataflowPipelineOptions {
+public interface BigQueryToNeo4jImportOptions extends PipelineOptions {
 
     @Description("Path to job specification")
     @Default.String("gs://dataflow-experiments-gs/dataflow-job-specs/testing/common/jobSpec.json")

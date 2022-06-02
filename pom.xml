@@ -161,6 +161,7 @@
             <groupId>org.apache.beam</groupId>
             <artifactId>beam-runners-google-cloud-dataflow-java</artifactId>
             <version>${beam.version}</version>
+            <scope>runtime</scope>
         </dependency>
 
         <!-- Google Cloud I/O - BigQuery, Bigtable, Datastore, Pub/Sub, Spanner -->

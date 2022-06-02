@@ -6,12 +6,11 @@ import com.google.cloud.teleport.v2.neo4j.common.model.JobSpecRequest;
 import com.google.cloud.teleport.v2.neo4j.common.model.Targets;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import org.apache.beam.model.pipeline.v1.RunnerApi;
+import org.apache.beam.repackaged.core.org.apache.commons.lang3.StringUtils;
 import org.apache.beam.sdk.io.neo4j.Neo4jIO;
 import org.apache.beam.sdk.coders.SerializableCoder;
 import org.apache.beam.sdk.schemas.Schema;
 import org.apache.beam.sdk.transforms.DoFn;
-import org.apache.beam.sdk.transforms.Flatten;
 import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.Row;
@@ -19,7 +18,6 @@ import org.neo4j.driver.Config;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.beam.sdk.extensions.sql.*;
-import org.springframework.util.StringUtils;
 
 import java.util.List;
 

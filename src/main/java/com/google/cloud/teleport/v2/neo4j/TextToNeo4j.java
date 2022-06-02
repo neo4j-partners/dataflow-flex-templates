@@ -1,4 +1,4 @@
-package com.google.cloud.teleport.v2.neo4j.text;
+package com.google.cloud.teleport.v2.neo4j;
 
 import com.google.cloud.teleport.v2.neo4j.common.JobSpecOptimizer;
 import com.google.cloud.teleport.v2.neo4j.common.Neo4JTargetWriter;
@@ -9,8 +9,7 @@ import com.google.cloud.teleport.v2.neo4j.common.model.Source;
 import com.google.cloud.teleport.v2.neo4j.text.options.TextToNeo4jImportOptions;
 import com.google.cloud.teleport.v2.neo4j.text.transforms.LineParsingFn;
 import com.google.gson.Gson;
-import org.apache.beam.runners.dataflow.DataflowPipelineJob;
-import org.apache.beam.runners.dataflow.DataflowRunner;
+import org.apache.beam.repackaged.core.org.apache.commons.lang3.StringUtils;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.PipelineResult;
 import org.apache.beam.sdk.coders.SerializableCoder;
@@ -25,7 +24,6 @@ import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.Row;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.util.StringUtils;
 
 public class TextToNeo4j {
 
@@ -120,7 +118,7 @@ public class TextToNeo4j {
                         TextIO.read().from(this.dataFileUri));
 
         final Schema sourceSchema = dataSource.textFile.getTextFileSchemaData();
-        LOG.info("Source schema field count: " + sourceSchema.getFieldCount()+", fields: "+StringUtils.collectionToCommaDelimitedString(sourceSchema.getFieldNames()));
+        LOG.info("Source schema field count: " + sourceSchema.getFieldCount()+", fields: "+StringUtils.join(sourceSchema.getFieldNames(),","));
         final DoFn<String, Row> lineToRow = new LineParsingFn(dataSource, sourceSchema, dataSource.textFile.csvFormat);
         final PCollection<Row> sourceRowsCollection = linesCollection.apply("Parse lines into string columns.", ParDo.of(lineToRow));
         sourceRowsCollection.setCoder(SerializableCoder.of(Row.class));
@@ -132,11 +130,8 @@ public class TextToNeo4j {
                 sourceSchema,
                 sourceRowsCollection);
 
-        // Now run this using the dataflow runner
-        final DataflowRunner dataflowRunner = DataflowRunner.fromOptions(pipelineOptions);
-        final DataflowPipelineJob job = dataflowRunner.run(pipeline);
-        final PipelineResult.State state = job.waitUntilFinish();
-        LOG.info("Final state : " + state);
+        // For a Dataflow Flex Template, do NOT waitUntilFinish().
+        pipeline.run();
     }
 
 }

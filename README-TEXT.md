@@ -38,7 +38,7 @@ run on Dataflow.
 >
 > ```sh
 > mvn compile exec:java \
->   -Dexec.mainClass=com.google.cloud.teleport.v2.neo4j.text.TextToNeo4j \
+>   -Dexec.mainClass=com.google.cloud.teleport.v2.neo4j.TextToNeo4j \
 >   -Dexec.args="\
 >     --runner=DataflowRunner \
 >     --project=$PROJECT \
@@ -54,33 +54,6 @@ run on Dataflow.
 >
 > </details>
 
-## Notes on parameters
-There are challenges when using the project name in the select query.  Use:
-
-    SELECT * FROM <schema>.<table> 
-
-rather than 
-
-    SELECT * FROM <project>.<schema>.<table>
-
-* Set environment variables that will be used in the build process.
-```sh
-export PROJECT=neo4jbusinessdev
-export GS_WORKING_DIR=gs://dataflow-experiments-gs/dataflow-working
-export APP_NAME=text-to-neo4j
-export JOB_NAME=test-text-to-neo4j-auradb
-export REGION=us-central1
-
-export IMAGE_NAME=bigquery-to-neo4j:latest
-export BUCKET_NAME=gs://dataflow-experiments-gs/flex-templates
-export TARGET_GCR_IMAGE=gcr.io/${PROJECT}/${IMAGE_NAME}
-export BASE_CONTAINER_IMAGE=gcr.io/dataflow-templates-base/java8-template-launcher-base
-export BASE_CONTAINER_IMAGE_VERSION=latest
-export TEMPLATE_MODULE=bigquery-to-neo4j
-export APP_ROOT=/template/${TEMPLATE_MODULE}
-export COMMAND_SPEC=${APP_ROOT}/resources/${TEMPLATE_MODULE}-command-spec.json
-export TEMPLATE_IMAGE_SPEC=${BUCKET_NAME}/images/${TEMPLATE_MODULE}-image-spec.json
-```
 First, let's build the container image.
 
 ```sh
@@ -92,19 +65,20 @@ mvn clean package
 * Set environment variables that will be used in the build process.
 ```sh
 export PROJECT=neo4jbusinessdev
-export IMAGE_NAME=bigquery-to-neo4j:latest
+export GS_WORKING_DIR=gs://dataflow-experiments-gs/dataflow-working
+export APP_NAME=text-to-neo4j
+export JOB_NAME=test-text-to-neo4j-auradb
+export REGION=us-central1
+
+export IMAGE_NAME=text-to-neo4j:latest
 export BUCKET_NAME=gs://dataflow-experiments-gs/flex-templates
 export TARGET_GCR_IMAGE=gcr.io/${PROJECT}/${IMAGE_NAME}
 export BASE_CONTAINER_IMAGE=gcr.io/dataflow-templates-base/java8-template-launcher-base
 export BASE_CONTAINER_IMAGE_VERSION=latest
-export TEMPLATE_MODULE=bigquery-to-neo4j
+export TEMPLATE_MODULE=text-to-neo4j
 export APP_ROOT=/template/${TEMPLATE_MODULE}
 export COMMAND_SPEC=${APP_ROOT}/resources/${TEMPLATE_MODULE}-command-spec.json
 export TEMPLATE_IMAGE_SPEC=${BUCKET_NAME}/images/${TEMPLATE_MODULE}-image-spec.json
-
-export REGION=us-central1
-export READ_QUERY="select * from northwind.V_CUSTOMER_ORDERS"
-
 gcloud config set project ${PROJECT}
 ```
 * Build and push image to Google Container Repository from the v2 directory

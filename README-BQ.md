@@ -27,16 +27,6 @@ export GS_WORKING_DIR=gs://dataflow-experiments-gs/dataflow-working
 export APP_NAME=bigquery-to-neo4j
 export JOB_NAME=test-bq-to-neo4j-auradb
 export REGION=us-central1
-
-export IMAGE_NAME=bigquery-to-neo4j:latest
-export BUCKET_NAME=gs://dataflow-experiments-gs/flex-templates
-export TARGET_GCR_IMAGE=gcr.io/${PROJECT}/${IMAGE_NAME}
-export BASE_CONTAINER_IMAGE=gcr.io/dataflow-templates-base/java8-template-launcher-base
-export BASE_CONTAINER_IMAGE_VERSION=latest
-export TEMPLATE_MODULE=bigquery-to-neo4j
-export APP_ROOT=/template/${TEMPLATE_MODULE}
-export COMMAND_SPEC=${APP_ROOT}/resources/${TEMPLATE_MODULE}-command-spec.json
-export TEMPLATE_IMAGE_SPEC=${BUCKET_NAME}/images/${TEMPLATE_MODULE}-image-spec.json
 ```
 
 > <details><summary>
@@ -48,7 +38,7 @@ export TEMPLATE_IMAGE_SPEC=${BUCKET_NAME}/images/${TEMPLATE_MODULE}-image-spec.j
 > # If you omit the --bootstrapServer argument, it connects to localhost.
 > # If you are running the Kafka server locally, you can omit --bootstrapServer.
 > mvn compile exec:java \
->   -Dexec.mainClass=com.google.cloud.teleport.v2.neo4j.bq.BigQueryToNeo4j \
+>   -Dexec.mainClass=com.google.cloud.teleport.v2.neo4j.BigQueryToNeo4j \
 >   -Dexec.args="\
 >     --runner=DataflowRunner \
 >     --project=$PROJECT \
@@ -67,9 +57,14 @@ export TEMPLATE_IMAGE_SPEC=${BUCKET_NAME}/images/${TEMPLATE_MODULE}-image-spec.j
 >
 > </details>
 
-## Notes on parameters
-There are challenges when using the project name in the select query.  Use SELECT * FROM <schema>.<table> rather than SELECT * FROM <project>.<schema>.<table>
+### Notes on parameters
+There are challenges when using the project name in the select query.  Use:
 
+    SELECT * FROM <schema>.<table> 
+
+rather than
+
+    SELECT * FROM <project>.<schema>.<table>
 
 First, let's build the container image.
 
@@ -81,7 +76,13 @@ mvn clean package
 #### Building Container Image
 * Set environment variables that will be used in the build process.
 ```sh
+
 export PROJECT=neo4jbusinessdev
+export GS_WORKING_DIR=gs://dataflow-experiments-gs/dataflow-working
+export APP_NAME=bigquery-to-neo4j
+export JOB_NAME=test-bq-to-neo4j-auradb
+export REGION=us-central1
+
 export IMAGE_NAME=bigquery-to-neo4j:latest
 export BUCKET_NAME=gs://dataflow-experiments-gs/flex-templates
 export TARGET_GCR_IMAGE=gcr.io/${PROJECT}/${IMAGE_NAME}
@@ -92,7 +93,6 @@ export APP_ROOT=/template/${TEMPLATE_MODULE}
 export COMMAND_SPEC=${APP_ROOT}/resources/${TEMPLATE_MODULE}-command-spec.json
 export TEMPLATE_IMAGE_SPEC=${BUCKET_NAME}/images/${TEMPLATE_MODULE}-image-spec.json
 
-export REGION=us-central1
 export READ_QUERY="select * from northwind.V_CUSTOMER_ORDERS"
 
 gcloud config set project ${PROJECT}

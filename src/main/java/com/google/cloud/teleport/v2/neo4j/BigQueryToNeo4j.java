@@ -13,13 +13,13 @@
  * License for the specific language governing permissions and limitations under
  * the License.
  */
-package com.google.cloud.teleport.v2.neo4j.bq;
+package com.google.cloud.teleport.v2.neo4j;
 
 import com.google.cloud.bigquery.BigQuery;
 import com.google.cloud.bigquery.BigQueryOptions;
 import com.google.api.services.bigquery.model.TableRow;
 import com.google.cloud.bigquery.*;
-import com.google.cloud.teleport.v2.neo4j.bq.bq.options.BigQueryToNeo4jImportOptions;
+import com.google.cloud.teleport.v2.neo4j.bq.options.BigQueryToNeo4jImportOptions;
 import com.google.cloud.teleport.v2.neo4j.bq.transforms.TableRow2RowFn;
 import com.google.cloud.teleport.v2.neo4j.common.BeamSchemaUtils;
 import com.google.cloud.teleport.v2.neo4j.common.JobSpecOptimizer;
@@ -29,12 +29,9 @@ import com.google.cloud.teleport.v2.neo4j.common.model.ConnectionParams;
 import com.google.cloud.teleport.v2.neo4j.common.model.JobSpecRequest;
 import com.google.datastore.v1.Entity;
 import com.google.gson.Gson;
-import org.apache.beam.runners.dataflow.DataflowPipelineJob;
-import org.apache.beam.runners.dataflow.DataflowRunner;
-import org.apache.beam.sdk.PipelineResult;
+import org.apache.beam.repackaged.core.org.apache.commons.lang3.StringUtils;
 import org.apache.beam.sdk.coders.SerializableCoder;
 import org.apache.beam.sdk.io.FileSystems;
-import org.apache.beam.sdk.io.gcp.bigquery.TableRowJsonCoder;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.ParDo;
@@ -46,9 +43,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO;
-import org.springframework.util.StringUtils;
-
-import java.util.Collections;
 
 /**
  * Dataflow template which reads BigQuery data and writes it to Neo4j. The source data can be
@@ -156,7 +150,7 @@ public class BigQueryToNeo4j {
                             .usingStandardSql()
                             .withTemplateCompatibility());
 
-    LOG.info("BQ Rows collection, source schema cols: "+sourceSchema.getFieldCount()+", cols: "+ StringUtils.collectionToCommaDelimitedString(sourceSchema.getFieldNames()));
+    LOG.info("BQ Rows collection, source schema cols: "+sourceSchema.getFieldCount()+", cols: "+ StringUtils.join(sourceSchema.getFieldNames(),","));
 
     final DoFn<TableRow, Row> tableRow2RowFn = new TableRow2RowFn(sourceSchema);
     PCollection<Row> sourceRowsCollection = bqRowsCollection.apply( "Map table rows", ParDo.of(tableRow2RowFn));
@@ -168,11 +162,8 @@ public class BigQueryToNeo4j {
             sourceSchema,
             sourceRowsCollection);
 
-    // Now run this using the dataflow runner
-    final DataflowRunner dataflowRunner = DataflowRunner.fromOptions(pipelineOptions);
-    final DataflowPipelineJob job = dataflowRunner.run(pipeline);
-    final PipelineResult.State state = job.waitUntilFinish();
-    BigQueryToNeo4j.LOG.info("Final state : " + state);
+    // For a Dataflow Flex Template, do NOT waitUntilFinish().
+    pipeline.run();
   }
 
 

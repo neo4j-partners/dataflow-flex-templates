@@ -3,6 +3,7 @@ package com.google.cloud.teleport.v2.neo4j.common.utils;
 import com.google.cloud.teleport.v2.neo4j.common.model.Mapping;
 import com.google.cloud.teleport.v2.neo4j.common.model.enums.PropertyType;
 import org.apache.beam.repackaged.core.org.apache.commons.lang3.StringUtils;
+import org.apache.beam.sdk.io.FileSystems;
 import org.apache.beam.sdk.schemas.Schema;
 import org.apache.beam.sdk.values.Row;
 import org.apache.commons.csv.CSVFormat;
@@ -16,8 +17,11 @@ import org.joda.time.format.DateTimeFormatter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
+import java.io.*;
 import java.math.BigDecimal;
+import java.nio.channels.Channels;
+import java.nio.channels.ReadableByteChannel;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -51,74 +55,6 @@ public class TextParserUtils {
             }
         }
         return textCols;
-    }
-
-    public static Row castRow(final Row strRow, List<Mapping> targetMappings, Schema targetSchema) {
-        Schema sourceSchema = strRow.getSchema();
-        Object[] castVals = new Object[targetMappings.size()];
-
-        for (int i = 0; i < targetMappings.size(); i++) {
-            Mapping mapping = targetMappings.get(i);
-            String strEl="";
-            if (StringUtils.isNotEmpty(mapping.constant)) {
-                strEl=mapping.constant;
-                // LOG.info("Found constant, name: "+mapping.name+", value: "+strEl);
-            } else {
-                String fieldName = mapping.field;
-                Schema.Field sourceField = sourceSchema.getField(fieldName);
-                if (sourceField==null){
-                    LOG.error("Could not map target field to source:"+fieldName);
-                    strEl = null;
-                } else {
-                    strEl = StringUtils.trim(strRow.getValue(fieldName)+"");
-                }
-            }
-
-            if (StringUtils.isEmpty(strEl) && StringUtils.isNotEmpty(mapping.defaultValue)){
-                LOG.info("Setting default value for field: "+mapping.field+", name: "+mapping.name+", default: "+mapping.defaultValue);
-                strEl = mapping.defaultValue;
-            }
-            if (mapping.type == PropertyType.Integer) {
-                castVals[i] = Integer.parseInt(strEl);
-            } else if (mapping.type == PropertyType.Float) {
-                castVals[i] = Float.parseFloat(strEl);
-            } else if (mapping.type == PropertyType.BigDecimal) {
-                castVals[i] = new BigDecimal(strEl);
-            } else if (mapping.type == PropertyType.Long) {
-                castVals[i] = Long.parseLong(strEl);
-            } else if (mapping.type == PropertyType.Boolean) {
-                castVals[i] = Boolean.parseBoolean(strEl);
-            } else if (mapping.type == PropertyType.ByteArray) {
-                castVals[i]=strEl.getBytes(StandardCharsets.UTF_8);
-            } else if (mapping.type == PropertyType.Point) {
-                //point is string
-                castVals[i]=strEl;
-            } else if (mapping.type == PropertyType.Duration) {
-                //TODO: how do we cast this?
-                castVals[i]=strEl;
-            } else if (mapping.type == PropertyType.Date) {
-                castVals[i]= DateTime.parse(strEl,jsDateFormatter);
-            } else if (mapping.type == PropertyType.LocalDateTime) {
-                castVals[i] = LocalDateTime.parse(strEl);
-            } else if (mapping.type == PropertyType.DateTime) {
-                castVals[i] =  DateTime.parse(strEl,jsDateTimeFormatter);
-            } else if (mapping.type == PropertyType.LocalTime) {
-                castVals[i] = LocalDate.parse(strEl);
-            } else if (mapping.type == PropertyType.Time) {
-                try {
-                    Date dt = jsTimeFormatter.parse(strEl);
-                    Calendar cal = Calendar.getInstance();
-                    cal.setTime(dt);
-                } catch (ParseException e){
-                    castVals[i]=null;
-                }
-            } else {
-                castVals[i]=strEl;
-            }
-        }
-
-        Row targetRow = Row.withSchema(targetSchema).addValues(castVals).build();
-        return targetRow;
     }
 
 }

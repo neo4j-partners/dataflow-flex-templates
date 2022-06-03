@@ -29,14 +29,9 @@ public class Mapping implements Serializable {
     public Mapping(TargetType type, final JSONObject mappingObj)  {
 
         this.constant = mappingObj.has("constant")?mappingObj.getString("constant"):"";
-        this.role = mappingObj.has("role")?RoleType.valueOf(mappingObj.getString("role")):RoleType.property;
-        this.fragmentType = mappingObj.has("fragment")?FragmentType.valueOf(mappingObj.getString("fragment")):FragmentType.node;
+        this.role = mappingObj.has("role")?RoleType.valueOf(mappingObj.getString("role")):role;
+        this.fragmentType = mappingObj.has("fragment")?FragmentType.valueOf(mappingObj.getString("fragment")):fragmentType;
 
-        if (type == TargetType.relationship) {
-            if (this.fragmentType == fragmentType.node){
-                throw new RuntimeException("Invalid fragment type for relationship target: "+this.fragmentType);
-            }
-        }
         this.field = mappingObj.has("field")?mappingObj.getString("field"):"";
         this.name = mappingObj.has("name")?mappingObj.getString("name"):"";
         if (StringUtils.isNotEmpty(this.field) && StringUtils.isEmpty(this.name)){

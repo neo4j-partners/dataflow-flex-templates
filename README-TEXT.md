@@ -10,7 +10,7 @@ your own Google Cloud project.
 ## Getting Started
 
 ### Requirements
-* Java 8
+* Java 11
 * Maven
 * Text file exists
 
@@ -27,13 +27,19 @@ run on Dataflow.
 >
 > * Set environment variables that will be used in the build process.
 > ```sh
+> export JAVA_HOME=`/usr/libexec/java_home -v 11`
 > export PROJECT=neo4jbusinessdev
 > export GS_WORKING_DIR=gs://dataflow-experiments-gs/dataflow-working
 > export APP_NAME=text-to-neo4j
 > export JOB_NAME=test-txt-to-neo4j-auradb
 > export REGION=us-central1
+> export MACHINE_TYPE=n2-highmem-8
 > ```
->
+> * Note that to enable_vertical_memory_autoscaling needs Dataflow Prime which requires enabling the "Cloud Autoscaling API"
+> * https://cloud.google.com/dataflow/docs/guides/enable-dataflow-prime
+    >   --dataflowServiceOptions=enable_prime
+    >   --experiments=enable_vertical_memory_autoscaling
+> * Additional testing required to determine optimal memory
 > ```sh
 > mvn compile exec:java \
 >   -Dexec.mainClass=com.google.cloud.teleport.v2.neo4j.TextToNeo4j \
@@ -46,20 +52,12 @@ run on Dataflow.
 >     --jobName=$JOB_NAME \
 >     --appName=$APP_NAME \
 >     --region=$REGION \
+>     --workerMachineType=$MACHINE_TYPE \
 >     --inputFilePattern=gs://dataflow-experiments-gs/northwind/purchases/nw_orders_1k_noheader.csv \
 >     --jobSpecUri=gs://dataflow-experiments-gs/dataflow-job-specs/testing/text/jobSpec.json \
 >     --neo4jConnectionUri=gs://dataflow-experiments-gs/dataflow-job-specs/testing/common/neo4jConnection.json"
 > ```
 > </details>
-
-### Notes on parameters
-There are challenges when using the project name in the select query.  Use:
-
-    SELECT * FROM <schema>.<table> 
-
-rather than
-
-    SELECT * FROM <project>.<schema>.<table>
 
 #### Create jar
 
@@ -76,16 +74,18 @@ This will create an all-in-one, shaded jar in project /target directory.
 * Set environment variables that will be used in the build process.
 * Note that /template is the working directory inside the container image
 ```sh
+export JAVA_HOME=`/usr/libexec/java_home -v 1.11`
 export PROJECT=neo4jbusinessdev
 export GS_WORKING_DIR=gs://dataflow-experiments-gs/dataflow-working
 export APP_NAME=text-to-neo4j
 export JOB_NAME=test-txt-to-neo4j-auradb
 export REGION=us-central1
+export MACHINE_TYPE=n2-highmem-8
 
 export IMAGE_NAME=text-to-neo4j
 export BUCKET_NAME=gs://dataflow-experiments-gs/flex-templates
 export TARGET_GCR_IMAGE=gcr.io/${PROJECT}/${IMAGE_NAME}
-export BASE_CONTAINER_IMAGE=gcr.io/dataflow-templates-base/java8-template-launcher-base
+export BASE_CONTAINER_IMAGE=gcr.io/dataflow-templates-base/java11-template-launcher-base
 export BASE_CONTAINER_IMAGE_VERSION=latest
 export TEMPLATE_POM_MODULE=neo4j-flex-templates
 export APP_ROOT=/template/${APP_NAME}
@@ -165,13 +165,14 @@ mvn test
 The template requires the following parameters:
 * jobSpecUri: GS hosted job specification file
 * neo4jConnectionUri: GS hosted Neo4j configuration file
-* readQuery: Text query to export data from (optional can be specified in job spec)
+* inputFilePattern: Text file from which we load Neo4j
 
 Template can be executed using the following gcloud command:
 ```sh
 export JOB_NAME="${APP_NAME}-`date +%Y%m%d-%H%M%S`"
 gcloud dataflow flex-template run ${JOB_NAME} \
         --project=${PROJECT} --region=${REGION} \
+        --worker-machine-type=${MACHINE_TYPE} \
         --template-file-gcs-location=${TEMPLATE_IMAGE_SPEC} \
         --parameters inputFilePattern="${PARAM_INPUT_FILE_PATTERN}" \
         --parameters jobSpecUri=${PARAM_JOB_SPEC_URI},neo4jConnectionUri=${PARAM_NEO4J_CONNECTION_URI} \

@@ -1,24 +1,26 @@
-package com.google.cloud.teleport.v2.neo4j.common;
+package com.google.cloud.teleport.v2.neo4j.common.database;
 
 
+import com.google.cloud.teleport.v2.neo4j.common.utils.BeamSchemaUtils;
+import com.google.cloud.teleport.v2.neo4j.common.transforms.CastTargetStringRowFn;
 import com.google.cloud.teleport.v2.neo4j.common.model.ConnectionParams;
 import com.google.cloud.teleport.v2.neo4j.common.model.JobSpecRequest;
-import com.google.cloud.teleport.v2.neo4j.common.model.Targets;
+import com.google.cloud.teleport.v2.neo4j.common.model.Target;
 import com.google.cloud.teleport.v2.neo4j.common.model.enums.TargetType;
 import com.google.cloud.teleport.v2.neo4j.common.transforms.CloneFn;
+import com.google.cloud.teleport.v2.neo4j.common.utils.DataCastingUtils;
+import com.google.cloud.teleport.v2.neo4j.common.utils.ModelUtils;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import org.apache.beam.repackaged.core.org.apache.commons.lang3.StringUtils;
 import org.apache.beam.sdk.io.neo4j.Neo4jIO;
-import org.apache.beam.sdk.coders.SerializableCoder;
 import org.apache.beam.sdk.schemas.Schema;
 import org.apache.beam.sdk.schemas.SchemaCoder;
+import org.apache.beam.sdk.transforms.Count;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.values.PCollection;
-import org.apache.beam.sdk.values.PDone;
-import org.apache.beam.sdk.values.PInput;
 import org.apache.beam.sdk.values.Row;
 import org.neo4j.driver.Config;
 import org.neo4j.driver.SessionConfig;
@@ -28,8 +30,8 @@ import org.apache.beam.sdk.extensions.sql.*;
 
 import java.util.List;
 
-public class Neo4JTargetWriter {
-    private static final Logger LOG = LoggerFactory.getLogger(Neo4JTargetWriter.class);
+public class TargetWriter {
+    private static final Logger LOG = LoggerFactory.getLogger(TargetWriter.class);
     
     public static void writeTargets(JobSpecRequest jobSpec,
                                     ConnectionParams neoConnection,
@@ -50,23 +52,27 @@ public class Neo4JTargetWriter {
                 .build();
 
         // Direct connect utility...
-        Neo4jDirectConnect neo4jDirectConnect = new Neo4jDirectConnect(neoConnection.serverUrl, neoConnection.database, neoConnection.username, neoConnection.password);
+        DirectConnect neo4jDirectConnect = new DirectConnect(neoConnection.serverUrl, neoConnection.database, neoConnection.username, neoConnection.password);
 
         if (jobSpec.config.resetDb){
             LOG.info("Resetting database");
             try {
-                LOG.info("Executing cypher: " + Neo4jUtils.CYPHER_DELETE_ALL);
+                LOG.info("Executing cypher: " + ModelUtils.CYPHER_DELETE_ALL);
                 neo4jDirectConnect.executeOnNeo4j(
-                        Neo4jUtils.CYPHER_DELETE_ALL,
+                        ModelUtils.CYPHER_DELETE_ALL,
                         true);
             } catch (Exception e) {
-                LOG.error("Error executing cypher: " + Neo4jUtils.CYPHER_DELETE_ALL + ", " + e.getMessage());
+                LOG.error("Error executing cypher: " + ModelUtils.CYPHER_DELETE_ALL + ", " + e.getMessage());
             }
         }
 
+        //TODO: count rows source and pass to next function.  It seems this is impossible
+        ///PCollection<Long> numRowsSource = sourceRowsCollection.apply("Count source rows.",Count.globally());
+        int numRowsSource = 999999999;
+
         // Now write these rows to Neo4j Customer nodes
         int targetNum=0;
-        for (Targets target : jobSpec.targets) {
+        for (Target target : jobSpec.targets) {
             if (target.active) {
                 String targetName=target.name;
                 targetNum++;
@@ -76,11 +82,11 @@ public class Neo4JTargetWriter {
                 LOG.info("==================================================");
                 LOG.info("Writing target "+targetName+": "+ gson.toJson(target));
 
-                String SQL = Neo4jUtils.getTargetSql( sourceSchema, target);
+                String SQL = ModelUtils.getTargetSql(numRowsSource, sourceSchema, target);
 
-                PCollection<Row> sqlTransformedSource = null;
                 // conditionally apply sql to rows..
-                if(!SQL.equals(Neo4jUtils.DEFAULT_STAR_QUERY)){
+                PCollection<Row> sqlTransformedSource = null;
+                if(!SQL.equals(ModelUtils.DEFAULT_STAR_QUERY)){
                     LOG.info("Applying SQL transformation to "+targetName+": "+SQL);
                     sqlTransformedSource = sourceRowsCollection.apply(targetNum+": SQLTransform "+targetName,  SqlTransform.query(SQL));
                 } else {
@@ -91,8 +97,8 @@ public class Neo4JTargetWriter {
 
                 /////////////////////////////////
                 // Target schema transform
-                final Schema targetSchema = BeamSchemaUtils.toNeo4jTargetSchema(target);
-                final DoFn<Row,  Row> castToTargetRow = new CastTargetRowFn(target, targetSchema);
+                final Schema targetSchema = BeamSchemaUtils.toBeamSchema(target);
+                final DoFn<Row,  Row> castToTargetRow = new CastTargetStringRowFn(target, targetSchema);
                 PCollection<Row> targetRowsCollection = sqlTransformedSource.apply(targetNum+": Cast "+targetName+" rows", ParDo.of(castToTargetRow));
                 targetRowsCollection.setCoder(SchemaCoder.of(targetSchema));
                 targetRowsCollection.setRowSchema(targetSchema);
@@ -122,9 +128,12 @@ public class Neo4JTargetWriter {
                 // data loading
                 String unwindCypher = CypherGenerator.getUnwindCreateCypher(target);
                 LOG.info("Unwind cypher: "+unwindCypher);
+
                 /////////////////////////
                 // Batch load data rows using Matt's Neo4jIO connector
                 /////////////////////////
+
+                //TODO: future task, configure parallelism by sharding the dataset and running each shard with a separate transform
                 final PTransform writeNeo4jIO=Neo4jIO.<Row>writeUnwind()
                         .withCypher(unwindCypher)
                         .withBatchSize(batchSize)
@@ -132,21 +141,14 @@ public class Neo4JTargetWriter {
                         .withUnwindMapName("rows")
                         .withParametersFunction(
                                 row -> {
-                                    return CypherGenerator.getUnwindRowDataMapper(row, target);
+                                    return DataCastingUtils.rowToNeo4jDataMap(row, target);
                                 })
                         .withDriverConfiguration(driverConfiguration);
 
                 targetRowsCollection.apply(targetNum+": Neo4j write "+targetName, writeNeo4jIO);
-                //TODO: not sure how to do parallelism here
-                /*
-                if (parallelism>1){
-                    targetRowsCollection.apply("Neo4j "+targetName, ParDo.of(writeNeo4jIO));
-                } else {
-                    targetRowsCollection.apply("Neo4j "+targetName, writeNeo4jIO);
-                }
-                 */
+
             } else {
-                LOG.info("Target is inactive: "+target.name);
+                LOG.info("Target is inactive, not processing: "+target.name);
             }
         }
     }

@@ -1,4 +1,4 @@
-package com.google.cloud.teleport.v2.neo4j.common;
+package com.google.cloud.teleport.v2.neo4j.common.database;
 
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -27,9 +27,9 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Arrays;
 
-public class Neo4jDirectConnect {
+public class DirectConnect {
 
-    private static final Logger LOG = LoggerFactory.getLogger(Neo4jDirectConnect.class);
+    private static final Logger LOG = LoggerFactory.getLogger(DirectConnect.class);
 
     public String serverUrl = null;
     public String database = null;
@@ -37,14 +37,14 @@ public class Neo4jDirectConnect {
     private String username, password;
     Driver driver = null;
 
-    public Neo4jDirectConnect(String hostName, int port, String database, String username, String password) {
+    public DirectConnect(String hostName, int port, String database, String username, String password) {
         this.username = username;
         this.password = password;
         this.database = database;
         this.serverUrl = getUrl(hostName, port);
     }
 
-    public Neo4jDirectConnect(String serverUrl, String database, String username, String password) {
+    public DirectConnect(String serverUrl, String database, String username, String password) {
         this.username = username;
         this.password = password;
         this.database = database;

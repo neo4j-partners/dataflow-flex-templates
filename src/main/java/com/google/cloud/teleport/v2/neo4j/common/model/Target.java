@@ -12,7 +12,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class Targets implements Serializable, Comparable {
+public class Target implements Serializable, Comparable {
 
     public String name;
     public boolean active = true;
@@ -22,9 +22,9 @@ public class Targets implements Serializable, Comparable {
     public SaveMode saveMode = SaveMode.append;
     public Map<String,Mapping> mappingByFieldMap =new HashMap();
 
-    public Targets(){}
+    public Target(){}
 
-    public Targets( final JSONObject targetObj) {
+    public Target(final JSONObject targetObj) {
         this.name = targetObj.getString("name");
         this.active = targetObj.has("active")?targetObj.getBoolean("active"):true;
         this.type = TargetType.valueOf(targetObj.getString("type"));
@@ -67,9 +67,9 @@ public class Targets implements Serializable, Comparable {
 
     @Override
     public int compareTo(Object o) {
-        if (this.type==((Targets)o).type) {
+        if (this.type==((Target)o).type) {
             return 0;
-        } else if (this.type== TargetType.relationship && ((Targets)o).type== TargetType.node) {
+        } else if (this.type== TargetType.relationship && ((Target)o).type== TargetType.node) {
             return 1;
         } else {
             return -1;

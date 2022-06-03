@@ -1,8 +1,8 @@
-package com.google.cloud.teleport.v2.neo4j.common;
+package com.google.cloud.teleport.v2.neo4j.common.utils;
 
 import com.google.cloud.bigquery.LegacySQLTypeName;
 import com.google.cloud.teleport.v2.neo4j.common.model.Mapping;
-import com.google.cloud.teleport.v2.neo4j.common.model.Targets;
+import com.google.cloud.teleport.v2.neo4j.common.model.Target;
 import com.google.cloud.teleport.v2.neo4j.common.model.enums.PropertyType;
 import org.apache.beam.repackaged.core.org.apache.commons.lang3.StringUtils;
 import org.apache.beam.sdk.schemas.Schema;
@@ -23,13 +23,13 @@ public class BeamSchemaUtils {
         List<Schema.Field> schemaFieldList = new ArrayList<>();
         for (int i = 0; i < bqSchema.getFields().size(); i++) {
             com.google.cloud.bigquery.Field field=bqSchema.getFields().get(i);
-            Schema.Field schemaField= Schema.Field.of(field.getName(), getFieldType(field.getType()));
-            //TODO: set not required
+            Schema.Field schemaField= Schema.Field.nullable(field.getName(), bigQueryToBeamFieldType(field));
             schemaFieldList.add(schemaField);
         }
         return new Schema(schemaFieldList);
     }
-    private static Schema.FieldType getFieldType(LegacySQLTypeName legacySQLTypeName){
+
+    public static Schema.FieldType bigQueryToBeamFieldType(com.google.cloud.bigquery.Field field){
 
         /*
         public static final LegacySQLTypeName BYTES;
@@ -45,6 +45,7 @@ public class BeamSchemaUtils {
         public static final LegacySQLTypeName DATETIME;
         public static final LegacySQLTypeName RECORD;
         */
+        LegacySQLTypeName legacySQLTypeName=field.getType();
         if (LegacySQLTypeName.STRING.equals(legacySQLTypeName)) {
             return Schema.FieldType.STRING;
         } else if (LegacySQLTypeName.TIMESTAMP.equals(legacySQLTypeName)) {
@@ -64,8 +65,7 @@ public class BeamSchemaUtils {
         }
         throw new UnsupportedOperationException("LegacySQL type " + legacySQLTypeName.getStandardType() + " not supported.");
     }
-    public static Schema toNeo4jTargetSchema
-            (Targets target) {
+    public static Schema toBeamSchema(Target target) {
 
         // map source column names to order
         List<Schema.Field> fields = new ArrayList<>();
@@ -106,7 +106,6 @@ public class BeamSchemaUtils {
                 schemaField = Schema.Field.of(fieldName, Schema.FieldType.DATETIME);
             } else if (mapping.type == PropertyType.DateTime) {
                 schemaField = Schema.Field.of(fieldName, Schema.FieldType.DATETIME);
-                //TODO: how to model time?
             } else if (mapping.type == PropertyType.LocalTime) {
                 schemaField = Schema.Field.of(fieldName, Schema.FieldType.FLOAT);
             } else if (mapping.type == PropertyType.Time) {

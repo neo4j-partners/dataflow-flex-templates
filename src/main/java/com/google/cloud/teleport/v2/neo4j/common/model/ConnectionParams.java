@@ -1,6 +1,6 @@
 package com.google.cloud.teleport.v2.neo4j.common.model;
 
-import com.google.cloud.teleport.v2.neo4j.common.Neo4jUtils;
+import com.google.cloud.teleport.v2.neo4j.common.utils.GsUtils;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,7 +22,7 @@ public class ConnectionParams implements Serializable {
 
         String neoConnectionJsonStr = "{}";
         try {
-            neoConnectionJsonStr = Neo4jUtils.getGcsPathContents(neoConnectionUri);
+            neoConnectionJsonStr = GsUtils.getPathContents(neoConnectionUri);
         } catch (final Exception e) {
             LOG.error("Unable to read {} neo4j configuration: ", neoConnectionUri, e);
         }

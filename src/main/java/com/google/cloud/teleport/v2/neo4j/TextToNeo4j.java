@@ -1,7 +1,7 @@
 package com.google.cloud.teleport.v2.neo4j;
 
 import com.google.cloud.teleport.v2.neo4j.common.JobSpecOptimizer;
-import com.google.cloud.teleport.v2.neo4j.common.Neo4JTargetWriter;
+import com.google.cloud.teleport.v2.neo4j.common.database.TargetWriter;
 import com.google.cloud.teleport.v2.neo4j.common.Validations;
 import com.google.cloud.teleport.v2.neo4j.common.model.ConnectionParams;
 import com.google.cloud.teleport.v2.neo4j.common.model.JobSpecRequest;
@@ -12,7 +12,6 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import org.apache.beam.repackaged.core.org.apache.commons.lang3.StringUtils;
 import org.apache.beam.sdk.Pipeline;
-import org.apache.beam.sdk.PipelineResult;
 import org.apache.beam.sdk.coders.SerializableCoder;
 import org.apache.beam.sdk.io.FileSystems;
 import org.apache.beam.sdk.io.TextIO;
@@ -89,7 +88,6 @@ public class TextToNeo4j {
             throw new RuntimeException("Errors found validating jobSpec.  Please see logs for more details.");
         }
 
-
         if (this.jobSpec.source == null) {
             throw new RuntimeException("Jobspec source is required for text imports.");
         }
@@ -127,7 +125,7 @@ public class TextToNeo4j {
         sourceRowsCollection.setRowSchema(sourceSchema);
 
         // we have the source now write targets
-        Neo4JTargetWriter.writeTargets(jobSpec,
+        TargetWriter.writeTargets(jobSpec,
                 neoConnection,
                 sourceSchema,
                 sourceRowsCollection);

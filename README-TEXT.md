@@ -173,7 +173,7 @@ export JOB_NAME="${APP_NAME}-`date +%Y%m%d-%H%M%S`"
 gcloud dataflow flex-template run ${JOB_NAME} \
         --project=${PROJECT} --region=${REGION} \
         --template-file-gcs-location=${TEMPLATE_IMAGE_SPEC} \
-        --parameters ^~^readQuery="${PARAM_READ_QUERY}" \
+        --parameters inputFilePattern="${PARAM_INPUT_FILE_PATTERN}" \
         --parameters jobSpecUri=${PARAM_JOB_SPEC_URI},neo4jConnectionUri=${PARAM_NEO4J_CONNECTION_URI} \
         --max-workers=1
 ```

@@ -1,6 +1,6 @@
 {
   "mainClass": "com.google.cloud.teleport.v2.neo4j.TextToNeo4j",
-  "classPath": "/template/text-to-neo4j/*:/template/text-to-bigtable/libs/*:/template/text-to-neo4j/classes",
+  "classPath": "/template/text-to-neo4j/*:/template/text-to-neo4j/libs/*:/template/text-to-neo4j/classes",
   "defaultParameterValues": {
     "labels": "{\"goog-dataflow-provided-template-type\":\"flex\", \"goog-dataflow-provided-template-name\":\"text-to-neo4j\"}"
   }

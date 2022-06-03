@@ -1,7 +1,7 @@
-# BigQuery to Bigtable Dataflow Template
+# BigQuery to Neo4J Dataflow Template
 
-The [BigQueryToBigtable](src/main/java/com/google/cloud/teleport/v2/neo4j/BigQueryToNeo4j.java) pipeline exports data
-from BigQuery using a query into a Cloud Bigtable table.
+The [BigQueryToNeo4j](src/main/java/com/google/cloud/teleport/v2/neo4j/BigQueryToNeo4j.java) pipeline exports data
+from BigQuery using a query into a Neo4j graph database.
 
 NOTE: This template is currently unreleased. If you wish to use it now, you
 will need to follow the steps outlined below to add it to and run it from
@@ -20,8 +20,6 @@ run on Dataflow.
 
 ### Creating and running a Flex Template
 
-
-
 > <details><summary>
 > <i>(Optional)</i> Run the Apache Beam pipeline locally for development.
 > <i>(Click to expand)</i>
@@ -37,13 +35,12 @@ run on Dataflow.
 > ```
 >
 > ```sh
-> # If you omit the --bootstrapServer argument, it connects to localhost.
-> # If you are running the Kafka server locally, you can omit --bootstrapServer.
 > mvn compile exec:java \
 >   -Dexec.mainClass=com.google.cloud.teleport.v2.neo4j.BigQueryToNeo4j \
 >   -Dexec.args="\
 >     --runner=DataflowRunner \
 >     --project=$PROJECT \
+>     --usePublicIps=true \
 >     --stagingLocation=$GS_WORKING_DIR/staging/ \
 >     --tempLocation=$GS_WORKING_DIR/temp/ \
 >     --jobName=$JOB_NAME \
@@ -56,7 +53,6 @@ run on Dataflow.
 >     --jobSpecUri=gs://dataflow-experiments-gs/dataflow-job-specs/testing/bq/jobSpec.json \
 >     --neo4jConnectionUri=gs://dataflow-experiments-gs/dataflow-job-specs/testing/common/neo4jConnection.json"
 > ```
->
 > </details>
 
 ### Notes on parameters
@@ -68,46 +64,55 @@ rather than
 
     SELECT * FROM <project>.<schema>.<table>
 
-First, let's build the container image.
+#### Create jar
 
 ```sh
 # Build and package the application as an uber-jar file.
 mvn clean package
 ```
 
+This will create an all-in-one, shaded jar in project /target directory.
+
+    target/neo4j-flex-templates-1.0.jar
+
 #### Building Container Image
 * Set environment variables that will be used in the build process.
+* Note that /template is the working directory inside the container image
 ```sh
-
 export PROJECT=neo4jbusinessdev
 export GS_WORKING_DIR=gs://dataflow-experiments-gs/dataflow-working
 export APP_NAME=bigquery-to-neo4j
 export JOB_NAME=test-bq-to-neo4j-auradb
 export REGION=us-central1
 
-export IMAGE_NAME=bigquery-to-neo4j:latest
+export IMAGE_NAME=bigquery-to-neo4j
 export BUCKET_NAME=gs://dataflow-experiments-gs/flex-templates
 export TARGET_GCR_IMAGE=gcr.io/${PROJECT}/${IMAGE_NAME}
 export BASE_CONTAINER_IMAGE=gcr.io/dataflow-templates-base/java8-template-launcher-base
 export BASE_CONTAINER_IMAGE_VERSION=latest
-export TEMPLATE_MODULE=bigquery-to-neo4j
-export APP_ROOT=/template/${TEMPLATE_MODULE}
-export COMMAND_SPEC=${APP_ROOT}/resources/${TEMPLATE_MODULE}-command-spec.json
-export TEMPLATE_IMAGE_SPEC=${BUCKET_NAME}/images/${TEMPLATE_MODULE}-image-spec.json
+export TEMPLATE_POM_MODULE=neo4j-flex-templates
+export APP_ROOT=/template/${APP_NAME}
+export COMMAND_SPEC=${APP_ROOT}/resources/${APP_NAME}-command-spec.json
+export TEMPLATE_IMAGE_SPEC=${BUCKET_NAME}/images/${APP_NAME}-image-spec.json
 
-export READ_QUERY="select * from northwind.V_CUSTOMER_ORDERS"
-
+export PARAM_READ_QUERY="SELECT customer_id,contact_name,company_name,seller_id,seller_first_name,seller_last_name,seller_title,product_id,product_name,category_name,supplier_name,supplier_postal_code, supplier_country,order_id, quantity,1 as unit_price, 0 as discount FROM northwind.V_CUSTOMER_ORDERS LIMIT 10"
+export PARAM_JOB_SPEC_URI=gs://dataflow-experiments-gs/dataflow-job-specs/testing/bq/jobSpec.json
+export PARAM_NEO4J_CONNECTION_URI=gs://dataflow-experiments-gs/dataflow-job-specs/testing/common/neo4jConnection.json
+``` 
+* Set gcloud CLI project
+```sh
 gcloud config set project ${PROJECT}
 ```
-* Build and push image to Google Container Repository from the v2 directory
+* Build and push image to Google Container Repository from current directory
 ```sh
 mvn clean package \
+    -Djib.container.mainClass=com.google.cloud.teleport.v2.neo4j.BigQueryToNeo4j \
     -Dimage=${TARGET_GCR_IMAGE} \
     -Dbase-container-image=${BASE_CONTAINER_IMAGE} \
     -Dbase-container-image.version=${BASE_CONTAINER_IMAGE_VERSION} \
     -Dapp-root=${APP_ROOT} \
     -Dcommand-spec=${COMMAND_SPEC} \
-    -am -pl ${TEMPLATE_MODULE}
+    -am -pl :${TEMPLATE_POM_MODULE}
 ```
 
 #### Creating Image Spec
@@ -137,9 +142,9 @@ echo '{
       {
         "name": "readQuery",
         "label": "BigQuery query",
-        "helpText": "BigQuery query to export data from.  Include fully qualified table name.",
+        "helpText": "BigQuery query to export data from.  Will over ride source.query in job spec.",
         "paramType": "TEXT",
-        "isOptional": false
+        "isOptional": true
       }    
     ]
   },
@@ -161,28 +166,23 @@ mvn test
 ### Executing Template
 
 The template requires the following parameters:
-* readQuery: BigQuery query to export data from
-* readIdColumn: BigQuery query unique column ID
-* bigtableWriteProjectId: Bigtable project id to write to
-* bigtableWriteInstanceId: Bigtable instance id to write to
-* bigtableWriteTableId: Bigtable table id to write to
-* bigtableWriteColumnFamily: Bigtable table column family id to write to
-
-The template has the following optional parameters:
-* bigtableWriteAppProfile: Bigtable app profile to use for the export
+* jobSpecUri: GS hosted job specification file
+* neo4jConnectionUri: GS hosted Neo4j configuration file
+* readQuery: BigQuery query to export data from (optional can be specified in job spec)
 
 Template can be executed using the following gcloud command:
 ```sh
-export JOB_NAME="${TEMPLATE_MODULE}-`date +%Y%m%d-%H%M%S-%N`"
-gcloud beta dataflow flex-template run ${JOB_NAME} \
+export JOB_NAME="${APP_NAME}-`date +%Y%m%d-%H%M%S`"
+gcloud dataflow flex-template run ${JOB_NAME} \
         --project=${PROJECT} --region=${REGION} \
         --template-file-gcs-location=${TEMPLATE_IMAGE_SPEC} \
-        --parameters ^~^readQuery="${READ_QUERY}" \
-        --parameters readIdColumn=${READ_ID_COLUMN},bigtableWriteProjectId=${BIGTABLE_WRITE_PROJECT_ID},bigtableWriteInstanceId=${BIGTABLE_WRITE_INSTANCE_ID},bigtableWriteTableId=${BIGTABLE_WRITE_TABLE_ID},bigtableWriteColumnFamily=${BIGTABLE_WRITE_COLUMN_FAMILY}
+        --parameters ^~^readQuery="${PARAM_READ_QUERY}" \
+        --parameters jobSpecUri=${PARAM_JOB_SPEC_URI},neo4jConnectionUri=${PARAM_NEO4J_CONNECTION_URI} \
+        --max-workers=1
 ```
 
-Note: The `^~^` prefix on readQuery is used to make `~` a delimiter instead of
-commas. This allows commas to be used in the query. Read more about [gcloud topic escaping](https://cloud.google.com/sdk/gcloud/reference/topic/escaping).
+Note: The `^~^` prefix on readQuery is used to make `~` a delimiter instead of commas. 
+This allows commas to be used in the query. Read more about [gcloud topic escaping](https://cloud.google.com/sdk/gcloud/reference/topic/escaping).
 
 #### Example query
 
@@ -191,3 +191,8 @@ Here is an example query using a public dataset. It combines a few values into a
 ```
 export READ_QUERY="SELECT CONCAT(SenderCompID,'#', OrderID) as rowkey, * FROM bigquery-public-data.cymbal_investments.trade_capture_report LIMIT 100"
 ```
+
+## Other resources
+
+    https://cloud.google.com/sdk/gcloud/reference/dataflow/flex-template/build
+    https://cloud.google.com/sdk/gcloud/reference/dataflow/flex-template/run

@@ -179,17 +179,6 @@ gcloud dataflow flex-template run ${JOB_NAME} \
         --max-workers=1
 ```
 
-Note: The `^~^` prefix on readQuery is used to make `~` a delimiter instead of commas.
-This allows commas to be used in the query. Read more about [gcloud topic escaping](https://cloud.google.com/sdk/gcloud/reference/topic/escaping).
-
-#### Example query
-
-Here is an example query using a public dataset. It combines a few values into a rowkey with a `#` between each value.
-
-```
-export READ_QUERY="SELECT CONCAT(SenderCompID,'#', OrderID) as rowkey, * FROM text-public-data.cymbal_investments.trade_capture_report LIMIT 100"
-```
-
 ## Other resources
 
     https://cloud.google.com/sdk/gcloud/reference/dataflow/flex-template/build

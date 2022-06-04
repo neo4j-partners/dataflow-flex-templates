@@ -29,7 +29,7 @@ run on Dataflow.
 > ```sh
 > export JAVA_HOME=`/usr/libexec/java_home -v 11`
 > export PROJECT=neo4jbusinessdev
-> export GS_WORKING_DIR=gs://dataflow-experiments-gs/dataflow-working
+> export GS_WORKING_DIR=gs://neo4j-sandbox/dataflow-working
 > export APP_NAME=text-to-neo4j
 > export JOB_NAME=test-txt-to-neo4j-auradb
 > export REGION=us-central1
@@ -53,9 +53,9 @@ run on Dataflow.
 >     --appName=$APP_NAME \
 >     --region=$REGION \
 >     --workerMachineType=$MACHINE_TYPE \
->     --inputFilePattern=gs://dataflow-experiments-gs/northwind/purchases/nw_orders_1k_noheader.csv \
->     --jobSpecUri=gs://dataflow-experiments-gs/dataflow-job-specs/testing/text/jobSpec.json \
->     --neo4jConnectionUri=gs://dataflow-experiments-gs/dataflow-job-specs/testing/common/neo4jConnection.json"
+>     --inputFilePattern=gs://neo4j-datasets/northwinds/nw_orders_1k_noheader.csv \
+>     --jobSpecUri=gs://neo4j-dataflow/job-specs/testing/text/text-northwind-jobspec.json \
+>     --neo4jConnectionUri=gs://neo4j-dataflow/job-specs/testing/common/auradb-free-connection.json"
 > ```
 > </details>
 
@@ -76,14 +76,14 @@ This will create an all-in-one, shaded jar in project /target directory.
 ```sh
 export JAVA_HOME=`/usr/libexec/java_home -v 1.11`
 export PROJECT=neo4jbusinessdev
-export GS_WORKING_DIR=gs://dataflow-experiments-gs/dataflow-working
+export GS_WORKING_DIR=gs://neo4j-sandbox/dataflow-working
 export APP_NAME=text-to-neo4j
 export JOB_NAME=test-txt-to-neo4j-auradb
 export REGION=us-central1
 export MACHINE_TYPE=n2-highmem-8
 
 export IMAGE_NAME=text-to-neo4j
-export BUCKET_NAME=gs://dataflow-experiments-gs/flex-templates
+export BUCKET_NAME=gs://neo4j-sandbox/flex-templates
 export TARGET_GCR_IMAGE=gcr.io/${PROJECT}/${IMAGE_NAME}
 export BASE_CONTAINER_IMAGE=gcr.io/dataflow-templates-base/java11-template-launcher-base
 export BASE_CONTAINER_IMAGE_VERSION=latest
@@ -92,9 +92,9 @@ export APP_ROOT=/template/${APP_NAME}
 export COMMAND_SPEC=${APP_ROOT}/resources/${APP_NAME}-command-spec.json
 export TEMPLATE_IMAGE_SPEC=${BUCKET_NAME}/images/${APP_NAME}-image-spec.json
 
-export PARAM_INPUT_FILE_PATTERN=gs://dataflow-experiments-gs/northwind/purchases/nw_orders_1k_noheader.csv \
-export PARAM_JOB_SPEC_URI=gs://dataflow-experiments-gs/dataflow-job-specs/testing/text/jobSpec.json
-export PARAM_NEO4J_CONNECTION_URI=gs://dataflow-experiments-gs/dataflow-job-specs/testing/common/neo4jConnection.json
+export PARAM_INPUT_FILE_PATTERN=gs://neo4j-datasets/northwinds/nw_orders_1k_noheader.csv \
+export PARAM_JOB_SPEC_URI=gs://neo4j-dataflow/job-specs/testing/text/text-northwind-jobspec.json
+export PARAM_NEO4J_CONNECTION_URI=gs://neo4j-dataflow/job-specs/testing/common/auradb-free-connection.json
 ``` 
 * Set gcloud CLI project
 ```sh

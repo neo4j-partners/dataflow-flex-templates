@@ -29,7 +29,7 @@ run on Dataflow.
 > ```sh
 > export JAVA_HOME=`/usr/libexec/java_home -v 11`
 > export PROJECT=neo4jbusinessdev
-> export GS_WORKING_DIR=gs://dataflow-experiments-gs/dataflow-working
+> export GS_WORKING_DIR=gs://neo4j-sandbox/dataflow-working
 > export APP_NAME=bigquery-to-neo4j
 > export JOB_NAME=test-bq-to-neo4j-auradb
 > export REGION=us-central1
@@ -58,8 +58,8 @@ run on Dataflow.
 >     seller_last_name,seller_title,product_id,product_name,category_name,supplier_name, \
 >     supplier_postal_code, supplier_country,order_id, \
 >     quantity,unit_price, discount FROM neo4jbusinessdev.northwind.V_CUSTOMER_ORDERS LIMIT 10\" \
->     --jobSpecUri=gs://dataflow-experiments-gs/dataflow-job-specs/testing/bq/jobSpec.json \
->     --neo4jConnectionUri=gs://dataflow-experiments-gs/dataflow-job-specs/testing/common/neo4jConnection.json"
+>     --jobSpecUri=gs://neo4j-dataflow/job-specs/testing/bigquery/bq-northwind-jobspec.json \
+>     --neo4jConnectionUri=gs://neo4j-dataflow/job-specs/testing/common/auradb-free-connection.json"
 > ```
 > </details>
 
@@ -80,14 +80,14 @@ This will create an all-in-one, shaded jar in project /target directory.
 ```sh
 export JAVA_HOME=`/usr/libexec/java_home -v 11`
 export PROJECT=neo4jbusinessdev
-export GS_WORKING_DIR=gs://dataflow-experiments-gs/dataflow-working
+export GS_WORKING_DIR=gs://neo4j-sandbox/dataflow-working
 export APP_NAME=bigquery-to-neo4j
 export JOB_NAME=test-bq-to-neo4j-auradb
 export REGION=us-central1
 export MACHINE_TYPE=n2-highmem-8
 
 export IMAGE_NAME=bigquery-to-neo4j
-export BUCKET_NAME=gs://dataflow-experiments-gs/flex-templates
+export BUCKET_NAME=gs://neo4j-sandbox/flex-templates
 export TARGET_GCR_IMAGE=gcr.io/${PROJECT}/${IMAGE_NAME}
 export BASE_CONTAINER_IMAGE=gcr.io/dataflow-templates-base/java11-template-launcher-base
 export BASE_CONTAINER_IMAGE_VERSION=latest
@@ -97,8 +97,8 @@ export COMMAND_SPEC=${APP_ROOT}/resources/${APP_NAME}-command-spec.json
 export TEMPLATE_IMAGE_SPEC=${BUCKET_NAME}/images/${APP_NAME}-image-spec.json
 
 export PARAM_READ_QUERY="SELECT customer_id,contact_name,company_name,seller_id,seller_first_name,seller_last_name,seller_title,product_id,product_name,category_name,supplier_name,supplier_postal_code, supplier_country,order_id, quantity,1 as unit_price, 0 as discount FROM northwind.V_CUSTOMER_ORDERS LIMIT 10"
-export PARAM_JOB_SPEC_URI=gs://dataflow-experiments-gs/dataflow-job-specs/testing/bq/jobSpec.json
-export PARAM_NEO4J_CONNECTION_URI=gs://dataflow-experiments-gs/dataflow-job-specs/testing/common/neo4jConnection.json
+export PARAM_JOB_SPEC_URI=gs://neo4j-dataflow/job-specs/testing/bigquery/bq-northwind-jobspec.json
+export PARAM_NEO4J_CONNECTION_URI=gs://neo4j-dataflow/job-specs/testing/common/auradb-free-connection.json
 ``` 
 * Set gcloud CLI project
 ```sh

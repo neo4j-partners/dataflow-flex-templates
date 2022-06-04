@@ -8,7 +8,7 @@
     "type": "text",
     "name": "1k orders",
     "file": {
-      "uri": "gs://dataflow-experiments-gs/northwind/purchases/nw_orders_1k_noheader.csv",
+      "uri": "gs://neo4j-datasets/northwinds/nw_orders_1k_noheader.csv",
       "//uri": "can be supplied at run-time in the template, or simply specified here. assumes that no security is required in vpc",
       "csv_format": "EXCEL",
       "delimiter": ",",

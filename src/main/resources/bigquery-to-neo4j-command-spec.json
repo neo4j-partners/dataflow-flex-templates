@@ -1,7 +1,0 @@
-{
-  "mainClass": "com.google.cloud.teleport.v2.neo4j.BigQueryToNeo4j",
-  "classPath": "/template/bigquery-to-neo4j/*:/template/bigquery-to-neo4j/libs/*:/template/bigquery-to-neo4j/classes",
-  "defaultParameterValues": {
-    "labels": "{\"goog-dataflow-provided-template-type\":\"flex\", \"goog-dataflow-provided-template-name\":\"bigquery-to-neo4j\"}"
-  }
-}

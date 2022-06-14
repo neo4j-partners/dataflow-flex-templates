@@ -20,9 +20,8 @@
     <groupId>com.neo4j.gcp.dataflow</groupId>
     <artifactId>neo4j-flex-templates</artifactId>
     <version>1.0-SNAPSHOT</version>
+    <name>googlecloud-to-neo4j</name>
 
-    <packaging>pom</packaging>
-    <name>neo4j-flex-templates</name>
 
     <properties>
         <java.version>11</java.version>
@@ -35,6 +34,7 @@
         <maven-shade-plugin.version>3.2.4</maven-shade-plugin.version>
         <maven-exec-plugin.version>3.0.0</maven-exec-plugin.version>
         <slf4j.version>1.7.36</slf4j.version>
+        <mvn-target-dir>${basedir}/target</mvn-target-dir>
     </properties>
 
     <repositories>
@@ -135,10 +135,51 @@
         </dependency>
     </dependencies>
 
-    <modules>
-        <module>neo4j-common</module>
-        <module>bigquery-to-neo4j</module>
-        <module>text-to-neo4j</module>
-    </modules>
+    <build>
+        <directory>${mvn-target-dir}</directory>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>${maven-compiler-plugin.version}</version>
+            </plugin>
+
+            <!-- The maven shade plugin is used to create an uber-jar with all the
+              dependencies needed to run as a standalone jar.
+              Do not minimize the jar since that removes some of the required
+              classes for the runners. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>${maven-shade-plugin.version}</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <configuration>
+                            <transformers>
+                                <transformer
+                                        implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+                            </transformers>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>com.google.cloud.tools</groupId>
+                <artifactId>jib-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>build</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
 
 </project>

@@ -57,13 +57,6 @@ public class ModelUtils {
     public static String getTargetSql(Schema sourceSchema, Target target) {
         StringBuffer sb = new StringBuffer();
 
-        String sortByClause ="";
-        if (target.type== TargetType.relationship){
-            String sortField=getRelationshipKeyField(target,FragmentType.target);
-            if (sb.length() == 0 && StringUtils.isNotBlank(sortField)) {
-                sortByClause = " ORDER BY "+sortField+" ASC";
-            }
-        }
         if (target.query != null) {
             List<String> fieldList = new ArrayList<>();
             /////////////////////////////////
@@ -91,18 +84,8 @@ public class ModelUtils {
                     }
                     sb.append(" GROUP BY "+StringUtils.join(fieldList,","));
 
-                    if (StringUtils.isNotEmpty(sortByClause)){
-                        sb.append(sortByClause);
-                        //  ORDER BY without a LIMIT is not supported!
-                        if (query.limit>-1){
-                            sb.append(" LIMIT "+query.limit);
-                        } else {
-                            sb.append(" LIMIT "+MAX_ROWS);
-                        }
-                    } else {
-                        if (query.limit>-1){
-                            sb.append(" LIMIT "+query.limit);
-                        }
+                    if (query.limit>-1){
+                        sb.append(" LIMIT "+query.limit);
                     }
 
                 }
@@ -111,7 +94,7 @@ public class ModelUtils {
 
         // If edge/relationship, sort by destination nodeId to reduce locking
         if (sb.length() == 0) {
-            return DEFAULT_STAR_QUERY+sortByClause;
+            return DEFAULT_STAR_QUERY;
         } else {
             return sb.toString();
         }

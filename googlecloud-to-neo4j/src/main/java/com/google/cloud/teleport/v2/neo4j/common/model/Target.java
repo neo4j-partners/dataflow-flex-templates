@@ -22,6 +22,8 @@ public class Target implements Serializable, Comparable {
     public SaveMode saveMode = SaveMode.append;
     public Map<String,Mapping> mappingByFieldMap =new HashMap();
 
+    public int sequence=0;
+
     public Target(){}
 
     public Target(final JSONObject targetObj) {

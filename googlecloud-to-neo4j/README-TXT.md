@@ -41,9 +41,9 @@ run on Dataflow.
     >   --experiments=enable_vertical_memory_autoscaling
 > * Additional testing required to determine optimal memory
 > ```sh
-> cd ${basedir}/text-to-neo4j
+> cd ${basedir}/googlecloud-to-neo4j
 > mvn compile exec:java \
->   -Dexec.mainClass=com.google.cloud.teleport.v2.neo4j.text.TextToNeo4j \
+>   -Dexec.mainClass=com.google.cloud.teleport.v2.neo4j.TextToNeo4j \
 >   -Dexec.args="\
 >     --runner=DataflowRunner \
 >     --project=$PROJECT \
@@ -104,7 +104,7 @@ gcloud config set project ${PROJECT}
 * Build and push image to Google Container Repository from current directory
 ```sh
 mvn clean package \
-    -Djib.container.mainClass=com.google.cloud.teleport.v2.neo4j.text.TextToNeo4j \
+    -Djib.container.mainClass=com.google.cloud.teleport.v2.neo4j.TextToNeo4j \
     -Dimage=${TARGET_GCR_IMAGE} \
     -Dbase-container-image=${BASE_CONTAINER_IMAGE} \
     -Dbase-container-image.version=${BASE_CONTAINER_IMAGE_VERSION} \

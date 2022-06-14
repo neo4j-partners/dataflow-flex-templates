@@ -16,19 +16,18 @@ import org.slf4j.LoggerFactory;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class JobSpecOptimizer {
+public class InputValidator {
 
     final static Pattern ORDER_BY_PATTERN=Pattern.compile(".*ORDER\\sBY.*");
 
-    private static final Logger LOG = LoggerFactory.getLogger(JobSpecOptimizer.class);
+    private static final Logger LOG = LoggerFactory.getLogger(InputValidator.class);
 
     final static Gson gson = new GsonBuilder().setPrettyPrinting().create();
 
-    public static Validations validateAndOptimize(JobSpecRequest jobSpec){
+    public static Validations validateAndOptimizeJobSpec(JobSpecRequest jobSpec){
 
         List<String> validationMessages=new ArrayList<>();
 
@@ -81,6 +80,17 @@ public class JobSpecOptimizer {
 
         //NODES first then relationships
         Collections.sort(jobSpec.targets);
+
+        //number and name targets
+        int targetNum=0;
+        for (Target target:jobSpec.targets){
+            targetNum++;
+            target.sequence=targetNum;
+            if (StringUtils.isEmpty(target.name)){
+                target.name = "Target "+targetNum;
+            }
+        }
+
         //sort so relationships are executed after nodes
         Validations validationResponse=new Validations();
         validationResponse.errors=validationMessages.size()>0;

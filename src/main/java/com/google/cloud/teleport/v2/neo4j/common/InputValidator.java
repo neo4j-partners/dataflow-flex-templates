@@ -1,11 +1,13 @@
 package com.google.cloud.teleport.v2.neo4j.common;
 
+import com.google.cloud.teleport.v2.neo4j.common.model.ConnectionParams;
 import com.google.cloud.teleport.v2.neo4j.common.model.JobSpecRequest;
 import com.google.cloud.teleport.v2.neo4j.common.model.Mapping;
 import com.google.cloud.teleport.v2.neo4j.common.model.Target;
 import com.google.cloud.teleport.v2.neo4j.common.model.enums.FragmentType;
 import com.google.cloud.teleport.v2.neo4j.common.model.enums.RoleType;
 import com.google.cloud.teleport.v2.neo4j.common.model.enums.TargetType;
+import com.google.cloud.teleport.v2.neo4j.common.options.Neo4jFlexTemplateOptions;
 import com.google.cloud.teleport.v2.neo4j.common.utils.ModelUtils;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -27,7 +29,43 @@ public class InputValidator {
 
     final static Gson gson = new GsonBuilder().setPrettyPrinting().create();
 
-    public static Validations validateAndOptimizeJobSpec(JobSpecRequest jobSpec){
+    public static List<String> validateNeo4jPipelineOptions(Neo4jFlexTemplateOptions pipelineOptions)  {
+
+        List<String> validationMessages =new ArrayList();
+
+        if (StringUtils.isEmpty(pipelineOptions.getNeo4jConnectionUri())) {
+            validationMessages.add("Neo4j connection URI not provided.");
+        }
+
+        if (StringUtils.isEmpty(pipelineOptions.getJobSpecUri())) {
+            validationMessages.add("Job spec URI not provided.");
+        }
+
+        ConnectionParams neoConnection = new ConnectionParams( pipelineOptions.getNeo4jConnectionUri());
+        validationMessages.addAll(InputValidator.validateNeo4jConnection(neoConnection));
+
+        JobSpecRequest jobSpec = new JobSpecRequest(pipelineOptions.getJobSpecUri());
+
+        validationMessages.addAll(InputValidator.validateJobSpec(jobSpec));
+        return validationMessages;
+    }
+
+
+    private static List<String> validateNeo4jConnection(ConnectionParams connectionParams) {
+        List<String> validationMessages=new ArrayList<>();
+        if (StringUtils.isEmpty(connectionParams.serverUrl)){
+            validationMessages.add("Missing connection server URL");
+        }
+        if (StringUtils.isEmpty(connectionParams.username)){
+            validationMessages.add("Missing connection username");
+        }
+        if (StringUtils.isEmpty(connectionParams.password)){
+            validationMessages.add("Missing connection password");
+        }
+        return validationMessages;
+    }
+
+    private static List<String> validateJobSpec(JobSpecRequest jobSpec){
 
         List<String> validationMessages=new ArrayList<>();
 
@@ -78,6 +116,12 @@ public class InputValidator {
             }
         }
 
+        return validationMessages;
+    }
+
+
+    public static void refactorJobSpec(JobSpecRequest jobSpec){
+
         //NODES first then relationships
         Collections.sort(jobSpec.targets);
 
@@ -91,11 +135,6 @@ public class InputValidator {
             }
         }
 
-        //sort so relationships are executed after nodes
-        Validations validationResponse=new Validations();
-        validationResponse.errors=validationMessages.size()>0;
-        validationResponse.validationMessages=validationMessages;
-        return validationResponse;
     }
 
 

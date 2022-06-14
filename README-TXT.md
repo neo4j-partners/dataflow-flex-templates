@@ -44,6 +44,7 @@ run on Dataflow.
 > cd ${basedir}/googlecloud-to-neo4j
 > mvn compile exec:java \
 >   -Dexec.mainClass=com.google.cloud.teleport.v2.neo4j.TextToNeo4j \
+>   -Dexec.cleanupDaemonThreads=false \
 >   -Dexec.args="\
 >     --runner=DataflowRunner \
 >     --project=$PROJECT \
@@ -59,7 +60,7 @@ run on Dataflow.
 >     --neo4jConnectionUri=gs://neo4j-dataflow/job-specs/testing/common/auradb-free-connection.json"
 > ```
 > </details>
-
+//https://storage.googleapis.com/neo4j-dataflow/job-specs/testing/common/auradb-free-connection.json
 #### Create jar
 
 ```sh

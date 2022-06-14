@@ -43,6 +43,7 @@ run on Dataflow.
 > ```sh
 > mvn compile exec:java \
 >   -Dexec.mainClass=com.google.cloud.teleport.v2.neo4j.BigQueryToNeo4j \
+>   -Dexec.cleanupDaemonThreads=false \
 >   -Dexec.args="\
 >     --runner=DataflowRunner \
 >     --project=$PROJECT \

@@ -1,6 +1,8 @@
 package com.google.cloud.teleport.v2.neo4j.common.utils;
 
 
+import com.google.cloud.bigquery.Field;
+import com.google.cloud.bigquery.FieldList;
 import com.google.cloud.teleport.v2.neo4j.common.model.*;
 import com.google.cloud.teleport.v2.neo4j.common.model.enums.FragmentType;
 import com.google.cloud.teleport.v2.neo4j.common.model.enums.RoleType;
@@ -11,23 +13,22 @@ import org.apache.beam.sdk.schemas.Schema;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 public class ModelUtils {
     private static final Logger LOG = LoggerFactory.getLogger(ModelUtils.class);
 
     final public static String DEFAULT_STAR_QUERY = "SELECT * FROM PCOLLECTION";
     final static String LEGAL_CHARS_REGEX = "[^a-zA-Z0-9_]";
-    final static String LEGAL_CHARS_REGEX_SPACE="[^a-zA-Z0-9_ ]";
-    final static String ALPHA_CHARS_REGEX="[^a-zA-Z]";
+    final static String LEGAL_CHARS_REGEX_SPACE = "[^a-zA-Z0-9_ ]";
+    final static String ALPHA_CHARS_REGEX = "[^a-zA-Z]";
     final public static String CYPHER_DELETE_ALL = "MATCH (n) DETACH DELETE n";
     final public static long MAX_ROWS = 10000000000000l;
 
 
-    public static Target generateDefaultTarget(Source source) throws RuntimeException{
-        if (source.sourceType== SourceType.text){
-            Target target=new Target();
+    public static Target generateDefaultTarget(Source source) throws RuntimeException {
+        if (source.sourceType == SourceType.text) {
+            Target target = new Target();
 
             //TODO: create default target (nodes) for source
 
@@ -38,62 +39,121 @@ public class ModelUtils {
         }
     }
 
-    public static String getRelationshipKeyField(Target target,FragmentType fragmentType){
-        return getFirstField(target,fragmentType,List.of(RoleType.key));
+    public static String getRelationshipKeyField(Target target, FragmentType fragmentType) {
+        return getFirstField(target, fragmentType, List.of(RoleType.key));
     }
 
-    public static String getFirstField(Target target,FragmentType fragmentType, List<RoleType> roleTypes){
-        List<String> fields=getFields( fragmentType,roleTypes, target);
-        if (fields.size()>0) return fields.get(0);
+    public static String getFirstField(Target target, FragmentType fragmentType, List<RoleType> roleTypes) {
+        List<String> fields = getFields(fragmentType, roleTypes, target);
+        if (fields.size() > 0) return fields.get(0);
         return "";
     }
 
-    public static String getFirstFieldOrConstant(Target target,FragmentType fragmentType, List<RoleType> roleTypes){
-        List<String> fieldsOrConstants=getFieldOrConstants(  fragmentType,roleTypes, target);
-        if (fieldsOrConstants.size()>0) return fieldsOrConstants.get(0);
+    public static String getFirstFieldOrConstant(Target target, FragmentType fragmentType, List<RoleType> roleTypes) {
+        List<String> fieldsOrConstants = getFieldOrConstants(fragmentType, roleTypes, target);
+        if (fieldsOrConstants.size() > 0) return fieldsOrConstants.get(0);
         return "";
     }
 
-    public static String getTargetSql(Schema sourceSchema, Target target) {
+    public static boolean singleSourceSpec(JobSpecRequest jobSpec) {
+        boolean singleSourceQuery = true;
+        for (Target target : jobSpec.targets) {
+            if (target.active) {
+                boolean targetRequiresRequery = ModelUtils.targetRequiresRequery(target);
+                if (targetRequiresRequery) {
+                    singleSourceQuery = false;
+                }
+            }
+        }
+        return singleSourceQuery;
+    }
+
+    public static boolean targetRequiresRequery(Target target) {
+        boolean requiresRequery = false;
+        if (target.query != null) {
+            if (target.query.group || target.query.aggregations.size() > 0 || StringUtils.isNotEmpty(target.query.orderBy) || StringUtils.isNotEmpty(target.query.where)) {
+                return true;
+            }
+        }
+        return requiresRequery;
+    }
+
+    public static Set<String> getBqFieldSet(com.google.cloud.bigquery.Schema schema) {
+        Set<String> fieldNameMap = new HashSet<>();
+        FieldList fieldList = schema.getFields();
+        for (Field field : fieldList) {
+            fieldNameMap.add(field.getName());
+        }
+        return fieldNameMap;
+    }
+
+    public static Set<String> getBeamFieldSet(Schema schema) {
+        return new HashSet<>(schema.getFieldNames());
+    }
+
+    public static String getTargetSql(Set<String> fieldNameMap, Target target, boolean generateSqlSort) {
         StringBuffer sb = new StringBuffer();
+
+        String orderByClause = "";
+        if (target.type == TargetType.relationship) {
+            String sortField = getRelationshipKeyField(target, FragmentType.target);
+            if (StringUtils.isNotBlank(sortField)) {
+                orderByClause = " ORDER BY " + sortField + " ASC";
+            } else if (StringUtils.isNotBlank(target.query.orderBy)) {
+                orderByClause = " ORDER BY "+target.query.orderBy;
+            }
+        } else {
+            if (StringUtils.isNotBlank(target.query.orderBy)) {
+                orderByClause = " ORDER BY "+target.query.orderBy;
+            }
+        }
 
         if (target.query != null) {
             List<String> fieldList = new ArrayList<>();
             /////////////////////////////////
             // Grouping transform
-            if (target.query != null) {
-                Query query = target.query;
-                if (query.group || query.aggregations.size() > 0) {
-                    for (int i = 0; i < target.mappings.size(); i++) {
-                        Mapping mapping = target.mappings.get(i);
-                        if (StringUtils.isNotBlank(mapping.field)) {
-                            if (sourceSchema.hasField(mapping.field)){
-                               fieldList.add(mapping.field);
-                            }
+            Query query = target.query;
+            if (query.group || query.aggregations.size() > 0) {
+                for (int i = 0; i < target.mappings.size(); i++) {
+                    Mapping mapping = target.mappings.get(i);
+                    if (StringUtils.isNotBlank(mapping.field)) {
+                        if (fieldNameMap.contains(mapping.field)) {
+                            fieldList.add(mapping.field);
                         }
                     }
-                    sb.append("SELECT "+StringUtils.join(fieldList,","));
-                    if (query.aggregations.size() > 0){
-                        for (Aggregation agg:query.aggregations){
-                            sb.append(","+agg.expression+" "+agg.field);
-                        }
+                }
+                sb.append("SELECT " + StringUtils.join(fieldList, ","));
+                if (query.aggregations.size() > 0) {
+                    for (Aggregation agg : query.aggregations) {
+                        sb.append("," + agg.expression + " " + agg.field);
                     }
-                    sb.append(" FROM PCOLLECTION");
-                    if (StringUtils.isNotBlank(query.where)) {
-                        sb.append(" WHERE "+query.where);
-                    }
-                    sb.append(" GROUP BY "+StringUtils.join(fieldList,","));
+                }
+                sb.append(" FROM PCOLLECTION");
+                if (StringUtils.isNotBlank(query.where)) {
+                    sb.append(" WHERE " + query.where);
+                }
+                sb.append(" GROUP BY " + StringUtils.join(fieldList, ","));
 
-                    if (query.limit>-1){
-                        sb.append(" LIMIT "+query.limit);
-                    }
 
+                if (StringUtils.isNotEmpty(orderByClause) && generateSqlSort) {
+                    LOG.info("Order by clause: "+orderByClause);
+                    sb.append(orderByClause);
+                    //  ORDER BY without a LIMIT is not supported!
+                    if (query.limit > -1) {
+                        sb.append(" LIMIT " + query.limit);
+                    }
+                } else {
+                    if (query.limit > -1) {
+                        sb.append(" LIMIT " + query.limit);
+                    }
                 }
             }
         }
 
         // If edge/relationship, sort by destination nodeId to reduce locking
-        if (sb.length() == 0) {
+        if (sb.length() == 0 && generateSqlSort) {
+            return DEFAULT_STAR_QUERY + orderByClause;
+        } else if (sb.length() == 0) {
             return DEFAULT_STAR_QUERY;
         } else {
             return sb.toString();
@@ -109,7 +169,7 @@ public class ModelUtils {
     }
 
     public static String makeValidNeo4jRelationshipIdentifier(String proposedIdString) {
-        String finalRelationshipIdString=proposedIdString.replaceAll(LEGAL_CHARS_REGEX, "_").toUpperCase().trim();
+        String finalRelationshipIdString = proposedIdString.replaceAll(LEGAL_CHARS_REGEX, "_").toUpperCase().trim();
         return finalRelationshipIdString;
     }
 
@@ -153,11 +213,11 @@ public class ModelUtils {
         return labels;
     }
 
-    public static List<String> getFields(FragmentType entityType,List<RoleType> roleTypes, Target target) {
-        List<String> fieldNames=new ArrayList<>();
+    public static List<String> getFields(FragmentType entityType, List<RoleType> roleTypes, Target target) {
+        List<String> fieldNames = new ArrayList<>();
         for (Mapping m : target.mappings) {
             if (m.fragmentType == entityType) {
-                if (roleTypes.contains(m.role)){
+                if (roleTypes.contains(m.role)) {
                     fieldNames.add(m.field);
                 }
             }
@@ -165,11 +225,11 @@ public class ModelUtils {
         return fieldNames;
     }
 
-    public static List<String> getFieldOrConstants(FragmentType entityType,List<RoleType> roleTypes, Target target) {
-        List<String> fieldOrConstants=new ArrayList<>();
+    public static List<String> getFieldOrConstants(FragmentType entityType, List<RoleType> roleTypes, Target target) {
+        List<String> fieldOrConstants = new ArrayList<>();
         for (Mapping m : target.mappings) {
             if (m.fragmentType == entityType) {
-                if (roleTypes.contains(m.role)){
+                if (roleTypes.contains(m.role)) {
                     if (StringUtils.isNotBlank(m.constant)) {
                         fieldOrConstants.add(m.constant);
                     } else if (StringUtils.isNotBlank(m.field)) {

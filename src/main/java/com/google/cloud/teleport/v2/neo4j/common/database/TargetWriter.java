@@ -34,58 +34,25 @@ import static com.google.cloud.teleport.v2.neo4j.common.utils.ModelUtils.getRela
 public class TargetWriter {
     private static final Logger LOG = LoggerFactory.getLogger(TargetWriter.class);
 
-    public static void writeNeo4j(JobSpecRequest jobSpec,
-                                  ConnectionParams neoConnection,
-                                  Schema sourceSchema,
-                                  PCollection<Row> sourceRowsCollection) {
+    private static Gson gson = new GsonBuilder().setPrettyPrinting().create();
 
-        Gson gson = new GsonBuilder().setPrettyPrinting().create();
-
-        // NEO4J setup
-        LOG.info("Writing " + jobSpec.targets.size() + " targets to Neo4j");
-
-        if (jobSpec.config.resetDb) {
-            // Direct connect utility...
-            DirectConnect neo4jDirectConnect = new DirectConnect(neoConnection.serverUrl, neoConnection.database, neoConnection.username, neoConnection.password);
-            LOG.info("Resetting database");
-            try {
-                LOG.info("Executing cypher: " + ModelUtils.CYPHER_DELETE_ALL);
-                neo4jDirectConnect.executeOnNeo4j(
-                        ModelUtils.CYPHER_DELETE_ALL,
-                        true);
-            } catch (Exception e) {
-                LOG.error("Error executing cypher: " + ModelUtils.CYPHER_DELETE_ALL + ", " + e.getMessage());
-            }
-            neo4jDirectConnect = null;
+    public static void resetNeo4j(ConnectionParams neoConnection) {
+        // Direct connect utility...
+        DirectConnect neo4jDirectConnect = new DirectConnect(neoConnection.serverUrl, neoConnection.database, neoConnection.username, neoConnection.password);
+        LOG.info("Resetting database");
+        try {
+            LOG.info("Executing cypher: " + ModelUtils.CYPHER_DELETE_ALL);
+            neo4jDirectConnect.executeOnNeo4j(
+                    ModelUtils.CYPHER_DELETE_ALL,
+                    true);
+        } catch (Exception e) {
+            LOG.error("Error executing cypher: " + ModelUtils.CYPHER_DELETE_ALL + ", " + e.getMessage());
         }
-
-        // Now write these rows to Neo4j Customer nodes
-        int targetNum = 0;
-        for (Target target : jobSpec.targets) {
-            if (target.active) {
-                LOG.info("==================================================");
-                LOG.info("Writing target " + target.name + ": " + gson.toJson(target));
-
-                String SQL = ModelUtils.getTargetSql(sourceSchema, target);
-
-                //https://github.com/GoogleCloudPlatform/DataflowTemplates/blob/main/src/main/java/com/google/cloud/teleport/splunk/SplunkEventWriter.java
-
-                // conditionally apply sql to rows..
-                if (!SQL.equals(ModelUtils.DEFAULT_STAR_QUERY)) {
-                    LOG.info("Applying SQL transformation to " + target.name + ": " + SQL);
-                    PCollection<Row> sqlTransformedSource = sourceRowsCollection.apply(targetNum + ": SQLTransform " + target.name, SqlTransform.query(SQL));
-                    castRowsWriteNeo4j(jobSpec, neoConnection, target, sqlTransformedSource);
-                } else {
-                    LOG.info("Skipping SQL transformation for " + target.name);
-                    castRowsWriteNeo4j(jobSpec, neoConnection, target, sourceRowsCollection);
-                }
-            } else {
-                LOG.info("Target is inactive, not processing: " + target.name);
-            }
-        }
+        neo4jDirectConnect = null;
     }
 
-    private static void castRowsWriteNeo4j(JobSpecRequest jobSpec,
+
+    public static void castRowsWriteNeo4j(JobSpecRequest jobSpec,
                                            ConnectionParams neoConnection, Target target, PCollection<Row> sqlTransformedSource) {
 
         // The Neo4j driver configuration

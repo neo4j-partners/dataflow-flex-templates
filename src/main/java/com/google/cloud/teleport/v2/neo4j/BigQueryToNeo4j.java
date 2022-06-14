@@ -37,6 +37,7 @@ import org.apache.beam.sdk.schemas.Schema;
 import org.apache.beam.sdk.schemas.SchemaCoder;
 import org.apache.beam.sdk.transforms.MapElements;
 import org.apache.beam.sdk.values.PCollection;
+import org.apache.beam.sdk.values.POutput;
 import org.apache.beam.sdk.values.Row;
 import org.apache.beam.sdk.values.TypeDescriptor;
 import org.slf4j.Logger;
@@ -196,7 +197,8 @@ public class BigQueryToNeo4j {
                                                     .via(sourceRows.getToRowFunction()))
                                     .setCoder(rowCoder);
 
-                    TargetWriter.castRowsWriteNeo4j(jobSpec, neo4jConnection, target, beamRows);
+                    POutput writeResults=TargetWriter.castRowsWriteNeo4j(jobSpec, neo4jConnection, target, beamRows);
+
                 } else {
                     LOG.info("Target " + target.name + " is inactive");
                 }

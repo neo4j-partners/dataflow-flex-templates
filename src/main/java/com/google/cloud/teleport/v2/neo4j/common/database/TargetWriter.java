@@ -21,6 +21,7 @@ import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.values.PCollection;
+import org.apache.beam.sdk.values.POutput;
 import org.apache.beam.sdk.values.Row;
 import org.neo4j.driver.Config;
 import org.neo4j.driver.SessionConfig;
@@ -52,8 +53,8 @@ public class TargetWriter {
     }
 
 
-    public static void castRowsWriteNeo4j(JobSpecRequest jobSpec,
-                                           ConnectionParams neoConnection, Target target, PCollection<Row> sqlTransformedSource) {
+    public static POutput castRowsWriteNeo4j(JobSpecRequest jobSpec,
+                                             ConnectionParams neoConnection, Target target, PCollection<Row> sqlTransformedSource) {
 
         // The Neo4j driver configuration
         final Neo4jIO.DriverConfiguration driverConfiguration =
@@ -117,6 +118,6 @@ public class TargetWriter {
                         })
                 .withDriverConfiguration(driverConfiguration);
 
-        targetRowsCollection.apply(target.sequence + ": Neo4j write " + target.name, writeNeo4jIO);
+        return targetRowsCollection.apply(target.sequence + ": Neo4j write " + target.name, writeNeo4jIO);
     }
 }

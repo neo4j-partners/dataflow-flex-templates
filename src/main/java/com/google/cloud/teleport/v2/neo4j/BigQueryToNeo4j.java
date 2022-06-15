@@ -16,7 +16,10 @@
 package com.google.cloud.teleport.v2.neo4j;
 
 import com.google.api.services.bigquery.model.TableRow;
-import com.google.cloud.bigquery.*;
+import com.google.cloud.bigquery.BigQuery;
+import com.google.cloud.bigquery.BigQueryOptions;
+import com.google.cloud.bigquery.QueryJobConfiguration;
+import com.google.cloud.bigquery.TableResult;
 import com.google.cloud.teleport.v2.neo4j.bq.options.BigQueryToNeo4jImportOptions;
 import com.google.cloud.teleport.v2.neo4j.common.InputValidator;
 import com.google.cloud.teleport.v2.neo4j.common.database.TargetWriter;
@@ -29,7 +32,6 @@ import com.google.gson.GsonBuilder;
 import org.apache.beam.repackaged.core.org.apache.commons.lang3.StringUtils;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.coders.Coder;
-import org.apache.beam.sdk.extensions.sql.SqlTransform;
 import org.apache.beam.sdk.io.FileSystems;
 import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
@@ -37,7 +39,6 @@ import org.apache.beam.sdk.schemas.Schema;
 import org.apache.beam.sdk.schemas.SchemaCoder;
 import org.apache.beam.sdk.transforms.MapElements;
 import org.apache.beam.sdk.values.PCollection;
-import org.apache.beam.sdk.values.POutput;
 import org.apache.beam.sdk.values.Row;
 import org.apache.beam.sdk.values.TypeDescriptor;
 import org.slf4j.Logger;
@@ -128,6 +129,8 @@ public class BigQueryToNeo4j {
 
         boolean singleSourceQuery = ModelUtils.singleSourceSpec(jobSpec);
 
+        PCollection<Void> waitOnCollection=null;
+
         if (singleSourceQuery) {
 
             PCollection<TableRow> sourceRows =
@@ -148,7 +151,8 @@ public class BigQueryToNeo4j {
 
             for (Target target : jobSpec.targets) {
                 if (target.active) {
-                    TargetWriter.castRowsWriteNeo4j(jobSpec, neo4jConnection, target, beamRows);
+                    //this will serialize flows
+                    waitOnCollection=TargetWriter.castRowsWriteNeo4j( waitOnCollection, jobSpec, neo4jConnection, target, beamRows);
                 } else {
                     LOG.info("Target " + target.name + " is inactive");
                 }
@@ -197,8 +201,8 @@ public class BigQueryToNeo4j {
                                                     .via(sourceRows.getToRowFunction()))
                                     .setCoder(rowCoder);
 
-                    POutput writeResults=TargetWriter.castRowsWriteNeo4j(jobSpec, neo4jConnection, target, beamRows);
-
+                    waitOnCollection=TargetWriter.castRowsWriteNeo4j(waitOnCollection, jobSpec, neo4jConnection, target, beamRows);
+                    //this will serialize flows
                 } else {
                     LOG.info("Target " + target.name + " is inactive");
                 }

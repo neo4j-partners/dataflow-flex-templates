@@ -126,6 +126,7 @@ public class TextToNeo4j {
         // Write neo4j
         LOG.info("Found " + jobSpec.targets.size() + " candidate targets");
 
+        PCollection<Void> waitOnCollection=null;
         // Now write these rows to Neo4j Customer nodes
         for (Target target : jobSpec.targets) {
             if (target.active) {
@@ -136,10 +137,13 @@ public class TextToNeo4j {
                 if (!SQL.equals(ModelUtils.DEFAULT_STAR_QUERY)) {
                     LOG.info("Applying SQL transformation to " + target.name + ": " + SQL);
                     PCollection<Row> sqlTransformedSource = beamRows.apply(target.sequence + ": SQLTransform " + target.name, SqlTransform.query(SQL));
-                    TargetWriter.castRowsWriteNeo4j(jobSpec, neo4jConnection, target, sqlTransformedSource);
+                    waitOnCollection=TargetWriter.castRowsWriteNeo4j(waitOnCollection,jobSpec, neo4jConnection, target, sqlTransformedSource);
+                    //serializing Neo4j operations
+
                 } else {
                     LOG.info("Skipping SQL transformation for " + target.name);
-                    TargetWriter.castRowsWriteNeo4j(jobSpec, neo4jConnection, target, beamRows);
+                    waitOnCollection=TargetWriter.castRowsWriteNeo4j(waitOnCollection,jobSpec, neo4jConnection, target, beamRows);
+                    //serializing Neo4j operations
                 }
 
             } else {

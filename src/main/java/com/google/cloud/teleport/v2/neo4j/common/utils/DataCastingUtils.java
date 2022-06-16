@@ -184,7 +184,7 @@ public class DataCastingUtils {
                 }
             }
         }
-        LOG.info("Casted map: "+mapToString(map));
+        //LOG.info("Casted map: "+mapToString(map));
         return map;
     }
     public static String mapToString(Map<String, ?> map) {

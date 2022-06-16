@@ -151,7 +151,7 @@ public class BigQueryToNeo4j {
 
         PCollection beamRows=null;
         if (singleSourceQuery){
-            beamRows=queryBq(BASE_SQL);
+            beamRows=queryBq(0,"common",BASE_SQL);
         }
 
         if ( ModelUtils.nodesOnly(jobSpec) || ModelUtils.relationshipsOnly(jobSpec)){
@@ -159,7 +159,7 @@ public class BigQueryToNeo4j {
                 TargetWriterTransform targetWriterTransform = new TargetWriterTransform(jobSpec, neo4jConnection, target,false,false);
                 if (!singleSourceQuery){
                     String TARGET_SQL = ModelUtils.getTargetSql(fieldSet, target, true,BASE_SQL);
-                    beamRows=queryBq(TARGET_SQL);
+                    beamRows=queryBq(target,TARGET_SQL);
                 }
                 beamRows.apply(target.sequence + ": Writing Neo4j " + target.name, targetWriterTransform);
             }
@@ -172,7 +172,7 @@ public class BigQueryToNeo4j {
                 TargetWriterTransform targetWriterTransform = new TargetWriterTransform(jobSpec, neo4jConnection, target,false,false);
                 if (!singleSourceQuery){
                     String TARGET_SQL = ModelUtils.getTargetSql(fieldSet, target, true,BASE_SQL);
-                    beamRows=queryBq(TARGET_SQL);
+                    beamRows=queryBq(target,TARGET_SQL);
                 }
                 PCollection<Row> returnVoid= ((PCollection) beamRows.apply(target.sequence + ": Writing Neo4j " + target.name, targetWriterTransform));
                 blockingList.add(returnVoid);
@@ -189,7 +189,7 @@ public class BigQueryToNeo4j {
                 TargetWriterTransform targetWriterTransform = new TargetWriterTransform(jobSpec, neo4jConnection, target,false,false);
                 if (!singleSourceQuery){
                     String TARGET_SQL = ModelUtils.getTargetSql(fieldSet, target, true,BASE_SQL);
-                    beamRows=queryBq(TARGET_SQL);
+                    beamRows=queryBq(target,TARGET_SQL);
                 }
                 List<PCollection<Row>> unblockedList = new ArrayList<>();
                 unblockedList.add(blocked);
@@ -208,9 +208,12 @@ public class BigQueryToNeo4j {
 
     }
 
-    private PCollection<Row> queryBq(String SQL){
+    private PCollection<Row> queryBq(Target target,String SQL) {
+        return queryBq(target.sequence,target.name, SQL);
+    }
+        private PCollection<Row> queryBq(int sequence, String desrciption,String SQL){
         PCollection<TableRow> sourceRows =
-                pipeline.apply("Read from BQ", BigQueryIO.readTableRowsWithSchema()
+                pipeline.apply(sequence+": Read from BQ "+desrciption, BigQueryIO.readTableRowsWithSchema()
                         .fromQuery(BASE_SQL)
                         .usingStandardSql()
                         .withTemplateCompatibility());
@@ -219,7 +222,7 @@ public class BigQueryToNeo4j {
         Coder<Row> rowCoder = SchemaCoder.of(beamSchema);
         LOG.info("Beam schema: {}", beamSchema);
         PCollection<Row> beamRows =
-                sourceRows.apply("BQ to BeamRow",
+                sourceRows.apply(sequence+": BQ to BeamRow "+desrciption,
                                 MapElements
                                         .into(TypeDescriptor.of(Row.class))
                                         .via(sourceRows.getToRowFunction()))

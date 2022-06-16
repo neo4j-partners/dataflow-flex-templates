@@ -144,7 +144,7 @@ public class CypherGenerator {
                 if (roleTypes.contains(m.role) && (!onlyIndexedProperties || m.indexed)) {
                     if (targetColCount > 0) sb.append(",");
                     if (StringUtils.isNotEmpty(m.constant)) {
-                        sb.append(ModelUtils.makeValidNeo4jIdentifier(m.name) + ": '" + m.constant + "'");
+                        sb.append(ModelUtils.makeValidNeo4jIdentifier(m.name) + ": \"" + m.constant + "\"");
                     } else {
                         sb.append(ModelUtils.makeValidNeo4jIdentifier(m.name) + ": row." + m.field);
                     }

@@ -11,13 +11,11 @@ import com.google.cloud.teleport.v2.neo4j.common.utils.BeamSchemaUtils;
 import com.google.cloud.teleport.v2.neo4j.common.utils.DataCastingUtils;
 import com.google.cloud.teleport.v2.neo4j.common.utils.ModelUtils;
 import org.apache.beam.repackaged.core.org.apache.commons.lang3.StringUtils;
-import org.apache.beam.sdk.coders.*;
 import org.apache.beam.sdk.extensions.sql.SqlTransform;
 import org.apache.beam.sdk.io.neo4j.Neo4jIO;
 import org.apache.beam.sdk.schemas.Schema;
 import org.apache.beam.sdk.transforms.*;
 import org.apache.beam.sdk.values.PCollection;
-import org.apache.beam.sdk.values.PDone;
 import org.apache.beam.sdk.values.POutput;
 import org.apache.beam.sdk.values.Row;
 import org.neo4j.driver.Config;
@@ -27,22 +25,23 @@ import org.slf4j.LoggerFactory;
 
 import java.util.List;
 
-public class TargetWriterTransform extends PTransform<PCollection<Row>, PCollection<Row>> {
-    private static final Logger LOG = LoggerFactory.getLogger(TargetWriterTransform.class);
+public class Neo4jRowWriterTransform extends PTransform<PCollection<Row>, PCollection<Row>> {
+    private static final Logger LOG = LoggerFactory.getLogger(Neo4jRowWriterTransform.class);
 
     JobSpecRequest jobSpec;
     ConnectionParams neoConnection;
     Target target;
 
-    boolean requery=false;
+    boolean allowRequery =false;
     boolean allowSort=false;
 
-    public TargetWriterTransform(JobSpecRequest jobSpec, ConnectionParams neoConnection, Target target,boolean requery, boolean allowSort) {
+    public Neo4jRowWriterTransform(JobSpecRequest jobSpec, ConnectionParams neoConnection, Target target, boolean allowInProcessRequery, boolean inProcessSortAllowed) {
         this.jobSpec=jobSpec;
         this.neoConnection=neoConnection;
         this.target=target;
-        this.requery=requery;
-        this.allowSort=allowSort;
+        // These are NOT push-down SQL so only desirable when no other option exists
+        this.allowRequery =allowInProcessRequery;
+        this.allowSort=inProcessSortAllowed;
     }
 
     @Override
@@ -109,7 +108,7 @@ public class TargetWriterTransform extends PTransform<PCollection<Row>, PCollect
 
         String SQL = ModelUtils.getTargetSql(ModelUtils.getBeamFieldSet(input.getSchema()), target,allowSort);
         // conditionally apply sql to rows..
-        if (!SQL.equals(ModelUtils.DEFAULT_STAR_QUERY) && requery) {
+        if (!SQL.equals(ModelUtils.DEFAULT_STAR_QUERY) && allowRequery) {
             LOG.info("Executing SQL: "+SQL);
             PCollection<Row> castData=input.apply(target.sequence + ": SQLTransform " + target.name, SqlTransform.query(SQL))
                                     .apply(target.sequence + ": Cast " + target.name + " rows", ParDo.of(castToTargetRow))

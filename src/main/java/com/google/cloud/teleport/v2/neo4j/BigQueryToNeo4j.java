@@ -21,9 +21,10 @@ import com.google.cloud.bigquery.BigQueryOptions;
 import com.google.cloud.bigquery.QueryJobConfiguration;
 import com.google.cloud.bigquery.TableResult;
 import com.google.cloud.teleport.v2.neo4j.bq.options.BigQueryToNeo4jImportOptions;
+import com.google.cloud.teleport.v2.neo4j.common.InputOptimizer;
 import com.google.cloud.teleport.v2.neo4j.common.InputValidator;
 import com.google.cloud.teleport.v2.neo4j.common.database.DirectConnect;
-import com.google.cloud.teleport.v2.neo4j.common.transforms.TargetWriterTransform;
+import com.google.cloud.teleport.v2.neo4j.common.transforms.Neo4jRowWriterTransform;
 import com.google.cloud.teleport.v2.neo4j.common.model.ConnectionParams;
 import com.google.cloud.teleport.v2.neo4j.common.model.JobSpecRequest;
 import com.google.cloud.teleport.v2.neo4j.common.model.Target;
@@ -33,7 +34,6 @@ import com.google.gson.GsonBuilder;
 import org.apache.beam.repackaged.core.org.apache.commons.lang3.StringUtils;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.coders.Coder;
-import org.apache.beam.sdk.coders.VoidCoder;
 import org.apache.beam.sdk.io.FileSystems;
 import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
@@ -41,7 +41,6 @@ import org.apache.beam.sdk.schemas.Schema;
 import org.apache.beam.sdk.schemas.SchemaCoder;
 import org.apache.beam.sdk.transforms.Flatten;
 import org.apache.beam.sdk.transforms.MapElements;
-import org.apache.beam.sdk.transforms.Wait;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.PCollectionList;
 import org.apache.beam.sdk.values.Row;
@@ -64,6 +63,7 @@ public class BigQueryToNeo4j {
     JobSpecRequest jobSpec;
     String BASE_SQL;
     Pipeline pipeline;
+
     /**
      * Runs a pipeline which reads data from BigQuery and writes it to Bigtable.
      *
@@ -98,7 +98,7 @@ public class BigQueryToNeo4j {
         this.neo4jConnection = new ConnectionParams(pipelineOptions.getNeo4jConnectionUri());
         this.jobSpec = new JobSpecRequest(pipelineOptions.getJobSpecUri());
 
-        InputValidator.refactorJobSpec(jobSpec);
+        InputOptimizer.refactorJobSpec(jobSpec);
 
         ///////////////////////////////////
         // Text input specific options and validation
@@ -132,15 +132,15 @@ public class BigQueryToNeo4j {
             directConnect.resetNeo4j();
         }
 
-        boolean singleSourceQuery = ModelUtils.singleSourceSpec(jobSpec);
-
-        //dry run won't return schema so regulary query
-        String ZERO_ROW_SQL = "SELECT * FROM ("+BASE_SQL+") LIMIT 0";
+        ////////////////////////////
+        // Dry run won't return schema so use regular query
+        // We need fieldSet for SQL generation later
+        String ZERO_ROW_SQL = "SELECT * FROM (" + BASE_SQL + ") LIMIT 0";
         BigQuery bigquery = BigQueryOptions.getDefaultInstance().getService();
-        QueryJobConfiguration queryConfig=QueryJobConfiguration.newBuilder(ZERO_ROW_SQL).build();
+        QueryJobConfiguration queryConfig = QueryJobConfiguration.newBuilder(ZERO_ROW_SQL).build();
         Set<String> fieldSet;
         try {
-            LOG.info("Getting metadata from query: "+ZERO_ROW_SQL);
+            LOG.info("Metadata query: " + ZERO_ROW_SQL);
             TableResult zeroRowQueryResult = bigquery.query(queryConfig);
             fieldSet = ModelUtils.getBqFieldSet(zeroRowQueryResult.getSchema());
         } catch (Exception e) {
@@ -149,53 +149,65 @@ public class BigQueryToNeo4j {
             throw new RuntimeException(errMsg);
         }
 
-        PCollection beamRows=null;
-        if (singleSourceQuery){
-            beamRows=queryBq(0,"common",BASE_SQL);
+        PCollection beamRows = null;
+
+        ////////////////////////////
+        // Optimization: if single source query, reuse this PRecordset rather than write it again
+        boolean singleSourceQuery = ModelUtils.singleSourceSpec(jobSpec);
+        if (singleSourceQuery) {
+            beamRows = queryBq(0, "common", BASE_SQL);
         }
 
-        if ( ModelUtils.nodesOnly(jobSpec) || ModelUtils.relationshipsOnly(jobSpec)){
+        ////////////////////////////
+        // Optimization: if we're not mixing nodes and edges, then run in parallel
+        // For relationship updates, max workers should be max 2.
+        if (ModelUtils.nodesOnly(jobSpec) || ModelUtils.relationshipsOnly(jobSpec)) {
             for (Target target : jobSpec.getActiveTargets()) {
-                TargetWriterTransform targetWriterTransform = new TargetWriterTransform(jobSpec, neo4jConnection, target,false,false);
-                if (!singleSourceQuery){
-                    String TARGET_SQL = ModelUtils.getTargetSql(fieldSet, target, true,BASE_SQL);
-                    beamRows=queryBq(target,TARGET_SQL);
+                if (!singleSourceQuery) {
+                    String TARGET_SPECIFIC_SQL = ModelUtils.getTargetSql(fieldSet, target, true, BASE_SQL);
+                    LOG.info("Target (" + target.name + ") specific sql: " + TARGET_SPECIFIC_SQL);
+                    beamRows = queryBq(target, TARGET_SPECIFIC_SQL);
                 }
+                Neo4jRowWriterTransform targetWriterTransform = new Neo4jRowWriterTransform(jobSpec, neo4jConnection, target, false, false);
                 beamRows.apply(target.sequence + ": Writing Neo4j " + target.name, targetWriterTransform);
             }
         } else {
             ////////////////////////////
+            // No optimization possible so write nodes then edges.
             // Write node targets
             List<Target> nodeTargets = jobSpec.getActiveNodeTargets();
             List<PCollection<Row>> blockingList = new ArrayList<>();
             for (Target target : nodeTargets) {
-                TargetWriterTransform targetWriterTransform = new TargetWriterTransform(jobSpec, neo4jConnection, target,false,false);
-                if (!singleSourceQuery){
-                    String TARGET_SQL = ModelUtils.getTargetSql(fieldSet, target, true,BASE_SQL);
-                    beamRows=queryBq(target,TARGET_SQL);
+                Neo4jRowWriterTransform targetWriterTransform = new Neo4jRowWriterTransform(jobSpec, neo4jConnection, target, false, false);
+                if (!singleSourceQuery) {
+                    String TARGET_SPECIFIC_SQL = ModelUtils.getTargetSql(fieldSet, target, true, BASE_SQL);
+                    LOG.info("Node target (" + target.name + ") specific sql: " + TARGET_SPECIFIC_SQL);
+                    beamRows = queryBq(target, TARGET_SPECIFIC_SQL);
                 }
-                PCollection<Row> returnVoid= ((PCollection) beamRows.apply(target.sequence + ": Writing Neo4j " + target.name, targetWriterTransform));
-                blockingList.add(returnVoid);
+                // Return empty PCollection to sequence operations
+                PCollection<Row> emptyReturn = ((PCollection) beamRows.apply(target.sequence + ": Writing Neo4j " + target.name, targetWriterTransform));
+                blockingList.add(emptyReturn);
             }
 
             ///////////////////////////////////////////
             //Block until nodes are collected...
-            PCollection<Row> blocked = PCollectionList.of(blockingList).apply("Node coalesce", Flatten.pCollections());
+            PCollection<Row> blocked = PCollectionList.of(blockingList).apply("Block", Flatten.pCollections());
 
             ////////////////////////////
             // Write relationship targets
             List<Target> relationshipTargets = jobSpec.getActiveRelationshipTargets();
             for (Target target : relationshipTargets) {
-                TargetWriterTransform targetWriterTransform = new TargetWriterTransform(jobSpec, neo4jConnection, target,false,false);
-                if (!singleSourceQuery){
-                    String TARGET_SQL = ModelUtils.getTargetSql(fieldSet, target, true,BASE_SQL);
-                    beamRows=queryBq(target,TARGET_SQL);
+                Neo4jRowWriterTransform targetWriterTransform = new Neo4jRowWriterTransform(jobSpec, neo4jConnection, target, false, false);
+                if (!singleSourceQuery) {
+                    String TARGET_SPECIFIC_SQL = ModelUtils.getTargetSql(fieldSet, target, true, BASE_SQL);
+                    LOG.info("Relationship target (" + target.name + ") specific sql: " + TARGET_SPECIFIC_SQL);
+                    beamRows = queryBq(target, TARGET_SPECIFIC_SQL);
                 }
                 List<PCollection<Row>> unblockedList = new ArrayList<>();
                 unblockedList.add(blocked);
                 unblockedList.add(beamRows);
-                PCollection<Row> unblockedBeamRows=PCollectionList.of(unblockedList).apply(target.sequence+": Relationship coalesce", Flatten.pCollections());
-                PCollection<Row> returnVoid=unblockedBeamRows.apply(target.sequence + ": Writing Neo4j " + target.name, targetWriterTransform);
+                PCollection<Row> unblockedBeamRows = PCollectionList.of(unblockedList).apply(target.sequence + ": Unblock", Flatten.pCollections());
+                PCollection<Row> returnVoid = unblockedBeamRows.apply(target.sequence + ": Writing Neo4j " + target.name, targetWriterTransform);
             }
         }
 
@@ -208,13 +220,14 @@ public class BigQueryToNeo4j {
 
     }
 
-    private PCollection<Row> queryBq(Target target,String SQL) {
-        return queryBq(target.sequence,target.name, SQL);
+    private PCollection<Row> queryBq(Target target, String SQL) {
+        return queryBq(target.sequence, target.name, SQL);
     }
-        private PCollection<Row> queryBq(int sequence, String desrciption,String SQL){
+
+    private PCollection<Row> queryBq(int sequence, String desrciption, String SQL) {
         PCollection<TableRow> sourceRows =
-                pipeline.apply(sequence+": Read from BQ "+desrciption, BigQueryIO.readTableRowsWithSchema()
-                        .fromQuery(BASE_SQL)
+                pipeline.apply(sequence + ": Read from BQ " + desrciption, BigQueryIO.readTableRowsWithSchema()
+                        .fromQuery(SQL)
                         .usingStandardSql()
                         .withTemplateCompatibility());
 
@@ -222,7 +235,7 @@ public class BigQueryToNeo4j {
         Coder<Row> rowCoder = SchemaCoder.of(beamSchema);
         LOG.info("Beam schema: {}", beamSchema);
         PCollection<Row> beamRows =
-                sourceRows.apply(sequence+": BQ to BeamRow "+desrciption,
+                sourceRows.apply(sequence + ": BQ to BeamRow " + desrciption,
                                 MapElements
                                         .into(TypeDescriptor.of(Row.class))
                                         .via(sourceRows.getToRowFunction()))

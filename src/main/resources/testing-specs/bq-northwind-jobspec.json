@@ -58,10 +58,11 @@
       "type": "node",
       "save_mode": "append",
       "query": {
-        "aggregations": [{
-          "expr": "SUM(unit_price*quantity)",
-          "field": "total_amount_sold"
-        },
+        "aggregations": [
+          {
+            "expr": "SUM(unit_price*quantity)",
+            "field": "total_amount_sold"
+          },
           {
             "expr": "SUM(quantity)",
             "field": "total_quantity_sold"
@@ -73,7 +74,7 @@
       },
       "mappings": [
         {
-          "constant":  "Product",
+          "constant": "Product",
           "name": "Product",
           "role": "label"
         },
@@ -114,10 +115,11 @@
       "type": "relationship",
       "save_mode": "append",
       "query": {
-        "aggregations": [{
-          "expr": "SUM(unit_price*quantity)",
-          "field": "sum_amount"
-        },
+        "aggregations": [
+          {
+            "expr": "SUM(unit_price*quantity)",
+            "field": "sum_amount"
+          },
           {
             "expr": "SUM(quantity)",
             "field": "sum_quantity"

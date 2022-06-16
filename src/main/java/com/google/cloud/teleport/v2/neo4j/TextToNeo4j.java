@@ -1,8 +1,9 @@
 package com.google.cloud.teleport.v2.neo4j;
 
+import com.google.cloud.teleport.v2.neo4j.common.InputOptimizer;
 import com.google.cloud.teleport.v2.neo4j.common.InputValidator;
 import com.google.cloud.teleport.v2.neo4j.common.database.DirectConnect;
-import com.google.cloud.teleport.v2.neo4j.common.transforms.TargetWriterTransform;
+import com.google.cloud.teleport.v2.neo4j.common.transforms.Neo4jRowWriterTransform;
 import com.google.cloud.teleport.v2.neo4j.common.model.ConnectionParams;
 import com.google.cloud.teleport.v2.neo4j.common.model.JobSpecRequest;
 import com.google.cloud.teleport.v2.neo4j.common.model.Source;
@@ -12,15 +13,10 @@ import com.google.cloud.teleport.v2.neo4j.common.utils.ModelUtils;
 import com.google.cloud.teleport.v2.neo4j.text.options.TextToNeo4jImportOptions;
 import com.google.cloud.teleport.v2.neo4j.text.transforms.LineToRowFn;
 import com.google.cloud.teleport.v2.neo4j.text.transforms.StringListToRowFn;
-import com.google.common.collect.Lists;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.sun.jdi.VoidType;
 import org.apache.beam.repackaged.core.org.apache.commons.lang3.StringUtils;
 import org.apache.beam.sdk.Pipeline;
-import org.apache.beam.sdk.coders.CoderRegistry;
-import org.apache.beam.sdk.coders.VoidCoder;
-import org.apache.beam.sdk.extensions.sql.SqlTransform;
 import org.apache.beam.sdk.io.FileSystems;
 import org.apache.beam.sdk.io.TextIO;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
@@ -28,7 +24,6 @@ import org.apache.beam.sdk.schemas.Schema;
 import org.apache.beam.sdk.transforms.Create;
 import org.apache.beam.sdk.transforms.Flatten;
 import org.apache.beam.sdk.transforms.ParDo;
-import org.apache.beam.sdk.transforms.Wait;
 import org.apache.beam.sdk.values.PBegin;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.PCollectionList;
@@ -78,7 +73,7 @@ public class TextToNeo4j {
         this.neo4jConnection = new ConnectionParams(pipelineOptions.getNeo4jConnectionUri());
         this.jobSpec = new JobSpecRequest(pipelineOptions.getJobSpecUri());
 
-        InputValidator.refactorJobSpec(jobSpec);
+        InputOptimizer.refactorJobSpec(jobSpec);
 
         ///////////////////////////////////
         // Text input specific options and validation
@@ -158,7 +153,7 @@ public class TextToNeo4j {
 
         if ( ModelUtils.nodesOnly(jobSpec) || ModelUtils.relationshipsOnly(jobSpec)){
             for (Target target : jobSpec.getActiveTargets()) {
-                TargetWriterTransform targetWriterTransform = new TargetWriterTransform(jobSpec, neo4jConnection, target,true,false);
+                Neo4jRowWriterTransform targetWriterTransform = new Neo4jRowWriterTransform(jobSpec, neo4jConnection, target,true,false);
                 PCollection<Row> returnVoid=beamRows.apply(target.sequence + ": Writing Neo4j " + target.name, targetWriterTransform);
             }
         } else {
@@ -168,24 +163,24 @@ public class TextToNeo4j {
             List<PCollection<Row>> blockingList = new ArrayList<>();
             for (Target target : nodeTargets) {
                 LOG.info("Processing node: "+target.name);
-                TargetWriterTransform targetWriterTransform = new TargetWriterTransform(jobSpec, neo4jConnection, target,true,false);
-                PCollection<Row> returnVoid=beamRows.apply(target.sequence + ": Writing Neo4j " + target.name, targetWriterTransform);
-                blockingList.add(returnVoid);
+                Neo4jRowWriterTransform targetWriterTransform = new Neo4jRowWriterTransform(jobSpec, neo4jConnection, target,true,false);
+                PCollection<Row> returnEmpty=beamRows.apply(target.sequence + ": Writing Neo4j " + target.name, targetWriterTransform);
+                blockingList.add(returnEmpty);
             }
 
             ///////////////////////////////////////////
             //Block until nodes are collected...
-            PCollection<Row> unblocking = PCollectionList.of(blockingList).apply("Node flow control", Flatten.pCollections());
+            PCollection<Row> unblocking = PCollectionList.of(blockingList).apply("Block", Flatten.pCollections());
 
             ////////////////////////////
             // Write relationship targets
             List<Target> relationshipTargets = jobSpec.getActiveRelationshipTargets();
             for (Target target : relationshipTargets) {
-                TargetWriterTransform targetWriterTransform = new TargetWriterTransform(jobSpec, neo4jConnection, target,true,false);
+                Neo4jRowWriterTransform targetWriterTransform = new Neo4jRowWriterTransform(jobSpec, neo4jConnection, target,true,false);
                 List<PCollection<Row>> waitForUnblocked = new ArrayList<>();
                 waitForUnblocked.add(unblocking);
                 waitForUnblocked.add(beamRows);
-                PCollection<Row> unblockedBeamRows=PCollectionList.of(waitForUnblocked).apply(target.sequence+": Flow control "+target.name, Flatten.pCollections());
+                PCollection<Row> unblockedBeamRows=PCollectionList.of(waitForUnblocked).apply(target.sequence+": Unblock "+target.name, Flatten.pCollections());
                 //  beamRows.apply(Wait.on(blocked));
                 PCollection<Row> returnVoid=unblockedBeamRows.apply(target.sequence + ": Writing Neo4j " + target.name, targetWriterTransform);
             }

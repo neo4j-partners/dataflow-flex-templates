@@ -159,35 +159,7 @@ public class InputValidator {
     }
 
 
-    public static void refactorJobSpec(JobSpecRequest jobSpec){
 
-        //Create or enrich targets from options
-        if (jobSpec.targets.size()==0){
-            if (jobSpec.options.size()>0) {
-                LOG.info("Targets not found, synthesizing from options");
-
-
-            } else if (jobSpec.source.fieldNames.length>0) {
-                LOG.info("Targets not found, synthesizing from source.  All properties will be indexed.");
-                Target target=Target.createSimpleNode(jobSpec.source.name, jobSpec.source.fieldNames, PropertyType.String, false);
-                jobSpec.targets.add(target);
-            }
-        }
-
-        //NODES first then relationships
-        Collections.sort(jobSpec.targets);
-
-        //number and name targets
-        int targetNum=0;
-        for (Target target:jobSpec.targets){
-            targetNum++;
-            target.sequence=targetNum;
-            if (StringUtils.isEmpty(target.name)){
-                target.name = "Target "+targetNum;
-            }
-        }
-
-    }
 
 
 }

@@ -51,11 +51,11 @@ public class CypherGenerator {
                 //MERGE (variable1:Label1 {nodeProperties1})-[:REL_TYPE]->
                 //(variable2:Label2 {nodeProperties2})
                 // MATCH before MERGE
-                sb.append(" MATCH (" + getLabelsPropertiesListCypherFragment("source", true, FragmentType.source, Arrays.asList(RoleType.key,RoleType.property), target) + ")");
-                sb.append(" MATCH (" + getLabelsPropertiesListCypherFragment("target", true, FragmentType.target, Arrays.asList(RoleType.key,RoleType.property), target) + ")");
-                sb.append("MERGE (from)");
+                sb.append(" MATCH (" + getLabelsPropertiesListCypherFragment("source", true, FragmentType.source, Arrays.asList(RoleType.key), target) + ")");
+                sb.append(" MATCH (" + getLabelsPropertiesListCypherFragment("target", true, FragmentType.target, Arrays.asList(RoleType.key), target) + ")");
+                sb.append(" MERGE (source)");
                 sb.append(" -[" + getRelationshipTypePropertiesListFragment("rel", false, target) + "]-> ");
-                sb.append("(to)");
+                sb.append("(target)");
                 // SET properties...
             } else if (effectiveSaveMode == SaveMode.error_if_exists) { // Fast, blind create
                 sb.append("UNWIND $" + CONST_ROW_VARIABLE_NAME + " AS row CREATE ");
@@ -67,9 +67,9 @@ public class CypherGenerator {
                 sb.append("UNWIND $" + CONST_ROW_VARIABLE_NAME + " AS row CREATE ");
                 sb.append(" MATCH (" + getLabelsPropertiesListCypherFragment("source", true, FragmentType.source, Arrays.asList(RoleType.key,RoleType.property), target) + ")");
                 sb.append(" , (" + getLabelsPropertiesListCypherFragment("target", true, FragmentType.target, Arrays.asList(RoleType.key,RoleType.property), target) + ")");
-                sb.append(" MERGE (from)");
+                sb.append(" MERGE (source)");
                 sb.append(" -[" + getRelationshipTypePropertiesListFragment("rel", false, target) + "]-> ");
-                sb.append(" (to)");
+                sb.append(" (target)");
             } else {
                 LOG.error("Unhandled saveMode: " + target.saveMode);
             }
@@ -93,27 +93,18 @@ public class CypherGenerator {
             }
 
             // Verb
-            if (effectiveSaveMode == SaveMode.append || effectiveSaveMode == SaveMode.overwrite) { // merge
+            if (effectiveSaveMode == SaveMode.append || effectiveSaveMode == SaveMode.overwrite || effectiveSaveMode == SaveMode.match) { // merge
                 sb.append("UNWIND $" + CONST_ROW_VARIABLE_NAME + " AS row ");
                 // MERGE clause represents matching properties
                 // MERGE (charlie {name: 'Charlie Sheen', age: 10})  A new node with the name 'Charlie Sheen' will be created since not all properties matched the existing 'Charlie Sheen' node.
-                sb.append("MERGE (" + getLabelsPropertiesListCypherFragment("n", true, FragmentType.node, Arrays.asList(RoleType.key), target) + ")");
-                String nodePropertyMapStr = getPropertiesListCypherFragment(FragmentType.node, true, Arrays.asList(RoleType.property), target);
+                sb.append("MERGE (" + getLabelsPropertiesListCypherFragment("n", false, FragmentType.node, Arrays.asList(RoleType.key), target) + ")");
+                String nodePropertyMapStr = getPropertiesListCypherFragment(FragmentType.node, false, Arrays.asList(RoleType.property), target);
                 if (nodePropertyMapStr.length() > 0) {
-                    sb.append("SET n+=" + nodePropertyMapStr);
+                    sb.append(" SET n+=" + nodePropertyMapStr);
                 }
             } else if (effectiveSaveMode == SaveMode.error_if_exists) { // fast create
                 sb.append("UNWIND $" + CONST_ROW_VARIABLE_NAME + " AS row ");
                 sb.append("CREATE (" + getLabelsPropertiesListCypherFragment("n", false, FragmentType.node, Arrays.asList(RoleType.key, RoleType.property), target) + ")");
-            } else  if (effectiveSaveMode == SaveMode.match) { // update only (this is not implemented in Spark connector)
-                sb.append("UNWIND $" + CONST_ROW_VARIABLE_NAME + " AS row ");
-                // MERGE clause represents matching properties
-                // MERGE (charlie {name: 'Charlie Sheen', age: 10})  A new node with the name 'Charlie Sheen' will be created since not all properties matched the existing 'Charlie Sheen' node.
-                sb.append("MERGE (" + getLabelsPropertiesListCypherFragment("n", true, FragmentType.node, Arrays.asList(RoleType.key), target) + ")");
-                String nodePropertyMapStr = getPropertiesListCypherFragment(FragmentType.node, true, Arrays.asList(RoleType.property), target);
-                if (nodePropertyMapStr.length() > 0) {
-                    sb.append(" ON MATCH SET =" + nodePropertyMapStr);
-                }
             } else {
                 LOG.error("Unhandled saveMode: " + target.saveMode);
             }
@@ -123,21 +114,21 @@ public class CypherGenerator {
         return sb.toString();
     }
 
-    public static String getLabelsPropertiesListCypherFragment(String nodePrefix, boolean onlyIndexedProperties, FragmentType entityType, List<RoleType> roleTypes, Target target) {
+    public static String getLabelsPropertiesListCypherFragment(String alias, boolean onlyIndexedProperties, FragmentType entityType, List<RoleType> roleTypes, Target target) {
         StringBuffer sb = new StringBuffer();
-        List<String> labels = ModelUtils.getLabels(entityType, target);
+        List<String> labels = ModelUtils.getStaticOrDynamicLabels("row",entityType, target);
         String propertiesKeyListStr = getPropertiesListCypherFragment(entityType, onlyIndexedProperties, roleTypes, target);
         // Labels
         if (labels.size() > 0) {
-            sb.append(nodePrefix);
+            sb.append(alias);
             for (String label : labels) {
                 sb.append(":" + ModelUtils.makeValidNeo4jIdentifier(label));
             }
         } else if (StringUtils.isNotEmpty(target.name)) {
-            sb.append(nodePrefix);
+            sb.append(alias);
             sb.append(":" + ModelUtils.makeValidNeo4jIdentifier(target.name));
         } else {
-            sb.append(nodePrefix);
+            sb.append(alias);
         }
         if (StringUtils.isNotEmpty(propertiesKeyListStr)) {
             sb.append(" " + propertiesKeyListStr);
@@ -174,7 +165,7 @@ public class CypherGenerator {
         // Model node creation statement
         //  "UNWIND $rows AS row CREATE(c:Customer { id : row.id, name: row.name, firstName: row.firstName })
         //derive labels
-        List<String> labels = ModelUtils.getLabels(FragmentType.node, target);
+        List<String> labels = ModelUtils.getStaticLabels(FragmentType.node, target);
         List<String> indexedProperties = ModelUtils.getIndexedProperties(FragmentType.node, target);
         List<String> uniqueProperties = ModelUtils.getUniqueProperties(FragmentType.node, target);
         List<String> mandatoryProperties = ModelUtils.getRequiredProperties(FragmentType.node, target);

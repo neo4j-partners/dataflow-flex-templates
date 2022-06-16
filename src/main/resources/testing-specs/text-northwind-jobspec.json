@@ -6,14 +6,12 @@
   },
   "source": {
     "type": "text",
+    "format": "EXCEL",
     "name": "1k orders",
-    "file": {
-      "uri": "gs://neo4j-datasets/northwinds/nw_orders_1k_noheader.csv",
-      "//uri": "can be supplied at run-time in the template, or simply specified here. assumes that no security is required in vpc",
-      "csv_format": "EXCEL",
-      "delimiter": ",",
-      "ordered_field_names": "customer_id,contact_name,company_name,seller_id,seller_first_name,seller_last_name,seller_title,product_id,product_name,category_name,supplier_name,supplier_postal_code,supplier_country,order_id,order_date,shipped_date,required_date,quantity,unit_price,discount"
-      }
+    "uri": "gs://neo4j-datasets/northwinds/nw_orders_1k_noheader.csv",
+    "//uri": "can be supplied at run-time in the template, or simply specified here. assumes that no security is required in vpc",
+    "delimiter": ",",
+    "ordered_field_names": "customer_id,contact_name,company_name,seller_id,seller_first_name,seller_last_name,seller_title,product_id,product_name,category_name,supplier_name,supplier_postal_code,supplier_country,order_id,order_date,shipped_date,required_date,quantity,unit_price,discount"
   },
   "targets": [
     {
@@ -32,7 +30,7 @@
         },
         {
           "field": "customer_id",
-          "name": "customer_id",
+          "name": "CustomerId",
           "role": "key",
           "description": "Customer identifier",
           "type": "String",
@@ -137,12 +135,13 @@
         {
           "constant": "PURCHASES",
           "role": "type",
-          "fragment": "source"
+          "fragment": "rel"
         },
         {
           "field": "customer_id",
           "name": "CustomerId",
           "role": "key",
+          "label": "Customer",
           "fragment": "source",
           "description": "",
           "type": "String"
@@ -151,6 +150,7 @@
           "field": "product_id",
           "name": "ProductId",
           "role": "key",
+          "label": "Product",
           "fragment": "target",
           "description": "",
           "type": "Integer"
@@ -178,16 +178,6 @@
           "role": "property",
           "description": "Calculated order quantity",
           "type": "Integer"
-        },
-        {
-          "field": "product_name",
-          "name": "ProductName",
-          "fragment": "target",
-          "role": "property",
-          "description": "",
-          "type": "String",
-          "unique": false,
-          "indexed": true
         }
       ]
     }

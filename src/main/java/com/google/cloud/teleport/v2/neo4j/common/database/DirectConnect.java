@@ -18,7 +18,9 @@ package com.google.cloud.teleport.v2.neo4j.common.database;
  * limitations under the License.
  */
 
+import com.google.cloud.teleport.v2.neo4j.common.model.ConnectionParams;
 import com.google.cloud.teleport.v2.neo4j.common.model.enums.AuthType;
+import com.google.cloud.teleport.v2.neo4j.common.utils.ModelUtils;
 import org.neo4j.driver.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,6 +39,13 @@ public class DirectConnect {
     private final String username;
     private final String password;
     Driver driver = null;
+
+    public DirectConnect(ConnectionParams connectionParams) {
+        this.username = connectionParams.username;
+        this.password = connectionParams.password;
+        this.database = connectionParams.database;
+        this.serverUrl = connectionParams.serverUrl;
+    }
 
     public DirectConnect(String hostName, int port, String database, String username, String password) {
         this.username = username;
@@ -89,4 +98,18 @@ public class DirectConnect {
             session.run(cypher);
         }
     }
+
+    public void resetNeo4j() {
+        // Direct connect utility...
+         LOG.info("Resetting database");
+        try {
+            LOG.info("Executing cypher: " + ModelUtils.CYPHER_DELETE_ALL);
+            executeOnNeo4j(
+                    ModelUtils.CYPHER_DELETE_ALL,
+                    true);
+        } catch (Exception e) {
+            LOG.error("Error executing cypher: " + ModelUtils.CYPHER_DELETE_ALL + ", " + e.getMessage());
+        }
+    }
+
 }

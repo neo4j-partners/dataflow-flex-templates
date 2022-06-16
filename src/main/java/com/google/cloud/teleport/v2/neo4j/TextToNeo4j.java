@@ -1,32 +1,42 @@
 package com.google.cloud.teleport.v2.neo4j;
 
 import com.google.cloud.teleport.v2.neo4j.common.InputValidator;
-import com.google.cloud.teleport.v2.neo4j.common.database.TargetWriter;
+import com.google.cloud.teleport.v2.neo4j.common.database.DirectConnect;
+import com.google.cloud.teleport.v2.neo4j.common.transforms.TargetWriterTransform;
 import com.google.cloud.teleport.v2.neo4j.common.model.ConnectionParams;
 import com.google.cloud.teleport.v2.neo4j.common.model.JobSpecRequest;
 import com.google.cloud.teleport.v2.neo4j.common.model.Source;
 import com.google.cloud.teleport.v2.neo4j.common.model.Target;
+import com.google.cloud.teleport.v2.neo4j.common.model.enums.SourceType;
 import com.google.cloud.teleport.v2.neo4j.common.utils.ModelUtils;
 import com.google.cloud.teleport.v2.neo4j.text.options.TextToNeo4jImportOptions;
-import com.google.cloud.teleport.v2.neo4j.text.transforms.LineParsingFn;
+import com.google.cloud.teleport.v2.neo4j.text.transforms.LineToRowFn;
+import com.google.cloud.teleport.v2.neo4j.text.transforms.StringListToRowFn;
+import com.google.common.collect.Lists;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.sun.jdi.VoidType;
 import org.apache.beam.repackaged.core.org.apache.commons.lang3.StringUtils;
 import org.apache.beam.sdk.Pipeline;
-import org.apache.beam.sdk.coders.SerializableCoder;
+import org.apache.beam.sdk.coders.CoderRegistry;
+import org.apache.beam.sdk.coders.VoidCoder;
 import org.apache.beam.sdk.extensions.sql.SqlTransform;
 import org.apache.beam.sdk.io.FileSystems;
 import org.apache.beam.sdk.io.TextIO;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
 import org.apache.beam.sdk.schemas.Schema;
-import org.apache.beam.sdk.transforms.DoFn;
+import org.apache.beam.sdk.transforms.Create;
+import org.apache.beam.sdk.transforms.Flatten;
 import org.apache.beam.sdk.transforms.ParDo;
+import org.apache.beam.sdk.transforms.Wait;
 import org.apache.beam.sdk.values.PBegin;
 import org.apache.beam.sdk.values.PCollection;
+import org.apache.beam.sdk.values.PCollectionList;
 import org.apache.beam.sdk.values.Row;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class TextToNeo4j {
@@ -77,11 +87,18 @@ public class TextToNeo4j {
             LOG.error(errMsg);
             throw new RuntimeException(errMsg);
         }
+        if (this.jobSpec.source.sourceType != SourceType.text) {
+            String errMsg = "Currently unhandled source type: " + this.jobSpec.source.sourceType;
+            LOG.error(errMsg);
+            throw new RuntimeException(errMsg);
+        }
         if (!StringUtils.isEmpty(pipelineOptions.getInputFilePattern())) {
             this.dataFileUri = pipelineOptions.getInputFilePattern();
-        } else if (!StringUtils.isEmpty(this.jobSpec.source.textFile.uri)) {
-            this.dataFileUri = this.jobSpec.source.textFile.uri;
+        } else if (!StringUtils.isEmpty(this.jobSpec.source.uri)) {
+            this.dataFileUri = this.jobSpec.source.uri;
             LOG.info("Using source from jobSpec dataFile: " + this.dataFileUri);
+        } else if (this.jobSpec.source.inline != null) {
+            LOG.info("Using inline data.");
         } else {
             String errMsg = "Could not determine source data file.";
             LOG.error(errMsg);
@@ -96,7 +113,7 @@ public class TextToNeo4j {
 
         Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
 
-        Source dataSource = this.jobSpec.source;
+        Source source = this.jobSpec.source;
 
         LOG.info("Using data file: " + this.dataFileUri);
 
@@ -105,52 +122,75 @@ public class TextToNeo4j {
 
         ////////////////////////////
         // Text file import
-        final PCollection<String> linesCollection =
-                begin.apply("Read " + dataSource.name + " data: " + this.dataFileUri,
-                        TextIO.read().from(this.dataFileUri));
+        PCollection<Row> beamRows = null;
+        Schema beamSchema = null;
 
-        final Schema beamSchema = dataSource.textFile.getTextFileSchemaData();
-        LOG.info("Source schema field count: " + beamSchema.getFieldCount() + ", fields: " + StringUtils.join(beamSchema.getFieldNames(), ","));
-        final DoFn<String, Row> lineToRow = new LineParsingFn(dataSource, beamSchema, dataSource.textFile.csvFormat);
-        final PCollection<Row> beamRows = linesCollection.apply("Parse lines into string columns.", ParDo.of(lineToRow));
-        beamRows.setCoder(SerializableCoder.of(Row.class));
-        beamRows.setRowSchema(beamSchema);
+        if (source.sourceType == SourceType.text) {
+            beamSchema = source.getTextFileSchema();
+            LOG.info("Source schema field count: " + beamSchema.getFieldCount() + ", fields: " + StringUtils.join(beamSchema.getFieldNames(), ","));
+
+
+            if (StringUtils.isNotBlank(this.dataFileUri)) {
+                LOG.info("Ingesting file: " + this.dataFileUri + ".");
+                beamRows = begin
+                        .apply("Read " + source.name + " data: " + this.dataFileUri, TextIO.read().from(this.dataFileUri))
+                        .apply("Parse lines into string columns.", ParDo.of(new LineToRowFn(source, beamSchema, source.csvFormat)))
+                        .setRowSchema(beamSchema);
+            } else if (source.inline != null) {
+                LOG.info("Processing " + source.inline.size() + " rows inline.");
+                beamRows = begin
+                        .apply("Ingest inline dataset: " + source.name, Create.of(source.inline))
+                        .apply("Parse lines into string columns.", ParDo.of(new StringListToRowFn(source, beamSchema)))
+                        .setRowSchema(beamSchema);
+            } else {
+                throw new RuntimeException("Data not found.");
+            }
+        } else {
+            throw new RuntimeException("Unhandled source type: " + source.sourceType);
+        }
 
         ////////////////////////////
         // Reset db
         if (jobSpec.config.resetDb) {
-            TargetWriter.resetNeo4j(this.neo4jConnection);
+            DirectConnect directConnect = new DirectConnect(this.neo4jConnection);
+            directConnect.resetNeo4j();
         }
 
-        ////////////////////////////
-        // Write neo4j
-        LOG.info("Found " + jobSpec.targets.size() + " candidate targets");
-
-        PCollection<Void> waitOnCollection=null;
-        // Now write these rows to Neo4j Customer nodes
-        for (Target target : jobSpec.targets) {
-            if (target.active) {
-                LOG.info("Writing target " + target.name + ": " + gson.toJson(target));
-                String SQL = ModelUtils.getTargetSql(ModelUtils.getBeamFieldSet(beamSchema), target,false);
-                //https://github.com/GoogleCloudPlatform/DataflowTemplates/blob/main/src/main/java/com/google/cloud/teleport/splunk/SplunkEventWriter.java
-                // conditionally apply sql to rows..
-                if (!SQL.equals(ModelUtils.DEFAULT_STAR_QUERY)) {
-                    LOG.info("Applying SQL transformation to " + target.name + ": " + SQL);
-                    PCollection<Row> sqlTransformedSource = beamRows.apply(target.sequence + ": SQLTransform " + target.name, SqlTransform.query(SQL));
-                    waitOnCollection=TargetWriter.castRowsWriteNeo4j(waitOnCollection,jobSpec, neo4jConnection, target, sqlTransformedSource);
-                    //serializing Neo4j operations
-
-                } else {
-                    LOG.info("Skipping SQL transformation for " + target.name);
-                    waitOnCollection=TargetWriter.castRowsWriteNeo4j(waitOnCollection,jobSpec, neo4jConnection, target, beamRows);
-                    //serializing Neo4j operations
-                }
-
-            } else {
-                LOG.info("Target is inactive, not processing: " + target.name);
+        if ( ModelUtils.nodesOnly(jobSpec) || ModelUtils.relationshipsOnly(jobSpec)){
+            for (Target target : jobSpec.getActiveTargets()) {
+                TargetWriterTransform targetWriterTransform = new TargetWriterTransform(jobSpec, neo4jConnection, target,true,false);
+                PCollection<Row> returnVoid=beamRows.apply(target.sequence + ": Writing Neo4j " + target.name, targetWriterTransform);
+            }
+        } else {
+            ////////////////////////////
+            // Write node targets
+            List<Target> nodeTargets = jobSpec.getActiveNodeTargets();
+            List<PCollection<Row>> blockingList = new ArrayList<>();
+            for (Target target : nodeTargets) {
+                LOG.info("Processing node: "+target.name);
+                TargetWriterTransform targetWriterTransform = new TargetWriterTransform(jobSpec, neo4jConnection, target,true,false);
+                PCollection<Row> returnVoid=beamRows.apply(target.sequence + ": Writing Neo4j " + target.name, targetWriterTransform);
+                blockingList.add(returnVoid);
             }
 
+            ///////////////////////////////////////////
+            //Block until nodes are collected...
+            PCollection<Row> unblocking = PCollectionList.of(blockingList).apply("Node flow control", Flatten.pCollections());
+
+            ////////////////////////////
+            // Write relationship targets
+            List<Target> relationshipTargets = jobSpec.getActiveRelationshipTargets();
+            for (Target target : relationshipTargets) {
+                TargetWriterTransform targetWriterTransform = new TargetWriterTransform(jobSpec, neo4jConnection, target,true,false);
+                List<PCollection<Row>> waitForUnblocked = new ArrayList<>();
+                waitForUnblocked.add(unblocking);
+                waitForUnblocked.add(beamRows);
+                PCollection<Row> unblockedBeamRows=PCollectionList.of(waitForUnblocked).apply(target.sequence+": Flow control "+target.name, Flatten.pCollections());
+                //  beamRows.apply(Wait.on(blocked));
+                PCollection<Row> returnVoid=unblockedBeamRows.apply(target.sequence + ": Writing Neo4j " + target.name, targetWriterTransform);
+            }
         }
+
         // For a Dataflow Flex Template, do NOT waitUntilFinish().
         pipeline.run();
     }

@@ -26,7 +26,7 @@
         },
         {
           "field": "customer_id",
-          "name": "customer_id",
+          "name": "CustomerId",
           "role": "key",
           "description": "Customer identifier",
           "type": "String",
@@ -61,10 +61,10 @@
         "aggregations": [{
           "expr": "SUM(unit_price*quantity)",
           "field": "total_amount_sold"
-          },
+        },
           {
-          "expr": "SUM(quantity)",
-          "field": "total_quantity_sold"
+            "expr": "SUM(quantity)",
+            "field": "total_quantity_sold"
           }
         ],
         "group": true,
@@ -131,12 +131,13 @@
         {
           "constant": "PURCHASES",
           "role": "type",
-          "fragment": "source"
+          "fragment": "rel"
         },
         {
           "field": "customer_id",
           "name": "CustomerId",
           "role": "key",
+          "label": "Customer",
           "fragment": "source",
           "description": "",
           "type": "String"
@@ -145,6 +146,7 @@
           "field": "product_id",
           "name": "ProductId",
           "role": "key",
+          "label": "Product",
           "fragment": "target",
           "description": "",
           "type": "Integer"
@@ -172,16 +174,6 @@
           "role": "property",
           "description": "Calculated order quantity",
           "type": "Integer"
-        },
-        {
-          "field": "product_name",
-          "name": "ProductName",
-          "fragment": "target",
-          "role": "property",
-          "description": "",
-          "type": "String",
-          "unique": false,
-          "indexed": true
         }
       ]
     }

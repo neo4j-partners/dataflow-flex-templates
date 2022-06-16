@@ -1,6 +1,6 @@
 package com.google.cloud.teleport.v2.neo4j.common.model.enums;
 
-public enum SourceType {
-    text,
-    bigquery
+public enum TextFormat {
+    JSON,
+    CSV
 }

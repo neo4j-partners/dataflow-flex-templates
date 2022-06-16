@@ -45,4 +45,31 @@ public class TextParserUtils {
         return textCols;
     }
 
+    public static List<List<String>> parseDelimitedLines(CSVFormat csvFormat, String csv) {
+        List rows = new ArrayList<>();
+        if (StringUtils.isEmpty(csv)) {
+            return null;
+        } else {
+            try {
+                //LOG.info("Csv format: "+csvFormat.toString());
+                CSVParser csvParser = CSVParser.parse(csv, csvFormat);
+                for (int i=0;i<csvParser.getRecordNumber();i++){
+                    CSVRecord csvRecord = csvParser.getRecords().get(i);
+                    List<Object> row = new ArrayList<>();
+                    Iterator<String> it = csvRecord.iterator();
+                    while (it.hasNext()) {
+                        // cast to text
+                        row.add( it.next()+"");
+                    }
+                    rows.add(row);
+                }
+
+            } catch (IOException ioException) {
+                LOG.error("Error parsing text file, exception: " + ioException.getMessage());
+                return rows;
+            }
+        }
+        return rows;
+    }
+
 }

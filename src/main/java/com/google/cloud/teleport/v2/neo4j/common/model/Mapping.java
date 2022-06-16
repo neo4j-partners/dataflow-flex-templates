@@ -13,10 +13,11 @@ import java.io.Serializable;
 
 public class Mapping implements Serializable {
     private static final Logger LOG = LoggerFactory.getLogger(Mapping.class);
-
+    public TargetType targetType=TargetType.node;
     public String constant;
-    public RoleType role;
+    public RoleType role=RoleType.property;
     public String name;
+    public String label;
     public String field;
     public String description;
     public PropertyType type;
@@ -26,8 +27,13 @@ public class Mapping implements Serializable {
     public boolean indexed=true;
     public FragmentType fragmentType = FragmentType.node;
 
-    public Mapping(TargetType type, final JSONObject mappingObj)  {
+    public Mapping(TargetType type){
+        this.targetType=type;
+    }
 
+    public Mapping(TargetType type, final JSONObject mappingObj)  {
+        this.targetType=type;
+        this.label = mappingObj.has("label")?mappingObj.getString("label"):"";
         this.constant = mappingObj.has("constant")?mappingObj.getString("constant"):"";
         this.role = mappingObj.has("role")?RoleType.valueOf(mappingObj.getString("role")):role;
         this.fragmentType = mappingObj.has("fragment")?FragmentType.valueOf(mappingObj.getString("fragment")):fragmentType;
@@ -41,6 +47,10 @@ public class Mapping implements Serializable {
         this.description = mappingObj.has("description")?mappingObj.getString("description"):"";
         this.unique = mappingObj.has("unique") && mappingObj.getBoolean("unique");
         this.indexed = mappingObj.has("indexed") && mappingObj.getBoolean("indexed");
+        if (this.role==RoleType.key){
+            this.unique=true;
+            this.indexed=true;
+        }
         if (mappingObj.has("type")){
             this.type = PropertyType.valueOf(mappingObj.getString("type"));
         } else {

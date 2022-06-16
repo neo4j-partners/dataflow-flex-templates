@@ -1,15 +1,16 @@
 package com.google.cloud.teleport.v2.neo4j.common.model;
 
+import com.google.cloud.teleport.v2.neo4j.common.model.enums.TargetType;
 import com.google.cloud.teleport.v2.neo4j.common.utils.GsUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.io.Serializable;
+import java.util.*;
 
-public class JobSpecRequest {
+public class JobSpecRequest implements Serializable {
 
     private static final Logger LOG = LoggerFactory.getLogger(JobSpecRequest.class);
 
@@ -17,6 +18,7 @@ public class JobSpecRequest {
     public Source source;
     public List<Target> targets = new ArrayList<>();
     public Config config =new Config();
+    public Map<String,String> options= new HashMap<>();
 
     public JobSpecRequest(final String jobSpecUri) {
         String jobSpecJsonStr = "{}";
@@ -49,17 +51,52 @@ public class JobSpecRequest {
                 }
             }
 
+            if (jobSpecObj.has("options")) {
+                final JSONArray optionsArray = jobSpecObj.getJSONArray("options");
+                for (int i = 0; i < optionsArray.length(); i++) {
+                    JSONObject jsonObject = optionsArray.getJSONObject(i);
+                    Iterator<String> keys = jsonObject.keys();
+                    while (keys.hasNext()){
+                        String key=keys.next();
+                        options.put(key,jsonObject.getString(key));
+                    }
+                }
+            }
+
         } catch (final Exception e) {
             JobSpecRequest.LOG.error(
                     "Unable to parse beam configuration from {}: ", jobSpecUri, e);
             throw new RuntimeException(e);
         }
-        boolean valid=validateSpec();
     }
 
-    private boolean validateSpec(){
-        //TODO: validate job sepc
-        return true;
+    public List<Target> getActiveTargets(){
+        List<Target> targets=new ArrayList<>();
+        for (Target target : this.targets) {
+            if (target.active) {
+                targets.add(target);
+            }
+        }
+        return targets;
     }
 
+    public List<Target> getActiveNodeTargets(){
+        List<Target> targets=new ArrayList<>();
+        for (Target target : this.targets) {
+            if (target.active && target.type==TargetType.node) {
+                targets.add(target);
+            }
+        }
+        return targets;
+    }
+
+        public List<Target> getActiveRelationshipTargets(){
+            List<Target> targets=new ArrayList<>();
+            for (Target target : this.targets) {
+                if (target.active && target.type==TargetType.relationship) {
+                    targets.add(target);
+                }
+            }
+            return targets;
+        }
 }

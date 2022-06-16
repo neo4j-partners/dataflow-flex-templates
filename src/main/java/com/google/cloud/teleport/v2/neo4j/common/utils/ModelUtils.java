@@ -13,10 +13,7 @@ import org.apache.beam.sdk.schemas.Schema;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 public class ModelUtils {
     private static final Logger LOG = LoggerFactory.getLogger(ModelUtils.class);
@@ -71,6 +68,27 @@ public class ModelUtils {
         return singleSourceQuery;
     }
 
+    public static boolean nodesOnly(JobSpecRequest jobSpec) {
+        for (Target target : jobSpec.targets) {
+            if (target.active) {
+                if (target.type==TargetType.relationship){
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+    public static boolean relationshipsOnly(JobSpecRequest jobSpec) {
+        for (Target target : jobSpec.targets) {
+            if (target.active) {
+                if (target.type==TargetType.node){
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
     public static boolean targetRequiresRequery(Target target) {
         boolean requiresRequery = false;
         if (target.query != null) {
@@ -95,6 +113,9 @@ public class ModelUtils {
     }
 
     public static String getTargetSql(Set<String> fieldNameMap, Target target, boolean generateSqlSort) {
+        return getTargetSql(fieldNameMap,target,generateSqlSort,null);
+    }
+    public static String getTargetSql(Set<String> fieldNameMap, Target target, boolean generateSqlSort, String baseSql) {
         StringBuffer sb = new StringBuffer();
 
         String orderByClause = "";
@@ -154,12 +175,18 @@ public class ModelUtils {
         }
 
         // If edge/relationship, sort by destination nodeId to reduce locking
+        String innerSql=null;
         if (sb.length() == 0 && generateSqlSort) {
-            return DEFAULT_STAR_QUERY + orderByClause;
+            innerSql= DEFAULT_STAR_QUERY + orderByClause;
         } else if (sb.length() == 0) {
-            return DEFAULT_STAR_QUERY;
+            innerSql= DEFAULT_STAR_QUERY;
         } else {
-            return sb.toString();
+            innerSql= sb.toString();
+        }
+        if (StringUtils.isNotEmpty(baseSql)){
+            return innerSql.replace(" PCOLLECTION", " (" + baseSql + ")");
+        } else {
+            return innerSql;
         }
     }
 
@@ -199,16 +226,36 @@ public class ModelUtils {
         return relationships;
     }
 
-    public static List<String> getLabels(FragmentType entityType, Target target) {
+    public static List<String> getStaticLabels(FragmentType entityType, Target target) {
         List<String> labels = new ArrayList<>();
         for (Mapping m : target.mappings) {
             if (m.fragmentType == entityType) {
-                if (m.role == RoleType.label) {
+                if (StringUtils.isNotEmpty(m.label)){
+                    labels.add(m.label);
+                } else if (m.role == RoleType.label) {
                     if (StringUtils.isNotEmpty(m.constant)) {
                         labels.add(m.constant);
                     } else {
-                        //TODO: handle dynamic labels
-                        labels.add(m.field);
+                        // dynamic labels not handled here
+                       // labels.add(prefix+"."+m.field);
+                    }
+                }
+            }
+        }
+        return labels;
+    }
+
+    public static List<String> getStaticOrDynamicLabels(String prefix,FragmentType entityType, Target target) {
+        List<String> labels = new ArrayList<>();
+        for (Mapping m : target.mappings) {
+            if (m.fragmentType == entityType) {
+                if (StringUtils.isNotEmpty(m.label)){
+                    labels.add(m.label);
+                } else if (m.role == RoleType.label) {
+                    if (StringUtils.isNotEmpty(m.constant)) {
+                        labels.add(m.constant);
+                    } else {
+                        labels.add(prefix+"."+m.field);
                     }
                 }
             }

@@ -4,24 +4,32 @@ import com.google.cloud.teleport.v2.neo4j.common.model.ConnectionParams;
 import com.google.cloud.teleport.v2.neo4j.common.model.JobSpecRequest;
 import com.google.cloud.teleport.v2.neo4j.common.model.Mapping;
 import com.google.cloud.teleport.v2.neo4j.common.model.Target;
-import com.google.cloud.teleport.v2.neo4j.common.model.enums.FragmentType;
-import com.google.cloud.teleport.v2.neo4j.common.model.enums.RoleType;
-import com.google.cloud.teleport.v2.neo4j.common.model.enums.TargetType;
+import com.google.cloud.teleport.v2.neo4j.common.model.enums.*;
 import com.google.cloud.teleport.v2.neo4j.common.options.Neo4jFlexTemplateOptions;
 import com.google.cloud.teleport.v2.neo4j.common.utils.ModelUtils;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import org.apache.beam.repackaged.core.org.apache.commons.lang3.StringUtils;
+import org.apache.beam.vendor.calcite.v1_28_0.org.apache.calcite.util.mapping.Mappings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class InputValidator {
+
+    final static Set<String> validOptions=Set.of(
+            "relationship",
+            "relationship.save.strategy",
+            "relationship.source.labels",
+            "relationship.source.save.mode",
+            "relationship.source.node.keys",
+            "relationship.target.labels",
+            "relationship.target.node.keys",
+            "relationship.target.node.properties",
+            "relationship.target.save.mode");
 
     final static Pattern ORDER_BY_PATTERN=Pattern.compile(".*ORDER\\sBY.*");
 
@@ -69,11 +77,19 @@ public class InputValidator {
 
         List<String> validationMessages=new ArrayList<>();
 
+        if (jobSpec.source==null){
+            validationMessages.add("Source is not defined");
+        } else {
+            if (StringUtils.isBlank(jobSpec.source.name)){
+                validationMessages.add("Source is not named");
+            }
+        }
+
         //VALIDATION
         for (Target target:jobSpec.targets) {
             // Check that all targets have names
             if (StringUtils.isBlank(target.name)){
-                validationMessages.add("Targets must include a 'name' attribute for debugging.");
+                validationMessages.add("Targets must include a 'name' attribute for debugging and synthetic artifact generation.");
             }
             // Check that SQL does not have order by...
             if (target.query!=null && StringUtils.isNotBlank(target.query.sql)){
@@ -88,6 +104,14 @@ public class InputValidator {
                 for (Mapping mapping:target.mappings){
                     if (mapping.fragmentType == FragmentType.node){
                         validationMessages.add("Invalid fragment type "+mapping.fragmentType+" for node mapping: "+mapping.name);
+                    }
+                    if (mapping.fragmentType == FragmentType.target || mapping.fragmentType == FragmentType.source  ){
+                        if (mapping.role != RoleType.key){
+                            validationMessages.add("Invalid role "+mapping.role+" on relationship: "+mapping.fragmentType);
+                        }
+                        if (StringUtils.isEmpty(mapping.label)){
+                            validationMessages.add(mapping.fragmentType+" missing label attribute");
+                        }
                     }
                 }
                 //relationship validation checks..
@@ -116,11 +140,39 @@ public class InputValidator {
             }
         }
 
+        if (jobSpec.options.size()>0) {
+            // check valid options
+            Iterator<String> optionIt=jobSpec.options.keySet().iterator();
+            while (optionIt.hasNext()){
+                String option=optionIt.next();
+                if (!validOptions.contains(option)){
+                    validationMessages.add("Invalid option specified: "+option);
+                }
+            }
+        }
+
+        if (jobSpec.targets.size()==0 && jobSpec.options.size()>0 && jobSpec.source.fieldNames.length==0) {
+            validationMessages.add("Unable to compute target node/edges from jobSpec.  Please define targets, options, our source fieldNames.");
+        }
+
         return validationMessages;
     }
 
 
     public static void refactorJobSpec(JobSpecRequest jobSpec){
+
+        //Create or enrich targets from options
+        if (jobSpec.targets.size()==0){
+            if (jobSpec.options.size()>0) {
+                LOG.info("Targets not found, synthesizing from options");
+
+
+            } else if (jobSpec.source.fieldNames.length>0) {
+                LOG.info("Targets not found, synthesizing from source.  All properties will be indexed.");
+                Target target=Target.createSimpleNode(jobSpec.source.name, jobSpec.source.fieldNames, PropertyType.String, false);
+                jobSpec.targets.add(target);
+            }
+        }
 
         //NODES first then relationships
         Collections.sort(jobSpec.targets);

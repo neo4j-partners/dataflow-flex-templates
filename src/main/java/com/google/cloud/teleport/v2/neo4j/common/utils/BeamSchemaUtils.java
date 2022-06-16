@@ -117,4 +117,16 @@ public class BeamSchemaUtils {
         }
         return new Schema(fields);
     }
+
+    public static Schema textToBeamSchema(String[] fieldNames){
+            // map source column names to order
+            List<Schema.Field> fields = new ArrayList<>();
+            // Map these fields to a schema in a row
+            for (int i = 0; i < fieldNames.length; i++) {
+                String fieldName = fieldNames[i];
+                Schema.Field schemaField= Schema.Field.of(fieldName, Schema.FieldType.STRING);
+                fields.add(schemaField);
+            }
+            return new Schema(fields);
+    }
 }

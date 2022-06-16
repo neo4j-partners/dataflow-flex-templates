@@ -12,18 +12,16 @@ import org.slf4j.LoggerFactory;
 
 import java.util.List;
 
-public class LineParsingFn extends DoFn<String, Row> {
+public class StringListToRowFn extends DoFn<List<String>, Row> {
 
-  private static final Logger LOG = LoggerFactory.getLogger(LineParsingFn.class);
+  private static final Logger LOG = LoggerFactory.getLogger(StringListToRowFn.class);
 
   private final Source source;
   private final Schema schema;
-  private final CSVFormat csvFormat;
 
-  public LineParsingFn(Source source, Schema sourceSchema, CSVFormat csvFormat) {
+  public StringListToRowFn(Source source, Schema sourceSchema) {
     this.source = source;
     this.schema = sourceSchema;
-    this.csvFormat = csvFormat;
   }
 
   @ProcessElement
@@ -31,9 +29,8 @@ public class LineParsingFn extends DoFn<String, Row> {
 
     if (this.source.sourceType== SourceType.text){
 
-      String line = processContext.element();
+      List<String> strCols = processContext.element();
       //transform
-      List<Object> strCols = TextParserUtils.parseDelimitedLine( csvFormat, line);
       if (strCols.size()>0) {
         Row row = Row.withSchema(this.schema).addValues(strCols).build();
         //LOG.info("Processed row, field count: "+row.getSchema().getFieldCount()+", values: "+strCols.size());

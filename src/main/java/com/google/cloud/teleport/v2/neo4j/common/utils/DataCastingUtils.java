@@ -25,6 +25,7 @@ import java.nio.charset.StandardCharsets;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class DataCastingUtils {
     private static final Logger LOG = LoggerFactory.getLogger(DataCastingUtils.class);
@@ -36,7 +37,7 @@ public class DataCastingUtils {
     public static Row txtRowToTargetRow(final Row strRow, List<Mapping> targetMappings, Schema targetSchema) {
         Schema sourceSchema = strRow.getSchema();
         Object[] castVals = new Object[targetMappings.size()];
-
+        //LOG.info("FIELDNAMES: "+StringUtils.join(targetSchema.getFieldNames(),","));
         for (int i = 0; i < targetMappings.size(); i++) {
             Mapping mapping = targetMappings.get(i);
             String strEl="";
@@ -53,7 +54,7 @@ public class DataCastingUtils {
                     strEl = StringUtils.trim(strRow.getValue(fieldName)+"");
                 }
             }
-
+            //LOG.info("DEBUG: "+mapping.constant+""+mapping.field+": "+strEl);
             if (StringUtils.isEmpty(strEl) && StringUtils.isNotEmpty(mapping.defaultValue)){
                 LOG.info("Setting default value for field: "+mapping.field+", name: "+mapping.name+", default: "+mapping.defaultValue);
                 strEl = mapping.defaultValue;
@@ -183,8 +184,14 @@ public class DataCastingUtils {
                 }
             }
         }
-
+        LOG.info("Casted map: "+mapToString(map));
         return map;
+    }
+    public static String mapToString(Map<String, ?> map) {
+        String mapAsString = map.keySet().stream()
+                .map(key -> key + "=" + map.get(key))
+                .collect(Collectors.joining(", ", "{", "}"));
+        return mapAsString;
     }
 
     public static byte[] asBytes(Object obj) throws IOException

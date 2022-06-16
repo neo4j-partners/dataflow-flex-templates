@@ -1,8 +1,8 @@
 package com.google.cloud.teleport.v2.neo4j.common.model;
 
 
-import com.google.cloud.teleport.v2.neo4j.common.model.enums.SaveMode;
-import com.google.cloud.teleport.v2.neo4j.common.model.enums.TargetType;
+import com.google.cloud.teleport.v2.neo4j.common.model.enums.*;
+import org.apache.beam.vendor.grpc.v1p43p2.com.google.api.Property;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -26,6 +26,28 @@ public class Target implements Serializable, Comparable {
 
     public Target(){}
 
+    public static Target createSimpleNode(String label, String[] propertyNames, PropertyType propertyType, boolean indexed){
+        Target target=new Target();
+        target.type=TargetType.node;
+        target.active=true;
+        target.saveMode= SaveMode.append;
+        Mapping mapping=new Mapping(TargetType.node);
+
+        mapping.constant=label;
+        mapping.fragmentType= FragmentType.node;
+        mapping.type = PropertyType.String;
+        mapping.role= RoleType.label;
+        for (String fieldname: propertyNames){
+            mapping.field=fieldname;
+            mapping.fragmentType=FragmentType.node;
+            mapping.type= propertyType;
+            mapping.indexed=indexed;
+            mapping.unique=false;
+            mapping.role=RoleType.property;
+        }
+        target.mappings.add(mapping);
+        return target;
+    }
     public Target(final JSONObject targetObj) {
         this.name = targetObj.getString("name");
         this.active = !targetObj.has("active") || targetObj.getBoolean("active");

@@ -10,29 +10,32 @@ import org.apache.beam.sdk.values.Row;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class CastTargetStringRowFn extends DoFn<Row, Row> {
+import java.util.List;
 
-  private static final Logger LOG = LoggerFactory.getLogger(CastTargetStringRowFn.class);
+public class CastExpandTargetRowFn extends DoFn<Row, Row> {
+
+  private static final Logger LOG = LoggerFactory.getLogger(CastExpandTargetRowFn.class);
 
   final static Gson gson = new GsonBuilder().setPrettyPrinting().create();
 
   private final Target target;
   private final Schema targetSchema;
 
-  public CastTargetStringRowFn(Target target, Schema targetSchema) {
+  public CastExpandTargetRowFn(Target target, Schema targetSchema) {
     this.target = target;
-    this.targetSchema = targetSchema;
+    this.targetSchema= targetSchema;
   }
 
   @ProcessElement
   public void processElement(ProcessContext processContext) {
     Row inputRow = processContext.element();
     //transform
-    Row outputRow = DataCastingUtils.txtRowToTargetRow(inputRow, target.mappings, targetSchema);
-    if (outputRow!=null) {
-      processContext.output(outputRow);
+    List<Object> castVals = DataCastingUtils.sourceTextToTargetObjects(inputRow, target);
+    if (targetSchema.getFieldCount()!=castVals.size()){
+      LOG.error("Unable to parse line.  Expecting "+targetSchema.getFieldCount()+" fields, found "+castVals.size());
     } else {
-      LOG.error("Row could not be parsed");
+      Row targetRow = Row.withSchema(targetSchema).attachValues(castVals);
+      processContext.output(targetRow);
     }
   }
 }

@@ -69,7 +69,6 @@ public class BeamSchemaUtils {
 
         // map source column names to order
         List<Schema.Field> fields = new ArrayList<>();
-        LOG.info("Fields explicitly defined");
         // Map these fields to a schema in a row
         for (int i = 0; i < target.mappings.size(); i++) {
             Mapping mapping = target.mappings.get(i);
@@ -86,12 +85,11 @@ public class BeamSchemaUtils {
                 throw new RuntimeException("Could not find field name or constant in target: "+target.name);
             }
             Schema.Field schemaField;
-            if (mapping.type == PropertyType.Integer) {
-                schemaField = Schema.Field.nullable(fieldName, Schema.FieldType.INT32);
+            if (mapping.type == PropertyType.Integer || mapping.type == PropertyType.Long) {
+                //avoid truncation by making it long
+                schemaField = Schema.Field.nullable(fieldName, Schema.FieldType.INT64);
             } else if (mapping.type == PropertyType.Float) {
                 schemaField = Schema.Field.nullable(fieldName, Schema.FieldType.FLOAT);
-            } else if (mapping.type == PropertyType.Long) {
-                schemaField = Schema.Field.nullable(fieldName, Schema.FieldType.INT64);
             } else if (mapping.type == PropertyType.Boolean) {
                 schemaField = Schema.Field.nullable(fieldName, Schema.FieldType.BOOLEAN);
             } else if (mapping.type == PropertyType.ByteArray) {
@@ -107,9 +105,9 @@ public class BeamSchemaUtils {
             } else if (mapping.type == PropertyType.DateTime) {
                 schemaField = Schema.Field.nullable(fieldName, Schema.FieldType.DATETIME);
             } else if (mapping.type == PropertyType.LocalTime) {
-                schemaField = Schema.Field.nullable(fieldName, Schema.FieldType.FLOAT);
+                schemaField = Schema.Field.nullable(fieldName, Schema.FieldType.DATETIME);
             } else if (mapping.type == PropertyType.Time) {
-                schemaField = Schema.Field.nullable(fieldName, Schema.FieldType.FLOAT);
+                schemaField = Schema.Field.nullable(fieldName, Schema.FieldType.STRING);
             } else {
                 schemaField = Schema.Field.nullable(fieldName, Schema.FieldType.STRING);
             }

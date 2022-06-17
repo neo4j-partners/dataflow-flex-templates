@@ -32,12 +32,15 @@ public class LineToRowFn extends DoFn<String, Row> {
     if (this.source.sourceType== SourceType.text){
 
       String line = processContext.element();
-      //transform
+      //Note: parser must return objects
       List<Object> strCols = TextParserUtils.parseDelimitedLine( csvFormat, line);
       if (strCols.size()>0) {
-        Row row = Row.withSchema(this.schema).addValues(strCols).build();
-        //LOG.info("Processed row, field count: "+row.getSchema().getFieldCount()+", values: "+strCols.size());
-        processContext.output(row);
+        if (this.schema.getFieldCount()!=strCols.size()){
+            LOG.error("Unable to parse line.  Expecting "+this.schema.getFieldCount()+" fields, found "+strCols.size());
+        } else {
+          Row row = Row.withSchema(this.schema).attachValues(strCols);
+          processContext.output(row);
+        }
       } else {
         LOG.error("Row was empty!");
       }

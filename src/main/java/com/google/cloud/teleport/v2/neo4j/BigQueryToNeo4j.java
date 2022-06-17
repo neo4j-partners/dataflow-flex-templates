@@ -24,10 +24,12 @@ import com.google.cloud.teleport.v2.neo4j.bq.options.BigQueryToNeo4jImportOption
 import com.google.cloud.teleport.v2.neo4j.common.InputOptimizer;
 import com.google.cloud.teleport.v2.neo4j.common.InputValidator;
 import com.google.cloud.teleport.v2.neo4j.common.database.Neo4jConnection;
+import com.google.cloud.teleport.v2.neo4j.common.transforms.DeleteEmptyRowsFn;
 import com.google.cloud.teleport.v2.neo4j.common.transforms.Neo4jRowWriterTransform;
 import com.google.cloud.teleport.v2.neo4j.common.model.ConnectionParams;
 import com.google.cloud.teleport.v2.neo4j.common.model.JobSpecRequest;
 import com.google.cloud.teleport.v2.neo4j.common.model.Target;
+import com.google.cloud.teleport.v2.neo4j.common.utils.BeamSchemaUtils;
 import com.google.cloud.teleport.v2.neo4j.common.utils.ModelUtils;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -41,6 +43,7 @@ import org.apache.beam.sdk.schemas.Schema;
 import org.apache.beam.sdk.schemas.SchemaCoder;
 import org.apache.beam.sdk.transforms.Flatten;
 import org.apache.beam.sdk.transforms.MapElements;
+import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.PCollectionList;
 import org.apache.beam.sdk.values.Row;
@@ -139,10 +142,12 @@ public class BigQueryToNeo4j {
         BigQuery bigquery = BigQueryOptions.getDefaultInstance().getService();
         QueryJobConfiguration queryConfig = QueryJobConfiguration.newBuilder(ZERO_ROW_SQL).build();
         Set<String> fieldSet;
+        Schema initSchema=null;
         try {
             LOG.info("Metadata query: " + ZERO_ROW_SQL);
             TableResult zeroRowQueryResult = bigquery.query(queryConfig);
-            fieldSet = ModelUtils.getBqFieldSet(zeroRowQueryResult.getSchema());
+            initSchema = BeamSchemaUtils.toBeamSchema(zeroRowQueryResult.getSchema());
+            fieldSet = ModelUtils.getBeamFieldSet(initSchema);
         } catch (Exception e) {
             String errMsg = "Error running query: " + e.getMessage();
             LOG.error(errMsg);
@@ -191,7 +196,7 @@ public class BigQueryToNeo4j {
 
             ///////////////////////////////////////////
             //Block until nodes are collected...
-            PCollection<Row> blocked = PCollectionList.of(blockingList).apply("Block", Flatten.pCollections());
+            PCollection<Row> blocked = PCollectionList.of(blockingList).apply("Block", Flatten.pCollections()).apply(ParDo.of(new DeleteEmptyRowsFn())).setRowSchema(initSchema);
 
             ////////////////////////////
             // Write relationship targets

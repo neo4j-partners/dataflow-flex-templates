@@ -1,6 +1,5 @@
 package com.google.cloud.teleport.v2.neo4j.common.utils;
 
-import com.google.cloud.bigquery.Field;
 import com.google.cloud.teleport.v2.neo4j.common.model.Mapping;
 import com.google.cloud.teleport.v2.neo4j.common.model.Target;
 import com.google.cloud.teleport.v2.neo4j.common.model.enums.PropertyType;
@@ -17,12 +16,8 @@ import org.slf4j.LoggerFactory;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
-import java.math.BigDecimal;
-import java.nio.charset.StandardCharsets;
-import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.*;
-import java.time.temporal.TemporalAmount;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -33,100 +28,128 @@ public class DataCastingUtils {
     private static final DateTimeFormatter jsDateFormatter = DateTimeFormat.forPattern("YYYY-MM-DD");
     private static final SimpleDateFormat jsTimeFormatter = new SimpleDateFormat("HH:MM:SS");
 
-    public static Row txtRowToTargetRow(final Row strRow, List<Mapping> targetMappings, Schema targetSchema) {
-        Schema sourceSchema = strRow.getSchema();
-        Object[] castVals = new Object[targetSchema.getFieldCount()];
-
-        Iterator<Schema.Field> it=targetSchema.getFields().iterator();
-        int indx=-1;
-      while (it.hasNext()){
-            Schema.Field field=it.next();
-            indx++;
+    public static List<Object> sourceTextToTargetObjects(final Row rowOfStrings, Target target) {
+        Schema targetSchema=BeamSchemaUtils.toBeamSchema(target);
+        List<Mapping> targetMappings=target.mappings;
+        List<Object> castVals = new ArrayList<>();
+        Iterator<Schema.Field> it = targetSchema.getFields().iterator();
+        int indx = -1;
+        while (it.hasNext()) {
+            Schema.Field field = it.next();
             String fieldName = field.getName();
-            Schema.FieldType type=field.getType();
+            Schema.FieldType type = field.getType();
+            Object objVal=null;
 
-            if (strRow.getValue(fieldName)==null) {
-              castVals[indx]=null;
-              continue;
-           }
+            try {
+                objVal=rowOfStrings.getValue(fieldName);
+            } catch (Exception e){
+                //LOG.warn("Error getting value: "+fieldName);
+            }
+            if (objVal == null) {
+                String constant= findConstantValue(targetMappings,  fieldName);
+                if (constant!=null) {
+                    castVals.add(constant);
+                    continue;
+                } else {
+                    LOG.error("Value for "+fieldName+" not found.");
+                    castVals.add(null);
+                    continue;
+                }
+            }
 
-            String strEl = strRow.getString(fieldName);
-
-          if (type.getTypeName().isNumericType()){
-              if (type.getTypeName()== Schema.TypeName.DECIMAL){
-                  castVals[indx]=Double.parseDouble(strEl);
-              } else if (type.getTypeName()== Schema.TypeName.FLOAT){
-                  castVals[indx]=Float.parseFloat(strEl);
-              } else if (type.getTypeName()== Schema.TypeName.DOUBLE){
-                  castVals[indx]=Double.parseDouble(strEl);
-              } else {
-                  castVals[indx]=Long.parseLong(strEl);
-              }
-          } else if (type.getTypeName().isLogicalType()){
-              castVals[indx]=Boolean.parseBoolean(strEl);
-          } else if (type.getTypeName().isDateType()){
-              if (strEl.indexOf(":")>0){
-                  DateTime dt = DateTime.parse(strEl, jsDateTimeFormatter);
-                  LocalDate ldt = LocalDate.of(dt.getYear(), dt.getMonthOfYear(), dt.getDayOfMonth());
-                  ldt.atTime(dt.getHourOfDay(), dt.getMinuteOfHour(), dt.getSecondOfMinute());
-                  castVals[indx] = ldt;
-              } else {
-                  DateTime dt = DateTime.parse(strEl, jsDateFormatter);
-                  LocalDate ldt = LocalDate.of(dt.getYear(), dt.getMonthOfYear(), dt.getDayOfMonth());
-                  ldt.atTime(dt.getHourOfDay(), dt.getMinuteOfHour(), dt.getSecondOfMinute());
-                  castVals[indx] = ldt;
-              }
-          } else {
-              castVals[indx] = strEl;
-          }
+            try {
+                String strEl = objVal+"";
+                //LOG.info(fieldName+":"+objVal);
+                if (type.getTypeName().isNumericType()) {
+                    if (type.getTypeName() == Schema.TypeName.DECIMAL) {
+                        castVals.add(Double.parseDouble(strEl));
+                    } else if (type.getTypeName() == Schema.TypeName.FLOAT) {
+                        castVals.add(Float.parseFloat(strEl));
+                    } else if (type.getTypeName() == Schema.TypeName.DOUBLE) {
+                        castVals.add(Double.parseDouble(strEl));
+                    } else {
+                        castVals.add(Long.parseLong(strEl));
+                    }
+                } else if (type.getTypeName().isLogicalType()) {
+                    castVals.add(Boolean.parseBoolean(strEl));
+                } else if (type.getTypeName().isDateType()) {
+                    if (strEl.indexOf(":") > 0) {
+                        DateTime dt = DateTime.parse(strEl, jsDateTimeFormatter);
+                        LocalDate ldt = LocalDate.of(dt.getYear(), dt.getMonthOfYear(), dt.getDayOfMonth());
+                        ldt.atTime(dt.getHourOfDay(), dt.getMinuteOfHour(), dt.getSecondOfMinute());
+                        castVals.add(ldt);
+                    } else {
+                        DateTime dt = DateTime.parse(strEl, jsDateFormatter);
+                        LocalDate ldt = LocalDate.of(dt.getYear(), dt.getMonthOfYear(), dt.getDayOfMonth());
+                        ldt.atTime(dt.getHourOfDay(), dt.getMinuteOfHour(), dt.getSecondOfMinute());
+                        castVals.add(ldt);
+                    }
+                } else {
+                    castVals.add(objVal);
+                }
+            }catch (Exception e){
+                castVals.add(null);
+                LOG.warn("Exception casting "+fieldName+": "+objVal);
+            }
         }
+        //LOG.info("Constructing target row: {}, values: {}",targetSchema,StringUtils.join(castVals,","));
+        return castVals;
+    }
 
-        Row targetRow = Row.withSchema(targetSchema).addValues(castVals).build();
-        return targetRow;
+    private static String findConstantValue(List<Mapping> targetMappings, String fieldName){
+        for (Mapping m : targetMappings) {
+            //lookup data type
+            if (StringUtils.isNotEmpty(m.constant)) {
+                if (m.name.equals(fieldName) || m.constant.equals(fieldName)) {
+                    return m.constant;
+                }
+            }
+        }
+        return null;
     }
 
     public static Map<String, Object> rowToNeo4jDataMap(Row row, Target target) {
 
         Map<String, Object> map = new HashMap();
 
-        Schema dataSchema=row.getSchema();
-        for (Schema.Field field:dataSchema.getFields()){
-            String fieldName=field.getName();
-            Schema.FieldType type=field.getType();
+        Schema dataSchema = row.getSchema();
+        for (Schema.Field field : dataSchema.getFields()) {
+            String fieldName = field.getName();
+            Schema.FieldType type = field.getType();
             // BYTE, INT16, INT32, INT64, DECIMAL, FLOAT, DOUBLE, STRING, DATETIME, BOOLEAN, BYTES, ARRAY, ITERABLE, MAP, ROW, LOGICAL_TYPE;
             // NUMERIC_TYPES; STRING_TYPES; DATE_TYPES; COLLECTION_TYPES; MAP_TYPES; COMPOSITE_TYPES;
-            if (row.getValue(fieldName)==null){
-                map.put(fieldName,null);
+            if (row.getValue(fieldName) == null) {
+                map.put(fieldName, null);
                 continue;
             }
-            if (type.getTypeName().isNumericType()){
-                if (type.getTypeName()== Schema.TypeName.DECIMAL){
+            if (type.getTypeName().isNumericType()) {
+                if (type.getTypeName() == Schema.TypeName.DECIMAL) {
                     map.put(fieldName, row.getDecimal(fieldName).doubleValue());
-                } else if (type.getTypeName()== Schema.TypeName.FLOAT){
+                } else if (type.getTypeName() == Schema.TypeName.FLOAT) {
                     map.put(fieldName, row.getFloat(fieldName).doubleValue());
-                } else if (type.getTypeName()== Schema.TypeName.DOUBLE){
+                } else if (type.getTypeName() == Schema.TypeName.DOUBLE) {
                     map.put(fieldName, row.getDouble(fieldName));
                 } else {
-                    map.put(fieldName, Long.parseLong(row.getValue(fieldName)+""));
+                    map.put(fieldName, Long.parseLong(row.getValue(fieldName) + ""));
                 }
-            } else if (type.getTypeName().isLogicalType()){
-                map.put(fieldName, Boolean.parseBoolean(row.getBoolean(fieldName)+""));
-            } else if (type.getTypeName().isDateType()){
-                    ReadableDateTime dt=row.getDateTime(fieldName);
-                    ZonedDateTime zdt = ZonedDateTime.ofLocal(
-                            LocalDateTime.of(
-                                    dt.getYear(),
-                                    dt.getMonthOfYear(),
-                                    dt.getDayOfMonth(),
-                                    dt.getHourOfDay(),
-                                    dt.getMinuteOfHour(),
-                                    dt.getSecondOfMinute(),
-                                    dt.getMillisOfSecond() * 1_000_000),
-                            ZoneId.of(dt.getZone().getID(), ZoneId.SHORT_IDS),
-                            ZoneOffset.ofTotalSeconds(dt.getZone().getOffset(dt) / 1000));
-                    map.put(fieldName,zdt);
+            } else if (type.getTypeName().isLogicalType()) {
+                map.put(fieldName, Boolean.parseBoolean(row.getBoolean(fieldName) + ""));
+            } else if (type.getTypeName().isDateType()) {
+                ReadableDateTime dt = row.getDateTime(fieldName);
+                ZonedDateTime zdt = ZonedDateTime.ofLocal(
+                        LocalDateTime.of(
+                                dt.getYear(),
+                                dt.getMonthOfYear(),
+                                dt.getDayOfMonth(),
+                                dt.getHourOfDay(),
+                                dt.getMinuteOfHour(),
+                                dt.getSecondOfMinute(),
+                                dt.getMillisOfSecond() * 1_000_000),
+                        ZoneId.of(dt.getZone().getID(), ZoneId.SHORT_IDS),
+                        ZoneOffset.ofTotalSeconds(dt.getZone().getOffset(dt) / 1000));
+                map.put(fieldName, zdt);
             } else {
-                map.put(fieldName, row.getValue(fieldName)+"");
+                map.put(fieldName, row.getValue(fieldName) + "");
             }
         }
         for (Mapping m : target.mappings) {
@@ -150,21 +173,21 @@ public class DataCastingUtils {
         return map;
     }
 
-    private static boolean listFullOfNulls(List<Object> entries){
-            for (Object key: entries){
-                if (key!=null) return false;
+    private static boolean listFullOfNulls(List<Object> entries) {
+        for (Object key : entries) {
+            if (key != null) return false;
         }
         return true;
     }
-    public static String mapToString(Map<String, ?> map) {
+
+    private static String mapToString(Map<String, ?> map) {
         String mapAsString = map.keySet().stream()
                 .map(key -> key + "=" + map.get(key))
                 .collect(Collectors.joining(", ", "{", "}"));
         return mapAsString;
     }
 
-    public static byte[] asBytes(Object obj) throws IOException
-    {
+    private static byte[] asBytes(Object obj) throws IOException {
         ByteArrayOutputStream bytesOut = new ByteArrayOutputStream();
         ObjectOutputStream oos = new ObjectOutputStream(bytesOut);
         oos.writeObject(obj);
@@ -176,7 +199,7 @@ public class DataCastingUtils {
     }
 
     private static DateTime asDateTime(Object o) {
-        if (o==null) return null;
+        if (o == null) return null;
         DateTime val = null;
         if (o instanceof DateTime) {
             val = ((DateTime) o).toDateTime();
@@ -185,7 +208,7 @@ public class DataCastingUtils {
     }
 
     private static Double asDouble(Object o) {
-        if (o==null) return null;
+        if (o == null) return null;
         Double val = null;
         if (o instanceof Number) {
             val = ((Number) o).doubleValue();
@@ -194,7 +217,7 @@ public class DataCastingUtils {
     }
 
     private static Float asFloat(Object o) {
-        if (o==null) return null;
+        if (o == null) return null;
         Float val = null;
         if (o instanceof Number) {
             val = ((Number) o).floatValue();
@@ -203,7 +226,7 @@ public class DataCastingUtils {
     }
 
     private static Integer asInteger(Object o) {
-        if (o==null) return null;
+        if (o == null) return null;
         Integer val = null;
         if (o instanceof Number) {
             val = ((Number) o).intValue();
@@ -212,7 +235,7 @@ public class DataCastingUtils {
     }
 
     private static Boolean asBoolean(Object o) {
-        if (o==null) return null;
+        if (o == null) return null;
         Boolean val = null;
         if (o instanceof Boolean) {
             val = ((Boolean) o).booleanValue();
@@ -221,7 +244,7 @@ public class DataCastingUtils {
     }
 
     private static String asString(Object o) {
-        if (o==null) return null;
+        if (o == null) return null;
         String val = null;
         if (o instanceof String) {
             val = ((String) o);

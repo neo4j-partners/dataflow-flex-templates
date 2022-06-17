@@ -34,8 +34,7 @@ public class TextParserUtils {
                 CSVRecord csvRecord = csvParser.getRecords().get(0);
                 Iterator<String> it = csvRecord.iterator();
                 while (it.hasNext()) {
-                    // cast to text
-                    textCols.add( it.next()+"");
+                    textCols.add( it.next());
                 }
             } catch (IOException ioException) {
                 LOG.error("Error parsing line: " + line + ", exception: " + ioException.getMessage());

@@ -3,7 +3,8 @@ package com.google.cloud.teleport.v2.neo4j;
 import com.google.cloud.teleport.v2.neo4j.common.InputOptimizer;
 import com.google.cloud.teleport.v2.neo4j.common.InputValidator;
 import com.google.cloud.teleport.v2.neo4j.common.database.Neo4jConnection;
-import com.google.cloud.teleport.v2.neo4j.common.transforms.CastTargetStringRowFn;
+import com.google.cloud.teleport.v2.neo4j.common.transforms.CastExpandTargetRowFn;
+import com.google.cloud.teleport.v2.neo4j.common.transforms.DeleteEmptyRowsFn;
 import com.google.cloud.teleport.v2.neo4j.common.transforms.Neo4jRowWriterTransform;
 import com.google.cloud.teleport.v2.neo4j.common.model.ConnectionParams;
 import com.google.cloud.teleport.v2.neo4j.common.model.JobSpecRequest;
@@ -122,32 +123,31 @@ public class TextToNeo4j {
 
         ////////////////////////////
         // Text file import
-        PCollection<Row> beamRows = null;
-        Schema beamSchema = null;
+        PCollection<Row> beamTextRows = null;
+        Schema beamTextSchema = null;
 
         if (source.sourceType != SourceType.text) {
             throw new RuntimeException("Unhandled source type: " + source.sourceType);
         }
-        beamSchema = source.getTextFileSchema();
-        Set<String> sourceFieldSet = ModelUtils.getBeamFieldSet(beamSchema);
-        LOG.info("Source schema field count: " + beamSchema.getFieldCount() + ", fields: " + StringUtils.join(beamSchema.getFieldNames(), ","));
+        beamTextSchema = source.getTextFileSchema();
 
         if (StringUtils.isNotBlank(this.dataFileUri)) {
             LOG.info("Ingesting file: " + this.dataFileUri + ".");
-            beamRows = begin
+            beamTextRows = begin
                     .apply("Read " + source.name + " data: " + this.dataFileUri, TextIO.read().from(this.dataFileUri))
-                    .apply("Parse lines into string columns.", ParDo.of(new LineToRowFn(source, beamSchema, source.csvFormat)))
-                    .setRowSchema(beamSchema);
+                    .apply("Parse lines into string columns.", ParDo.of(new LineToRowFn(source, beamTextSchema, source.csvFormat)))
+                    .setRowSchema(beamTextSchema);
         } else if (source.inline != null) {
             LOG.info("Processing " + source.inline.size() + " rows inline.");
-            beamRows = begin
+            beamTextRows = begin
                     .apply("Ingest inline dataset: " + source.name, Create.of(source.inline))
-                    .apply("Parse lines into string columns.", ParDo.of(new StringListToRowFn(source, beamSchema)))
-                    .setRowSchema(beamSchema);
+                    .apply("Parse lines into string columns.", ParDo.of(new StringListToRowFn(source, beamTextSchema)))
+                    .setRowSchema(beamTextSchema);
         } else {
             throw new RuntimeException("Data not found.");
         }
 
+        LOG.info("Source schema: {}",beamTextSchema);
 
         ////////////////////////////
         // Reset db
@@ -158,9 +158,7 @@ public class TextToNeo4j {
 
         if (ModelUtils.nodesOnly(jobSpec) || ModelUtils.relationshipsOnly(jobSpec)) {
             for (Target target : jobSpec.getActiveTargets()) {
-                Neo4jRowWriterTransform targetWriterTransform = new Neo4jRowWriterTransform(jobSpec, neo4jConnection, target);
-                //PCollection<Row> returnVoid=
-                beamRows.apply(target.sequence + ": Writing Neo4j " + target.name, targetWriterTransform);
+                PCollection<Row> returnEmpty = castAndWriteCollection(beamTextRows, beamTextSchema,target);
             }
         } else {
             ////////////////////////////
@@ -168,63 +166,57 @@ public class TextToNeo4j {
             List<Target> nodeTargets = jobSpec.getActiveNodeTargets();
             List<PCollection<Row>> blockingList = new ArrayList<>();
             for (Target target : nodeTargets) {
-                LOG.info("Processing node: " + target.name);
-                final Schema targetSchema = BeamSchemaUtils.toBeamSchema(target);
-                final DoFn<Row, Row> castToTargetRow = new CastTargetStringRowFn(target, targetSchema);
-                String SQL = ModelUtils.getTargetSql(sourceFieldSet, target, false);
-                // conditionally apply sql to rows..
-                if (!SQL.equals(ModelUtils.DEFAULT_STAR_QUERY)) {
-                    LOG.info("Executing SQL: " + SQL);
-                    PCollection<Row> sqlTransformedData = beamRows.apply(target.sequence + ": SQLTransform " + target.name, SqlTransform.query(SQL))
-                            .apply(target.sequence + ": Cast " + target.name + " rows", ParDo.of(castToTargetRow))
-                            .setRowSchema(targetSchema);
-                    LOG.info("Target fieldNames: " + StringUtils.join(targetSchema.getFieldNames(), ","));
-                    Neo4jRowWriterTransform targetWriterTransform = new Neo4jRowWriterTransform(jobSpec, neo4jConnection, target);
-                    PCollection<Row> returnEmpty = sqlTransformedData.apply(target.sequence + ": Writing Neo4j " + target.name, targetWriterTransform);
-                    blockingList.add(returnEmpty);
-                } else {
-                    Neo4jRowWriterTransform targetWriterTransform = new Neo4jRowWriterTransform(jobSpec, neo4jConnection, target);
-                    PCollection<Row> returnEmpty = beamRows.apply(target.sequence + ": Writing Neo4j " + target.name, targetWriterTransform);
-                    blockingList.add(returnEmpty);
-                }
+                PCollection<Row> returnEmpty = castAndWriteCollection(beamTextRows, beamTextSchema,target);
+                blockingList.add(returnEmpty);
             }
 
             ///////////////////////////////////////////
             //Block until nodes are collected...
-            PCollection<Row> blocked = PCollectionList.of(blockingList).apply("Block", Flatten.pCollections());
+            PCollection<Row> blocked = PCollectionList.of(blockingList).apply("Block", Flatten.pCollections()).apply(ParDo.of(new DeleteEmptyRowsFn())).setRowSchema(beamTextSchema);
 
             ////////////////////////////
             // Write relationship targets
             List<Target> relationshipTargets = jobSpec.getActiveRelationshipTargets();
             for (Target target : relationshipTargets) {
-
+                LOG.info("Processing relationship: " + target.name);
                 List<PCollection<Row>> waitForUnblocked = new ArrayList<>();
-                waitForUnblocked.add(beamRows);
+                waitForUnblocked.add(beamTextRows);
+                //null row must be added after data row.
                 waitForUnblocked.add(blocked);
-                PCollection<Row> unblockedBeamRows = PCollectionList.of(waitForUnblocked).apply(target.sequence + ": Unblock " + target.name, Flatten.pCollections());
-                LOG.info("Beam schema: {}", beamSchema);
-
-                final Schema targetSchema = BeamSchemaUtils.toBeamSchema(target);
-                final DoFn<Row, Row> castToTargetRow = new CastTargetStringRowFn(target, targetSchema);
-                Neo4jRowWriterTransform targetWriterTransform = new Neo4jRowWriterTransform(jobSpec, neo4jConnection, target);
-                String SQL = ModelUtils.getTargetSql(sourceFieldSet, target, false);
-                // conditionally apply sql to rows..
-                if (!SQL.equals(ModelUtils.DEFAULT_STAR_QUERY)) {
-                    LOG.info("Executing SQL on PCOLLECTION: " + SQL);
-                    PCollection<Row> returnEmpty = unblockedBeamRows
-                            .apply(target.sequence + ": SQLTransform " + target.name, SqlTransform.query(SQL))
-                            .apply(target.sequence + ": Cast " + target.name + " rows", ParDo.of(castToTargetRow))
-                            .setRowSchema(targetSchema)
-                            .apply(target.sequence + ": Writing Neo4j " + target.name, targetWriterTransform);
-                } else {
-                    PCollection<Row> returnEmpty = unblockedBeamRows.apply(target.sequence + ": Cast " + target.name + " rows", ParDo.of(castToTargetRow))
-                            .apply(target.sequence + ": Writing Neo4j " + target.name, targetWriterTransform);
-                }
-
+                // also need to delete null rows...
+                PCollection<Row> unblockedTextRows = PCollectionList.of(waitForUnblocked).apply(target.sequence + ": Unblock " + target.name, Flatten.pCollections());
+                PCollection<Row> returnEmpty =castAndWriteCollection(unblockedTextRows, beamTextSchema,target);
+                //PCollection<Row> returnEmpty =castAndWriteCollection(beamTextRows, beamTextSchema,target);
             }
         }
 
         // For a Dataflow Flex Template, do NOT waitUntilFinish().
         pipeline.run();
+    }
+
+    private PCollection<Row> castAndWriteCollection(PCollection<Row> beamTextRows, Schema beamTextSchema, Target target){
+        LOG.info("Processing "+target.type+": " + target.name);
+        Set<String> sourceFieldSet = ModelUtils.getBeamFieldSet(beamTextSchema);
+        final Schema targetSchema = BeamSchemaUtils.toBeamSchema(target);
+        final DoFn<Row, Row> castToTargetRow = new CastExpandTargetRowFn(target,targetSchema);
+        Neo4jRowWriterTransform targetWriterTransform = new Neo4jRowWriterTransform(jobSpec, neo4jConnection, target);
+        String SQL = ModelUtils.getTargetSql(sourceFieldSet, target, false);
+        // conditionally apply sql to rows..
+        if (!SQL.equals(ModelUtils.DEFAULT_STAR_QUERY) ) {
+            LOG.info("Target schema: {}",targetSchema);
+            LOG.info("Executing SQL on PCOLLECTION: " + SQL);
+            PCollection<Row> sqlDataRow = beamTextRows
+                    .apply(target.sequence + ": SQLTransform " + target.name, SqlTransform.query(SQL));
+            LOG.info("Sql final schema: {}",sqlDataRow.getSchema());
+            PCollection<Row> castData = sqlDataRow.apply(target.sequence + ": Cast " + target.name + " rows", ParDo.of(castToTargetRow))
+                    .setRowSchema(targetSchema);
+            return castData.apply(target.sequence + ": Writing Neo4j " + target.name, targetWriterTransform);
+        } else {
+            LOG.info("Target schema: {}",targetSchema);
+            PCollection<Row> castData = beamTextRows
+                    .apply(target.sequence + ": Cast " + target.name + " rows", ParDo.of(castToTargetRow))
+                    .setRowSchema(targetSchema);
+            return castData.apply(target.sequence + ": Writing Neo4j " + target.name, targetWriterTransform);
+        }
     }
 }

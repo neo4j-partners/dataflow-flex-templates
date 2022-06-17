@@ -54,11 +54,11 @@ run on Dataflow.
 >     --appName=$APP_NAME \
 >     --region=$REGION \
 >     --workerMachineType=$MACHINE_TYPE \
->     --maxNumWorkers=16 \
+>     --maxNumWorkers=2 \
 >     --readQuery=\"SELECT customer_id,contact_name,company_name,seller_id,seller_first_name, \
 >     seller_last_name,seller_title,product_id,product_name,category_name,supplier_name, \
 >     supplier_postal_code, supplier_country,order_id, \
->     quantity,unit_price, discount FROM neo4jbusinessdev.northwind.V_CUSTOMER_ORDERS LIMIT 10\" \
+>     quantity,unit_price, discount FROM neo4jbusinessdev.northwind.V_CUSTOMER_ORDERS LIMIT 10000\" \
 >     --jobSpecUri=gs://neo4j-dataflow/job-specs/testing/bigquery/bq-northwind-jobspec.json \
 >     --neo4jConnectionUri=gs://neo4j-dataflow/job-specs/testing/common/auradb-free-connection.json"
 > ```

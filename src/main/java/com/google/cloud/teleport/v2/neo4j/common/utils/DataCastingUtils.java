@@ -1,8 +1,6 @@
 package com.google.cloud.teleport.v2.neo4j.common.utils;
 
 import com.google.cloud.bigquery.Field;
-import com.google.cloud.bigquery.FieldList;
-import com.google.cloud.bigquery.LegacySQLTypeName;
 import com.google.cloud.teleport.v2.neo4j.common.model.Mapping;
 import com.google.cloud.teleport.v2.neo4j.common.model.Target;
 import com.google.cloud.teleport.v2.neo4j.common.model.enums.PropertyType;
@@ -10,8 +8,7 @@ import org.apache.beam.repackaged.core.org.apache.commons.lang3.StringUtils;
 import org.apache.beam.sdk.schemas.Schema;
 import org.apache.beam.sdk.values.Row;
 import org.joda.time.DateTime;
-import org.joda.time.LocalDate;
-import org.joda.time.LocalDateTime;
+import org.joda.time.ReadableDateTime;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 import org.slf4j.Logger;
@@ -24,6 +21,8 @@ import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.*;
+import java.time.temporal.TemporalAmount;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -60,11 +59,11 @@ public class DataCastingUtils {
                 strEl = mapping.defaultValue;
             }
             if (mapping.type == PropertyType.Integer) {
-                castVals[i] = Integer.parseInt(strEl);
+                castVals[i] = Long.parseLong(strEl);
             } else if (mapping.type == PropertyType.Float) {
-                castVals[i] = Float.parseFloat(strEl);
+                castVals[i] = Double.parseDouble(strEl);
             } else if (mapping.type == PropertyType.BigDecimal) {
-                castVals[i] = new BigDecimal(strEl);
+                castVals[i] = Double.parseDouble(strEl);
             } else if (mapping.type == PropertyType.Long) {
                 castVals[i] = Long.parseLong(strEl);
             } else if (mapping.type == PropertyType.Boolean) {
@@ -72,19 +71,22 @@ public class DataCastingUtils {
             } else if (mapping.type == PropertyType.ByteArray) {
                 castVals[i]=strEl.getBytes(StandardCharsets.UTF_8);
             } else if (mapping.type == PropertyType.Point) {
-                //point is string
+                //TODO: cast to point
+                //org.neo4j.graphdb.spatial.Point
                 castVals[i]=strEl;
             } else if (mapping.type == PropertyType.Duration) {
-                //TODO: how do we cast this?
-                castVals[i]=strEl;
-            } else if (mapping.type == PropertyType.Date) {
-                castVals[i]= DateTime.parse(strEl,jsDateFormatter);
+                java.time.temporal.TemporalAmount duration=TimeParser.parseTemporalAmount(strEl);
+                castVals[i]= duration;
+                //TODO: check on time parsing
+            } else if (mapping.type == PropertyType.Date || mapping.type == PropertyType.DateTime) {
+                DateTime dt = DateTime.parse(strEl,jsDateFormatter);
+                LocalDate ldt=LocalDate.of(dt.getYear(),dt.getMonthOfYear(),dt.getDayOfMonth());
+                ldt.atTime(dt.getHourOfDay(),dt.getMinuteOfHour(),dt.getSecondOfMinute());
+                castVals[i]= ldt;
             } else if (mapping.type == PropertyType.LocalDateTime) {
                 castVals[i] = LocalDateTime.parse(strEl);
-            } else if (mapping.type == PropertyType.DateTime) {
-                castVals[i] =  DateTime.parse(strEl,jsDateTimeFormatter);
             } else if (mapping.type == PropertyType.LocalTime) {
-                castVals[i] = LocalDate.parse(strEl);
+                castVals[i] = LocalTime.parse(strEl);
             } else if (mapping.type == PropertyType.Time) {
                 try {
                     Date dt = jsTimeFormatter.parse(strEl);
@@ -102,50 +104,57 @@ public class DataCastingUtils {
         return targetRow;
     }
 
-    public static List<Object> bigQueryToBeamValues(com.google.cloud.bigquery.Schema bqSchema,Collection<Object> bqValues){
-
-        List<Object> beamValues=new ArrayList<>();
-        Object[] objValues=bqValues.toArray();
-        FieldList fieldList = bqSchema.getFields();
-        for (int i=0;i<fieldList.size();i++){
-            Field bqField=fieldList.get(i);
-            LegacySQLTypeName legacySQLTypeName=bqField.getType();
-            Object val=objValues[i];
-            if (LegacySQLTypeName.STRING.equals(legacySQLTypeName)) {
-                //return Schema.FieldType.STRING;
-                beamValues.add(asString(val));
-            } else if (LegacySQLTypeName.TIMESTAMP.equals(legacySQLTypeName)) {
-                //return Schema.FieldType.DATETIME;
-                beamValues.add(asDateTime(val));
-            } else if (LegacySQLTypeName.DATE.equals(legacySQLTypeName)) {
-                //return Schema.FieldType.DATETIME;
-                beamValues.add(asDateTime(val));
-            } else if (LegacySQLTypeName.BYTES.equals(legacySQLTypeName)) {
-                //return Schema.FieldType.BYTES;
-                beamValues.add(val);
-            } else if (LegacySQLTypeName.BOOLEAN.equals(legacySQLTypeName)) {
-                //return Schema.FieldType.BOOLEAN;
-                beamValues.add(asBoolean(val));
-            } else if (LegacySQLTypeName.NUMERIC.equals(legacySQLTypeName)) {
-                //return Schema.FieldType.DOUBLE;
-                beamValues.add(asDouble(val));
-            } else if (LegacySQLTypeName.FLOAT.equals(legacySQLTypeName)) {
-                //return Schema.FieldType.FLOAT;
-                beamValues.add(asFloat(val));
-            } else if (LegacySQLTypeName.INTEGER.equals(legacySQLTypeName)) {
-                //return Schema.FieldType.INT64;
-                beamValues.add(asInteger(val));
-            }
-        }
-        return beamValues;
-    }
-
     public static Map<String, Object> rowToNeo4jDataMap(Row row, Target target) {
 
         Map<String, Object> map = new HashMap();
+
+        Schema dataSchema=row.getSchema();
+        for (Schema.Field field:dataSchema.getFields()){
+            String fieldName=field.getName();
+            Schema.FieldType type=field.getType();
+            // BYTE, INT16, INT32, INT64, DECIMAL, FLOAT, DOUBLE, STRING, DATETIME, BOOLEAN, BYTES, ARRAY, ITERABLE, MAP, ROW, LOGICAL_TYPE;
+            // NUMERIC_TYPES; STRING_TYPES; DATE_TYPES; COLLECTION_TYPES; MAP_TYPES; COMPOSITE_TYPES;
+            if (row.getValue(fieldName)==null){
+                map.put(fieldName,null);
+                continue;
+            }
+            if (type.getTypeName().isNumericType()){
+                if (type.getTypeName()== Schema.TypeName.DECIMAL){
+                    map.put(fieldName, row.getDecimal(fieldName).doubleValue());
+                } else if (type.getTypeName()== Schema.TypeName.FLOAT){
+                    map.put(fieldName, row.getFloat(fieldName).doubleValue());
+                } else if (type.getTypeName()== Schema.TypeName.DOUBLE){
+                    map.put(fieldName, row.getDouble(fieldName));
+                } else {
+                    map.put(fieldName, Long.parseLong(row.getValue(fieldName)+""));
+                }
+            } else if (type.getTypeName().isLogicalType()){
+                map.put(fieldName, Boolean.parseBoolean(row.getBoolean(fieldName)+""));
+            } else if (type.getTypeName().isDateType()){
+                    ReadableDateTime dt=row.getDateTime(fieldName);
+                    ZonedDateTime zdt = ZonedDateTime.ofLocal(
+                            LocalDateTime.of(
+                                    dt.getYear(),
+                                    dt.getMonthOfYear(),
+                                    dt.getDayOfMonth(),
+                                    dt.getHourOfDay(),
+                                    dt.getMinuteOfHour(),
+                                    dt.getSecondOfMinute(),
+                                    dt.getMillisOfSecond() * 1_000_000),
+                            ZoneId.of(dt.getZone().getID(), ZoneId.SHORT_IDS),
+                            ZoneOffset.ofTotalSeconds(dt.getZone().getOffset(dt) / 1000));
+                    map.put(fieldName,zdt);
+            } else {
+                map.put(fieldName, row.getValue(fieldName)+"");
+            }
+        }
         for (Mapping m : target.mappings) {
+            //if row is empty continue
+            if (listFullOfNulls(row.getValues())) {
+                continue;
+            }
             String fieldName = m.field;
-            PropertyType dataColPropertyType = m.type;
+            PropertyType targetMappingType = m.type;
             //lookup data type
             if (StringUtils.isNotEmpty(m.constant)) {
                 if (StringUtils.isNotEmpty(m.name)) {
@@ -153,39 +162,18 @@ public class DataCastingUtils {
                 } else {
                     map.put(m.constant, m.constant);
                 }
-            } else {
-                if (dataColPropertyType == PropertyType.Integer) {
-                    map.put(m.field, row.getInt32(fieldName));
-                } else if (dataColPropertyType == PropertyType.Float) {
-                    map.put(m.field, row.getFloat(fieldName));
-                } else if (dataColPropertyType == PropertyType.Long) {
-                    map.put(m.field, row.getInt64(fieldName));
-                } else if (dataColPropertyType == PropertyType.Boolean) {
-                    map.put(m.field, row.getBoolean(fieldName));
-                } else if (dataColPropertyType == PropertyType.ByteArray) {
-                    map.put(m.field, row.getBytes(fieldName));
-                } else if (dataColPropertyType == PropertyType.Point) {
-                    map.put(m.field, row.getString(fieldName));
-                } else if (dataColPropertyType == PropertyType.Duration) {
-                    map.put(m.field, row.getDecimal(fieldName));
-                } else if (dataColPropertyType == PropertyType.Date) {
-                    map.put(m.field, row.getDateTime(fieldName));
-                } else if (dataColPropertyType == PropertyType.LocalDateTime) {
-                    map.put(m.field, row.getDateTime(fieldName));
-                } else if (dataColPropertyType == PropertyType.DateTime) {
-                    map.put(m.field, row.getDateTime(fieldName));
-                    //TODO: how to model time?
-                } else if (dataColPropertyType == PropertyType.LocalTime) {
-                    map.put(m.field, row.getFloat(fieldName));
-                } else if (dataColPropertyType == PropertyType.Time) {
-                    map.put(m.field, row.getFloat(fieldName));
-                } else {
-                    map.put(m.field, row.getString(fieldName));
-                }
             }
         }
+
         //LOG.info("Casted map: "+mapToString(map));
         return map;
+    }
+
+    private static boolean listFullOfNulls(List<Object> entries){
+            for (Object key: entries){
+                if (key!=null) return false;
+        }
+        return true;
     }
     public static String mapToString(Map<String, ?> map) {
         String mapAsString = map.keySet().stream()

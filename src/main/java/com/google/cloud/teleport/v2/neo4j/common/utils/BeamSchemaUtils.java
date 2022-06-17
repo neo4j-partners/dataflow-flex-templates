@@ -87,31 +87,31 @@ public class BeamSchemaUtils {
             }
             Schema.Field schemaField;
             if (mapping.type == PropertyType.Integer) {
-                schemaField = Schema.Field.of(fieldName, Schema.FieldType.INT32);
+                schemaField = Schema.Field.nullable(fieldName, Schema.FieldType.INT32);
             } else if (mapping.type == PropertyType.Float) {
-                schemaField = Schema.Field.of(fieldName, Schema.FieldType.FLOAT);
+                schemaField = Schema.Field.nullable(fieldName, Schema.FieldType.FLOAT);
             } else if (mapping.type == PropertyType.Long) {
-                schemaField = Schema.Field.of(fieldName, Schema.FieldType.INT64);
+                schemaField = Schema.Field.nullable(fieldName, Schema.FieldType.INT64);
             } else if (mapping.type == PropertyType.Boolean) {
-                schemaField = Schema.Field.of(fieldName, Schema.FieldType.BOOLEAN);
+                schemaField = Schema.Field.nullable(fieldName, Schema.FieldType.BOOLEAN);
             } else if (mapping.type == PropertyType.ByteArray) {
-                schemaField = Schema.Field.of(fieldName, Schema.FieldType.BYTES);
+                schemaField = Schema.Field.nullable(fieldName, Schema.FieldType.BYTES);
             } else if (mapping.type == PropertyType.Point) {
-                schemaField = Schema.Field.of(fieldName, Schema.FieldType.STRING);
+                schemaField = Schema.Field.nullable(fieldName, Schema.FieldType.STRING);
             } else if (mapping.type == PropertyType.Duration) {
-                schemaField = Schema.Field.of(fieldName, Schema.FieldType.DECIMAL);
+                schemaField = Schema.Field.nullable(fieldName, Schema.FieldType.DECIMAL);
             } else if (mapping.type == PropertyType.Date) {
-                schemaField = Schema.Field.of(fieldName, Schema.FieldType.DATETIME);
+                schemaField = Schema.Field.nullable(fieldName, Schema.FieldType.DATETIME);
             } else if (mapping.type == PropertyType.LocalDateTime) {
-                schemaField = Schema.Field.of(fieldName, Schema.FieldType.DATETIME);
+                schemaField = Schema.Field.nullable(fieldName, Schema.FieldType.DATETIME);
             } else if (mapping.type == PropertyType.DateTime) {
-                schemaField = Schema.Field.of(fieldName, Schema.FieldType.DATETIME);
+                schemaField = Schema.Field.nullable(fieldName, Schema.FieldType.DATETIME);
             } else if (mapping.type == PropertyType.LocalTime) {
-                schemaField = Schema.Field.of(fieldName, Schema.FieldType.FLOAT);
+                schemaField = Schema.Field.nullable(fieldName, Schema.FieldType.FLOAT);
             } else if (mapping.type == PropertyType.Time) {
-                schemaField = Schema.Field.of(fieldName, Schema.FieldType.FLOAT);
+                schemaField = Schema.Field.nullable(fieldName, Schema.FieldType.FLOAT);
             } else {
-                schemaField = Schema.Field.of(fieldName, Schema.FieldType.STRING);
+                schemaField = Schema.Field.nullable(fieldName, Schema.FieldType.STRING);
             }
             fields.add(schemaField);
         }

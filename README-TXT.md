@@ -55,6 +55,7 @@ run on Dataflow.
 >     --appName=$APP_NAME \
 >     --region=$REGION \
 >     --workerMachineType=$MACHINE_TYPE \
+>     --maxNumWorkers=2 \
 >     --inputFilePattern=gs://neo4j-datasets/northwinds/nw_orders_1k_noheader.csv \
 >     --jobSpecUri=gs://neo4j-dataflow/job-specs/testing/text/text-northwind-jobspec.json \
 >     --neo4jConnectionUri=gs://neo4j-dataflow/job-specs/testing/common/auradb-free-connection.json"

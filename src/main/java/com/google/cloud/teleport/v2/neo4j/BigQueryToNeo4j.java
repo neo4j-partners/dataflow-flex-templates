@@ -23,7 +23,7 @@ import com.google.cloud.bigquery.TableResult;
 import com.google.cloud.teleport.v2.neo4j.bq.options.BigQueryToNeo4jImportOptions;
 import com.google.cloud.teleport.v2.neo4j.common.InputOptimizer;
 import com.google.cloud.teleport.v2.neo4j.common.InputValidator;
-import com.google.cloud.teleport.v2.neo4j.common.database.DirectConnect;
+import com.google.cloud.teleport.v2.neo4j.common.database.Neo4jConnection;
 import com.google.cloud.teleport.v2.neo4j.common.transforms.Neo4jRowWriterTransform;
 import com.google.cloud.teleport.v2.neo4j.common.model.ConnectionParams;
 import com.google.cloud.teleport.v2.neo4j.common.model.JobSpecRequest;
@@ -128,8 +128,8 @@ public class BigQueryToNeo4j {
         ////////////////////////////
         // Reset db
         if (jobSpec.config.resetDb) {
-            DirectConnect directConnect = new DirectConnect(this.neo4jConnection);
-            directConnect.resetNeo4j();
+            Neo4jConnection directConnect = new Neo4jConnection(this.neo4jConnection);
+            directConnect.resetDatabase();
         }
 
         ////////////////////////////
@@ -168,7 +168,7 @@ public class BigQueryToNeo4j {
                     LOG.info("Target (" + target.name + ") specific sql: " + TARGET_SPECIFIC_SQL);
                     beamRows = queryBq(target, TARGET_SPECIFIC_SQL);
                 }
-                Neo4jRowWriterTransform targetWriterTransform = new Neo4jRowWriterTransform(jobSpec, neo4jConnection, target, false, false);
+                Neo4jRowWriterTransform targetWriterTransform = new Neo4jRowWriterTransform(jobSpec, neo4jConnection, target);
                 beamRows.apply(target.sequence + ": Writing Neo4j " + target.name, targetWriterTransform);
             }
         } else {
@@ -178,7 +178,7 @@ public class BigQueryToNeo4j {
             List<Target> nodeTargets = jobSpec.getActiveNodeTargets();
             List<PCollection<Row>> blockingList = new ArrayList<>();
             for (Target target : nodeTargets) {
-                Neo4jRowWriterTransform targetWriterTransform = new Neo4jRowWriterTransform(jobSpec, neo4jConnection, target, false, false);
+                Neo4jRowWriterTransform targetWriterTransform = new Neo4jRowWriterTransform(jobSpec, neo4jConnection, target);
                 if (!singleSourceQuery) {
                     String TARGET_SPECIFIC_SQL = ModelUtils.getTargetSql(fieldSet, target, true, BASE_SQL);
                     LOG.info("Node target (" + target.name + ") specific sql: " + TARGET_SPECIFIC_SQL);
@@ -197,15 +197,15 @@ public class BigQueryToNeo4j {
             // Write relationship targets
             List<Target> relationshipTargets = jobSpec.getActiveRelationshipTargets();
             for (Target target : relationshipTargets) {
-                Neo4jRowWriterTransform targetWriterTransform = new Neo4jRowWriterTransform(jobSpec, neo4jConnection, target, false, false);
+                Neo4jRowWriterTransform targetWriterTransform = new Neo4jRowWriterTransform(jobSpec, neo4jConnection, target);
                 if (!singleSourceQuery) {
                     String TARGET_SPECIFIC_SQL = ModelUtils.getTargetSql(fieldSet, target, true, BASE_SQL);
                     LOG.info("Relationship target (" + target.name + ") specific sql: " + TARGET_SPECIFIC_SQL);
                     beamRows = queryBq(target, TARGET_SPECIFIC_SQL);
                 }
                 List<PCollection<Row>> unblockedList = new ArrayList<>();
-                unblockedList.add(blocked);
                 unblockedList.add(beamRows);
+                unblockedList.add(blocked);
                 PCollection<Row> unblockedBeamRows = PCollectionList.of(unblockedList).apply(target.sequence + ": Unblock", Flatten.pCollections());
                 PCollection<Row> returnVoid = unblockedBeamRows.apply(target.sequence + ": Writing Neo4j " + target.name, targetWriterTransform);
             }

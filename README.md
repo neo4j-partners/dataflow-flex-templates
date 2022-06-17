@@ -32,3 +32,22 @@ This project contains FlexTemplates that facilitate loading files within the Goo
 - This works because PCollection is schema agnostic.  We can cast the unblocked PCollection to whatever we want.
 - At the moment, the scheme is leaky because the Neo4jIO writer itself returns POutput which is non-blocking.  
 - The current best effort is to apply a zero row collapsing transform to the cast data inside Neo4jRowWriterTransform.
+
+## Data Type casting
+
+Cypher type/Java type
+=========================
+String/String
+Integer/Long
+Float/Double
+Boolean/Boolean
+Point/org.neo4j.graphdb.spatial.Point
+Date/java.time.LocalDate
+Time/java.time.OffsetTime
+LocalTime/java.time.LocalTime
+DateTime/java.time.ZonedDateTime
+LocalDateTime/java.time.LocalDateTime
+Duration/java.time.temporal.TemporalAmount
+Node/org.neo4j.graphdb.Node
+Relationship/org.neo4j.graphdb.Relationship
+Path/org.neo4j.graphdb.Path

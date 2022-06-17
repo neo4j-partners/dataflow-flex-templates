@@ -211,7 +211,8 @@ public class TextToNeo4j {
                 // conditionally apply sql to rows..
                 if (!SQL.equals(ModelUtils.DEFAULT_STAR_QUERY)) {
                     LOG.info("Executing SQL on PCOLLECTION: " + SQL);
-                    PCollection<Row> returnEmpty = unblockedBeamRows.apply(target.sequence + ": SQLTransform " + target.name, SqlTransform.query(SQL))
+                    PCollection<Row> returnEmpty = unblockedBeamRows
+                            .apply(target.sequence + ": SQLTransform " + target.name, SqlTransform.query(SQL))
                             .apply(target.sequence + ": Cast " + target.name + " rows", ParDo.of(castToTargetRow))
                             .setRowSchema(targetSchema)
                             .apply(target.sequence + ": Writing Neo4j " + target.name, targetWriterTransform);

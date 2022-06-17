@@ -35,69 +35,50 @@ public class DataCastingUtils {
 
     public static Row txtRowToTargetRow(final Row strRow, List<Mapping> targetMappings, Schema targetSchema) {
         Schema sourceSchema = strRow.getSchema();
-        Object[] castVals = new Object[targetMappings.size()];
-        //LOG.info("FIELDNAMES: "+StringUtils.join(targetSchema.getFieldNames(),","));
-        for (int i = 0; i < targetMappings.size(); i++) {
-            Mapping mapping = targetMappings.get(i);
-            String strEl="";
-            if (StringUtils.isNotEmpty(mapping.constant)) {
-                strEl=mapping.constant;
-                // LOG.info("Found constant, name: "+mapping.name+", value: "+strEl);
-            } else {
-                String fieldName = mapping.field;
-                Schema.Field sourceField = sourceSchema.getField(fieldName);
-                if (sourceField==null){
-                    LOG.error("Could not map target field to source:"+fieldName);
-                    strEl = null;
-                } else {
-                    strEl = StringUtils.trim(strRow.getValue(fieldName)+"");
-                }
-            }
-            //LOG.info("DEBUG: "+mapping.constant+""+mapping.field+": "+strEl);
-            if (StringUtils.isEmpty(strEl) && StringUtils.isNotEmpty(mapping.defaultValue)){
-                LOG.info("Setting default value for field: "+mapping.field+", name: "+mapping.name+", default: "+mapping.defaultValue);
-                strEl = mapping.defaultValue;
-            }
-            if (mapping.type == PropertyType.Integer) {
-                castVals[i] = Long.parseLong(strEl);
-            } else if (mapping.type == PropertyType.Float) {
-                castVals[i] = Double.parseDouble(strEl);
-            } else if (mapping.type == PropertyType.BigDecimal) {
-                castVals[i] = Double.parseDouble(strEl);
-            } else if (mapping.type == PropertyType.Long) {
-                castVals[i] = Long.parseLong(strEl);
-            } else if (mapping.type == PropertyType.Boolean) {
-                castVals[i] = Boolean.parseBoolean(strEl);
-            } else if (mapping.type == PropertyType.ByteArray) {
-                castVals[i]=strEl.getBytes(StandardCharsets.UTF_8);
-            } else if (mapping.type == PropertyType.Point) {
-                //TODO: cast to point
-                //org.neo4j.graphdb.spatial.Point
-                castVals[i]=strEl;
-            } else if (mapping.type == PropertyType.Duration) {
-                java.time.temporal.TemporalAmount duration=TimeParser.parseTemporalAmount(strEl);
-                castVals[i]= duration;
-                //TODO: check on time parsing
-            } else if (mapping.type == PropertyType.Date || mapping.type == PropertyType.DateTime) {
-                DateTime dt = DateTime.parse(strEl,jsDateFormatter);
-                LocalDate ldt=LocalDate.of(dt.getYear(),dt.getMonthOfYear(),dt.getDayOfMonth());
-                ldt.atTime(dt.getHourOfDay(),dt.getMinuteOfHour(),dt.getSecondOfMinute());
-                castVals[i]= ldt;
-            } else if (mapping.type == PropertyType.LocalDateTime) {
-                castVals[i] = LocalDateTime.parse(strEl);
-            } else if (mapping.type == PropertyType.LocalTime) {
-                castVals[i] = LocalTime.parse(strEl);
-            } else if (mapping.type == PropertyType.Time) {
-                try {
-                    Date dt = jsTimeFormatter.parse(strEl);
-                    Calendar cal = Calendar.getInstance();
-                    cal.setTime(dt);
-                } catch (ParseException e){
-                    castVals[i]=null;
-                }
-            } else {
-                castVals[i]=strEl;
-            }
+        Object[] castVals = new Object[targetSchema.getFieldCount()];
+
+        Iterator<Schema.Field> it=targetSchema.getFields().iterator();
+        int indx=-1;
+      while (it.hasNext()){
+            Schema.Field field=it.next();
+            indx++;
+            String fieldName = field.getName();
+            Schema.FieldType type=field.getType();
+
+            if (strRow.getValue(fieldName)==null) {
+              castVals[indx]=null;
+              continue;
+           }
+
+            String strEl = strRow.getString(fieldName);
+
+          if (type.getTypeName().isNumericType()){
+              if (type.getTypeName()== Schema.TypeName.DECIMAL){
+                  castVals[indx]=Double.parseDouble(strEl);
+              } else if (type.getTypeName()== Schema.TypeName.FLOAT){
+                  castVals[indx]=Float.parseFloat(strEl);
+              } else if (type.getTypeName()== Schema.TypeName.DOUBLE){
+                  castVals[indx]=Double.parseDouble(strEl);
+              } else {
+                  castVals[indx]=Long.parseLong(strEl);
+              }
+          } else if (type.getTypeName().isLogicalType()){
+              castVals[indx]=Boolean.parseBoolean(strEl);
+          } else if (type.getTypeName().isDateType()){
+              if (strEl.indexOf(":")>0){
+                  DateTime dt = DateTime.parse(strEl, jsDateTimeFormatter);
+                  LocalDate ldt = LocalDate.of(dt.getYear(), dt.getMonthOfYear(), dt.getDayOfMonth());
+                  ldt.atTime(dt.getHourOfDay(), dt.getMinuteOfHour(), dt.getSecondOfMinute());
+                  castVals[indx] = ldt;
+              } else {
+                  DateTime dt = DateTime.parse(strEl, jsDateFormatter);
+                  LocalDate ldt = LocalDate.of(dt.getYear(), dt.getMonthOfYear(), dt.getDayOfMonth());
+                  ldt.atTime(dt.getHourOfDay(), dt.getMinuteOfHour(), dt.getSecondOfMinute());
+                  castVals[indx] = ldt;
+              }
+          } else {
+              castVals[indx] = strEl;
+          }
         }
 
         Row targetRow = Row.withSchema(targetSchema).addValues(castVals).build();

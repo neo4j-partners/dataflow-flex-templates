@@ -4,11 +4,11 @@ This project contains FlexTemplates that facilitate loading files within the Goo
 
 ## Big Query to Neo4j
 
-[README-BQ](README-BQ.md)
+[README-BQ](README-BQ-COMPOSITE.md)
 
 ## Text to Neo4j
 
-[README-TXT](README-TXT.md)
+[README-TXT](README-TXT-COMPOSITE.md)
 
 ## Known issues
 

@@ -19,12 +19,10 @@ public class InputOptimizer {
         if (jobSpec.targets.size()==0){
             if (jobSpec.options.size()>0) {
                 LOG.info("Targets not found, synthesizing from options");
-
-
-            } else if (jobSpec.source.fieldNames.length>0) {
+                throw new RuntimeException("Not currently synthesizing targets from options.");
+            } else if (jobSpec.getAllFieldNames().size()==0) {
                 LOG.info("Targets not found, synthesizing from source.  All properties will be indexed.");
-                Target target=Target.createSimpleNode(jobSpec.source.name, jobSpec.source.fieldNames, PropertyType.String, false);
-                jobSpec.targets.add(target);
+                throw new RuntimeException("Not currently auto-generating targets.");
             }
         }
 

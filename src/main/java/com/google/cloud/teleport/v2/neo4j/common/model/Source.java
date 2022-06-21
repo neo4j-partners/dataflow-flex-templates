@@ -1,7 +1,7 @@
 package com.google.cloud.teleport.v2.neo4j.common.model;
 
 import com.google.cloud.teleport.v2.neo4j.common.model.enums.SourceType;
-import com.google.cloud.teleport.v2.neo4j.common.utils.BeamSchemaUtils;
+import com.google.cloud.teleport.v2.neo4j.common.utils.BeamUtils;
 import com.google.cloud.teleport.v2.neo4j.common.model.enums.TextFormat;
 import com.google.cloud.teleport.v2.neo4j.common.utils.TextParserUtils;
 import org.apache.beam.repackaged.core.org.apache.commons.lang3.StringUtils;
@@ -20,12 +20,14 @@ import java.util.Map;
 
 public class Source implements Serializable {
     private static final Logger LOG = LoggerFactory.getLogger(Source.class);
-
     public SourceType sourceType=SourceType.text;
     public String name="";
     public String uri = "";
     public String delimiter = "";
+    //row separator
+    public String separator = "";
 
+    public String query="";
     public TextFormat textFormat= TextFormat.CSV;
     public CSVFormat csvFormat = CSVFormat.DEFAULT;
     public String[] fieldNames = new String[0];
@@ -62,17 +64,23 @@ public class Source implements Serializable {
         } else {
             csvFormat = CSVFormat.DEFAULT;
         }
+
+        delimiter = sourceObj.has("delimiter") ? sourceObj.getString("delimiter") : "";
+        separator = sourceObj.has("separator") ? sourceObj.getString("separator") : "";
         //handle inline data
         if (sourceObj.has("data")){
             if (textFormat==TextFormat.JSON) {
                 this.inline = jsonToListArray(sourceObj.getJSONArray("data"));
             } else {
-                this.inline = TextParserUtils.parseDelimitedLines(csvFormat,sourceObj.getString("data"));
+                String csv=sourceObj.getString("data");
+                if (StringUtils.isNotEmpty(separator)){
+                    csv=StringUtils.join(StringUtils.split(csv,separator),System.lineSeparator());
+                }
+                this.inline = TextParserUtils.parseDelimitedLines(csvFormat,csv);
             }
         }
-
+        query = sourceObj.has("query") ? sourceObj.getString("query"):"";
         uri = sourceObj.has("uri") ? sourceObj.getString("uri"):"";
-        delimiter = sourceObj.has("delimiter") ? sourceObj.getString("delimiter") : "";
         final String colNamesStr = sourceObj.has("ordered_field_names") ? sourceObj.getString("ordered_field_names") : "";
         if (StringUtils.isNotEmpty(colNamesStr)) {
             fieldNames = StringUtils.split(colNamesStr, ",");
@@ -94,7 +102,7 @@ public class Source implements Serializable {
         }
     }
     public Schema getTextFileSchema(){
-        return BeamSchemaUtils.textToBeamSchema(fieldNames);
+        return BeamUtils.textToBeamSchema(fieldNames);
     }
 
     public static List<List<String>> jsonToListArray(JSONArray lines) {

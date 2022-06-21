@@ -8,14 +8,27 @@ import org.apache.beam.sdk.options.Validation;
 public interface Neo4jFlexTemplateOptions extends PipelineOptions {
 
     @Description("Path to job specification")
-    @Default.String("gs://neo4j-dataflow/job-specs/testing/common/bq-northwind-jobspec.json")
     @Validation.Required
     String getJobSpecUri();
     void setJobSpecUri(String value);
 
     @Description("Path to Neo4j connection metadata")
-    @Default.String("gs://neo4j-dataflow/job-specs/testing/common/auradb-free-connection.json")
     @Validation.Required
     String getNeo4jConnectionUri();
     void setNeo4jConnectionUri(String value);
+
+    @Description("Options JSON (see documentation)")
+    String getOptionsJson();
+    void setOptionsJson(String value);
+
+    @Description("Read query")
+    @Default.String("")
+    String getReadQuery();
+    void setReadQuery(String value);
+
+
+    @Description("Input file pattern")
+    @Default.String("")
+    String getInputFilePattern();
+    void setInputFilePattern(String value);
 }

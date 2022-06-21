@@ -14,23 +14,27 @@ import java.util.Map;
 
 public class Target implements Serializable, Comparable {
 
-    public String name;
+    public String source="";
+    public String name="";
     public boolean active = true;
     public TargetType type;
+    public boolean autoMap=false;
     public Query query = new Query();
     public List<Mapping> mappings = new ArrayList<>();
     public SaveMode saveMode = SaveMode.append;
     public Map<String,Mapping> mappingByFieldMap =new HashMap();
+    public List<String> fieldNames=new ArrayList<>();
 
     public int sequence=0;
 
     public Target(){}
 
-    public static Target createSimpleNode(String label, String[] propertyNames, PropertyType propertyType, boolean indexed){
+    public static Target createSimpleNode(String source, String label, String[] propertyNames, PropertyType propertyType, boolean indexed){
         Target target=new Target();
         target.type=TargetType.node;
         target.active=true;
         target.saveMode= SaveMode.append;
+        target.source=source;
         Mapping mapping=new Mapping(TargetType.node);
 
         mapping.constant=label;
@@ -52,10 +56,11 @@ public class Target implements Serializable, Comparable {
         this.name = targetObj.getString("name");
         this.active = !targetObj.has("active") || targetObj.getBoolean("active");
         this.type = TargetType.valueOf(targetObj.getString("type"));
-        this.saveMode = SaveMode.valueOf(targetObj.getString("save_mode"));
-
-        if (targetObj.has("query")) {
-            final JSONObject queryObj = targetObj.getJSONObject("query");
+        this.saveMode = SaveMode.valueOf(targetObj.getString("mode"));
+        this.source =  targetObj.has("source")?targetObj.getString("source"):"";
+        this.autoMap = !targetObj.has("automap") || targetObj.getBoolean("automap");
+        if (targetObj.has("transform")) {
+            final JSONObject queryObj = targetObj.getJSONObject("transform");
             if (queryObj.has("aggregations")) {
                 List<Aggregation> aggregations=new ArrayList<>();
                 JSONArray aggregationsArray = queryObj.getJSONArray("aggregations");
@@ -81,6 +86,7 @@ public class Target implements Serializable, Comparable {
                 final Mapping mapping = new Mapping(this.type,mappingObj);
                 this.mappings.add(mapping);
                 this.mappingByFieldMap.put(mapping.field, mapping);
+           this.fieldNames.add(mapping.field);
         }
 
     }

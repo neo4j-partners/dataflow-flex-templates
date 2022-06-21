@@ -6,14 +6,13 @@ import com.google.cloud.teleport.v2.neo4j.common.model.enums.RoleType;
 import com.google.cloud.teleport.v2.neo4j.common.model.enums.TargetType;
 import org.apache.beam.repackaged.core.org.apache.commons.lang3.StringUtils;
 import org.json.JSONObject;
-import org.neo4j.driver.types.Relationship;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.Serializable;
 
-public class Mapping implements Serializable {
-    private static final Logger LOG = LoggerFactory.getLogger(Mapping.class);
+public class Node implements Serializable {
+    private static final Logger LOG = LoggerFactory.getLogger(Node.class);
     public TargetType targetType=TargetType.node;
     public String constant;
     public RoleType role=RoleType.property;
@@ -28,11 +27,11 @@ public class Mapping implements Serializable {
     public boolean indexed=true;
     public FragmentType fragmentType = FragmentType.node;
 
-    public Mapping(TargetType type){
+    public Node(TargetType type){
         this.targetType=type;
     }
 
-    public Mapping(TargetType type, final JSONObject mappingObj)  {
+    public Node(TargetType type, final JSONObject mappingObj)  {
         this.targetType=type;
         this.label = mappingObj.has("label")?mappingObj.getString("label"):"";
         this.constant = mappingObj.has("constant")?mappingObj.getString("constant"):"";
@@ -61,5 +60,4 @@ public class Mapping implements Serializable {
         this.mandatory = mappingObj.has("mandatory") && mappingObj.getBoolean("mandatory");
         this.defaultValue =  mappingObj.has("default")?mappingObj.get("default")+"":"";
     }
-
 }

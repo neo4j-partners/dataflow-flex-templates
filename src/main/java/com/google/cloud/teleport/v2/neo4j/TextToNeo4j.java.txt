@@ -4,14 +4,13 @@ import com.google.cloud.teleport.v2.neo4j.common.InputOptimizer;
 import com.google.cloud.teleport.v2.neo4j.common.InputValidator;
 import com.google.cloud.teleport.v2.neo4j.common.database.Neo4jConnection;
 import com.google.cloud.teleport.v2.neo4j.common.transforms.CastExpandTargetRowFn;
-import com.google.cloud.teleport.v2.neo4j.common.transforms.DeleteEmptyRowsFn;
 import com.google.cloud.teleport.v2.neo4j.common.transforms.Neo4jRowWriterTransform;
 import com.google.cloud.teleport.v2.neo4j.common.model.ConnectionParams;
 import com.google.cloud.teleport.v2.neo4j.common.model.JobSpecRequest;
 import com.google.cloud.teleport.v2.neo4j.common.model.Source;
 import com.google.cloud.teleport.v2.neo4j.common.model.Target;
 import com.google.cloud.teleport.v2.neo4j.common.model.enums.SourceType;
-import com.google.cloud.teleport.v2.neo4j.common.utils.BeamSchemaUtils;
+import com.google.cloud.teleport.v2.neo4j.common.utils.BeamUtils;
 import com.google.cloud.teleport.v2.neo4j.common.utils.ModelUtils;
 import com.google.cloud.teleport.v2.neo4j.text.options.TextToNeo4jImportOptions;
 import com.google.cloud.teleport.v2.neo4j.text.transforms.LineToRowFn;
@@ -27,11 +26,9 @@ import org.apache.beam.sdk.options.PipelineOptionsFactory;
 import org.apache.beam.sdk.schemas.Schema;
 import org.apache.beam.sdk.transforms.Create;
 import org.apache.beam.sdk.transforms.DoFn;
-import org.apache.beam.sdk.transforms.Flatten;
 import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.values.PBegin;
 import org.apache.beam.sdk.values.PCollection;
-import org.apache.beam.sdk.values.PCollectionList;
 import org.apache.beam.sdk.values.Row;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -83,22 +80,22 @@ public class TextToNeo4j {
 
         ///////////////////////////////////
         // Text input specific options and validation
-        if (this.jobSpec.source == null) {
+        if (this.jobSpec.getDefaultSource() == null) {
             String errMsg = "JobSpec source is required for text imports.";
             LOG.error(errMsg);
             throw new RuntimeException(errMsg);
         }
-        if (this.jobSpec.source.sourceType != SourceType.text) {
-            String errMsg = "Currently unhandled source type: " + this.jobSpec.source.sourceType;
+        if (this.jobSpec.getDefaultSource().sourceType != SourceType.text) {
+            String errMsg = "Currently unhandled source type: " + this.jobSpec.getDefaultSource().sourceType;
             LOG.error(errMsg);
             throw new RuntimeException(errMsg);
         }
         if (!StringUtils.isEmpty(pipelineOptions.getInputFilePattern())) {
             this.dataFileUri = pipelineOptions.getInputFilePattern();
-        } else if (!StringUtils.isEmpty(this.jobSpec.source.uri)) {
-            this.dataFileUri = this.jobSpec.source.uri;
+        } else if (!StringUtils.isEmpty(this.jobSpec.getDefaultSource().uri)) {
+            this.dataFileUri = this.jobSpec.getDefaultSource().uri;
             LOG.info("Using source from jobSpec dataFile: " + this.dataFileUri);
-        } else if (this.jobSpec.source.inline != null) {
+        } else if (this.jobSpec.getDefaultSource().inline != null) {
             LOG.info("Using inline data.");
         } else {
             String errMsg = "Could not determine source data file.";
@@ -114,9 +111,7 @@ public class TextToNeo4j {
 
         Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
 
-        Source source = this.jobSpec.source;
-
-        LOG.info("Using data file: " + this.dataFileUri);
+        Source source = this.jobSpec.getDefaultSource();
 
         final PBegin begin = pipeline.begin();
         // Read all the lines from a file
@@ -172,19 +167,14 @@ public class TextToNeo4j {
 
             ///////////////////////////////////////////
             //Block until nodes are collected...
-            PCollection<Row> blocked = PCollectionList.of(blockingList).apply("Block", Flatten.pCollections()).apply(ParDo.of(new DeleteEmptyRowsFn())).setRowSchema(beamTextSchema);
+            PCollection<Row> blocked = BeamUtils.blockCollection(blockingList, beamTextSchema);
 
             ////////////////////////////
             // Write relationship targets
             List<Target> relationshipTargets = jobSpec.getActiveRelationshipTargets();
             for (Target target : relationshipTargets) {
                 LOG.info("Processing relationship: " + target.name);
-                List<PCollection<Row>> waitForUnblocked = new ArrayList<>();
-                waitForUnblocked.add(beamTextRows);
-                //null row must be added after data row.
-                waitForUnblocked.add(blocked);
-                // also need to delete null rows...
-                PCollection<Row> unblockedTextRows = PCollectionList.of(waitForUnblocked).apply(target.sequence + ": Unblock " + target.name, Flatten.pCollections());
+                PCollection<Row> unblockedTextRows =  BeamUtils.unblockCollection(blocked, beamTextRows,target.sequence + ": Unblock");
                 PCollection<Row> returnEmpty =castAndWriteCollection(unblockedTextRows, beamTextSchema,target);
                 //PCollection<Row> returnEmpty =castAndWriteCollection(beamTextRows, beamTextSchema,target);
             }
@@ -197,7 +187,7 @@ public class TextToNeo4j {
     private PCollection<Row> castAndWriteCollection(PCollection<Row> beamTextRows, Schema beamTextSchema, Target target){
         LOG.info("Processing "+target.type+": " + target.name);
         Set<String> sourceFieldSet = ModelUtils.getBeamFieldSet(beamTextSchema);
-        final Schema targetSchema = BeamSchemaUtils.toBeamSchema(target);
+        final Schema targetSchema = BeamUtils.toBeamSchema(target);
         final DoFn<Row, Row> castToTargetRow = new CastExpandTargetRowFn(target,targetSchema);
         Neo4jRowWriterTransform targetWriterTransform = new Neo4jRowWriterTransform(jobSpec, neo4jConnection, target);
         String SQL = ModelUtils.getTargetSql(sourceFieldSet, target, false);

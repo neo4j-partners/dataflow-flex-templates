@@ -14,6 +14,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class ModelUtils {
     private static final Logger LOG = LoggerFactory.getLogger(ModelUtils.class);
@@ -24,6 +26,7 @@ public class ModelUtils {
     final static String ALPHA_CHARS_REGEX = "[^a-zA-Z]";
     final public static String CYPHER_DELETE_ALL = "MATCH (n) DETACH DELETE n";
     final public static long MAX_ROWS = 10000000000000l;
+    final static Pattern variablePattern = Pattern.compile("\\[(.+?)\\]");
 
 
     public static Target generateDefaultTarget(Source source) throws RuntimeException {
@@ -59,7 +62,7 @@ public class ModelUtils {
         boolean singleSourceQuery = true;
         for (Target target : jobSpec.targets) {
             if (target.active) {
-                boolean targetRequiresRequery = ModelUtils.targetRequiresRequery(target);
+                boolean targetRequiresRequery = ModelUtils.targetHasTransforms(target);
                 if (targetRequiresRequery) {
                     singleSourceQuery = false;
                 }
@@ -68,20 +71,24 @@ public class ModelUtils {
         return singleSourceQuery;
     }
 
-    public static boolean nodesOnly(JobSpecRequest jobSpec) {
+    public static boolean targetsHaveTransforms(JobSpecRequest jobSpec, Source source) {
         for (Target target : jobSpec.targets) {
             if (target.active) {
-                if (target.type==TargetType.relationship){
-                    return false;
+                if (target.source.equals(source.name)) {
+                    boolean targetRequiresRequery = ModelUtils.targetHasTransforms(target);
+                    if (targetRequiresRequery) {
+                        return true;
+                    }
                 }
             }
         }
-        return true;
+        return false;
     }
-    public static boolean relationshipsOnly(JobSpecRequest jobSpec) {
+
+    public static boolean nodesOnly(JobSpecRequest jobSpec) {
         for (Target target : jobSpec.targets) {
             if (target.active) {
-                if (target.type==TargetType.node){
+                if (target.type == TargetType.relationship) {
                     return false;
                 }
             }
@@ -89,7 +96,18 @@ public class ModelUtils {
         return true;
     }
 
-    public static boolean targetRequiresRequery(Target target) {
+    public static boolean relationshipsOnly(JobSpecRequest jobSpec) {
+        for (Target target : jobSpec.targets) {
+            if (target.active) {
+                if (target.type == TargetType.node) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    public static boolean targetHasTransforms(Target target) {
         boolean requiresRequery = false;
         if (target.query != null) {
             if (target.query.group || target.query.aggregations.size() > 0 || StringUtils.isNotEmpty(target.query.orderBy) || StringUtils.isNotEmpty(target.query.where)) {
@@ -113,8 +131,9 @@ public class ModelUtils {
     }
 
     public static String getTargetSql(Set<String> fieldNameMap, Target target, boolean generateSqlSort) {
-        return getTargetSql(fieldNameMap,target,generateSqlSort,null);
+        return getTargetSql(fieldNameMap, target, generateSqlSort, null);
     }
+
     public static String getTargetSql(Set<String> fieldNameMap, Target target, boolean generateSqlSort, String baseSql) {
         StringBuffer sb = new StringBuffer();
 
@@ -124,11 +143,11 @@ public class ModelUtils {
             if (StringUtils.isNotBlank(sortField)) {
                 orderByClause = " ORDER BY " + sortField + " ASC";
             } else if (StringUtils.isNotBlank(target.query.orderBy)) {
-                orderByClause = " ORDER BY "+target.query.orderBy;
+                orderByClause = " ORDER BY " + target.query.orderBy;
             }
         } else {
             if (StringUtils.isNotBlank(target.query.orderBy)) {
-                orderByClause = " ORDER BY "+target.query.orderBy;
+                orderByClause = " ORDER BY " + target.query.orderBy;
             }
         }
 
@@ -160,7 +179,7 @@ public class ModelUtils {
 
 
                 if (StringUtils.isNotEmpty(orderByClause) && generateSqlSort) {
-                    LOG.info("Order by clause: "+orderByClause);
+                    LOG.info("Order by clause: " + orderByClause);
                     sb.append(orderByClause);
                     //  ORDER BY without a LIMIT is not supported!
                     if (query.limit > -1) {
@@ -175,15 +194,15 @@ public class ModelUtils {
         }
 
         // If edge/relationship, sort by destination nodeId to reduce locking
-        String innerSql=null;
+        String innerSql = null;
         if (sb.length() == 0 && generateSqlSort) {
-            innerSql= DEFAULT_STAR_QUERY + orderByClause;
+            innerSql = DEFAULT_STAR_QUERY + orderByClause;
         } else if (sb.length() == 0) {
-            innerSql= DEFAULT_STAR_QUERY;
+            innerSql = DEFAULT_STAR_QUERY;
         } else {
-            innerSql= sb.toString();
+            innerSql = sb.toString();
         }
-        if (StringUtils.isNotEmpty(baseSql)){
+        if (StringUtils.isNotEmpty(baseSql)) {
             return innerSql.replace(" PCOLLECTION", " (" + baseSql + ")");
         } else {
             return innerSql;
@@ -230,14 +249,14 @@ public class ModelUtils {
         List<String> labels = new ArrayList<>();
         for (Mapping m : target.mappings) {
             if (m.fragmentType == entityType) {
-                if (StringUtils.isNotEmpty(m.label)){
+                if (StringUtils.isNotEmpty(m.label)) {
                     labels.add(m.label);
                 } else if (m.role == RoleType.label) {
                     if (StringUtils.isNotEmpty(m.constant)) {
                         labels.add(m.constant);
                     } else {
                         // dynamic labels not handled here
-                       // labels.add(prefix+"."+m.field);
+                        // labels.add(prefix+"."+m.field);
                     }
                 }
             }
@@ -245,17 +264,17 @@ public class ModelUtils {
         return labels;
     }
 
-    public static List<String> getStaticOrDynamicLabels(String prefix,FragmentType entityType, Target target) {
+    public static List<String> getStaticOrDynamicLabels(String prefix, FragmentType entityType, Target target) {
         List<String> labels = new ArrayList<>();
         for (Mapping m : target.mappings) {
             if (m.fragmentType == entityType) {
-                if (StringUtils.isNotEmpty(m.label)){
+                if (StringUtils.isNotEmpty(m.label)) {
                     labels.add(m.label);
                 } else if (m.role == RoleType.label) {
                     if (StringUtils.isNotEmpty(m.constant)) {
                         labels.add(m.constant);
                     } else {
-                        labels.add(prefix+"."+m.field);
+                        labels.add(prefix + "." + m.field);
                     }
                 }
             }
@@ -291,12 +310,30 @@ public class ModelUtils {
         return fieldOrConstants;
     }
 
-    public static List<String> getIndexedProperties(FragmentType entityType, Target target) {
+    public static String replaceTokens(String text, HashMap<String, String> replacements) {
+        Matcher matcher = variablePattern.matcher(text);
+        //populate the replacements map ...
+        StringBuilder builder = new StringBuilder();
+        int i = 0;
+        while (matcher.find()) {
+            String replacement = replacements.get(matcher.group(1));
+            builder.append(text.substring(i, matcher.start()));
+            if (replacement == null)
+                builder.append(matcher.group(0));
+            else
+                builder.append(replacement);
+            i = matcher.end();
+        }
+        builder.append(text.substring(i, text.length()));
+        return builder.toString();
+    }
+
+    public static List<String> getIndexedProperties(Config config, FragmentType entityType, Target target) {
         List<String> indexedProperties = new ArrayList<>();
         for (Mapping m : target.mappings) {
 
             if (m.fragmentType == entityType) {
-                if (m.role == RoleType.key || m.indexed) {
+                if (m.role == RoleType.key || m.indexed || config.indexAllProperties) {
                     indexedProperties.add(m.field);
                 }
             }

@@ -44,16 +44,17 @@ public class TextParserUtils {
         return textCols;
     }
 
+    //Function useful for small in-memory datasets
     public static List<List<String>> parseDelimitedLines(CSVFormat csvFormat, String csv) {
         List rows = new ArrayList<>();
         if (StringUtils.isEmpty(csv)) {
             return null;
         } else {
             try {
-                //LOG.info("Csv format: "+csvFormat.toString());
                 CSVParser csvParser = CSVParser.parse(csv, csvFormat);
-                for (int i=0;i<csvParser.getRecordNumber();i++){
-                    CSVRecord csvRecord = csvParser.getRecords().get(i);
+                Iterator<CSVRecord> recordsIterator = csvParser.iterator();
+                while (recordsIterator.hasNext()) {
+                    CSVRecord csvRecord = recordsIterator.next();
                     List<Object> row = new ArrayList<>();
                     Iterator<String> it = csvRecord.iterator();
                     while (it.hasNext()) {
@@ -62,6 +63,7 @@ public class TextParserUtils {
                     }
                     rows.add(row);
                 }
+                LOG.info("Csv format: "+csvFormat.toString()+", csv: "+StringUtils.truncate(csv,100)+", records: "+rows.size());
 
             } catch (IOException ioException) {
                 LOG.error("Error parsing text file, exception: " + ioException.getMessage());

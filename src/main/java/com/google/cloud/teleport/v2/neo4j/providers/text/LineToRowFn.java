@@ -1,4 +1,4 @@
-package com.google.cloud.teleport.v2.neo4j.text.transforms;
+package com.google.cloud.teleport.v2.neo4j.providers.text;
 
 import com.google.cloud.teleport.v2.neo4j.common.model.Source;
 import com.google.cloud.teleport.v2.neo4j.common.model.enums.SourceType;

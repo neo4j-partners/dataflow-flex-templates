@@ -4,16 +4,22 @@ import com.google.cloud.bigquery.LegacySQLTypeName;
 import com.google.cloud.teleport.v2.neo4j.common.model.Mapping;
 import com.google.cloud.teleport.v2.neo4j.common.model.Target;
 import com.google.cloud.teleport.v2.neo4j.common.model.enums.PropertyType;
+import com.google.cloud.teleport.v2.neo4j.common.transforms.DeleteEmptyRowsFn;
 import org.apache.beam.repackaged.core.org.apache.commons.lang3.StringUtils;
 import org.apache.beam.sdk.schemas.Schema;
+import org.apache.beam.sdk.transforms.Flatten;
+import org.apache.beam.sdk.transforms.ParDo;
+import org.apache.beam.sdk.values.PCollection;
+import org.apache.beam.sdk.values.PCollectionList;
+import org.apache.beam.sdk.values.Row;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class BeamSchemaUtils {
-    private static final Logger LOG = LoggerFactory.getLogger(BeamSchemaUtils.class);
+public class BeamUtils {
+    private static final Logger LOG = LoggerFactory.getLogger(BeamUtils.class);
 
     public static String getSchemaFieldNameCsv(Schema schema) {
         return StringUtils.join(schema.getFields(), ",");
@@ -65,6 +71,22 @@ public class BeamSchemaUtils {
         }
         throw new UnsupportedOperationException("LegacySQL type " + legacySQLTypeName.getStandardType() + " not supported.");
     }
+
+    //This pattern serializes processing until collections in blockingList have completed
+    public static PCollection<Row> blockCollection(List<PCollection<Row>> emptyBlockingList, Schema anySchema){
+        return PCollectionList.of(emptyBlockingList).apply("Block", Flatten.pCollections()).apply("Remove nullRows",ParDo.of(new DeleteEmptyRowsFn())).setRowSchema(anySchema);
+    }
+
+    //This pattern accepts the emptyBlockingList and returns a copy of beamRows after the blocking list collections have processed
+    public static PCollection<Row> unblockCollection(PCollection<Row> blockedCollection, PCollection<Row> beamRows, String description){
+        List<PCollection<Row>> waitForUnblocked = new ArrayList<>();
+        waitForUnblocked.add(beamRows);
+        //null row must be added after data row.
+        waitForUnblocked.add(blockedCollection);
+        // also need to delete null rows...
+        return PCollectionList.of(waitForUnblocked).apply(description, Flatten.pCollections());
+    }
+
     public static Schema toBeamSchema(Target target) {
 
         // map source column names to order

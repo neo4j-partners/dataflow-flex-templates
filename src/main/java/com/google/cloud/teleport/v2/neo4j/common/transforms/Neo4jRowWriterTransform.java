@@ -3,20 +3,15 @@ package com.google.cloud.teleport.v2.neo4j.common.transforms;
 
 import com.google.cloud.teleport.v2.neo4j.common.database.CypherGenerator;
 import com.google.cloud.teleport.v2.neo4j.common.database.Neo4jConnection;
+import com.google.cloud.teleport.v2.neo4j.common.model.Config;
 import com.google.cloud.teleport.v2.neo4j.common.model.ConnectionParams;
 import com.google.cloud.teleport.v2.neo4j.common.model.JobSpecRequest;
 import com.google.cloud.teleport.v2.neo4j.common.model.Target;
 import com.google.cloud.teleport.v2.neo4j.common.model.enums.TargetType;
-import com.google.cloud.teleport.v2.neo4j.common.utils.BeamSchemaUtils;
 import com.google.cloud.teleport.v2.neo4j.common.utils.DataCastingUtils;
-import com.google.cloud.teleport.v2.neo4j.common.utils.ModelUtils;
-import org.apache.beam.repackaged.core.org.apache.commons.lang3.StringUtils;
 import org.apache.beam.sdk.coders.RowCoder;
-import org.apache.beam.sdk.extensions.sql.SqlTransform;
-import org.apache.beam.sdk.schemas.Schema;
 import org.apache.beam.sdk.transforms.*;
 import org.apache.beam.sdk.values.PCollection;
-import org.apache.beam.sdk.values.POutput;
 import org.apache.beam.sdk.values.Row;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,10 +36,9 @@ public class Neo4jRowWriterTransform extends PTransform<PCollection<Row>, PColle
     @Override
     public PCollection<Row> expand(PCollection<Row> input) {
 
-
-
+        Config config=jobSpec.config;
         // indices and constraints
-        List<String> cyphers = CypherGenerator.getNodeIndexAndConstraintsCypherStatements(target);
+        List<String> cyphers = CypherGenerator.getNodeIndexAndConstraintsCypherStatements(config, target);
         if (cyphers.size() > 0) {
             Neo4jConnection neo4jDirectConnect = new Neo4jConnection(neoConnection);
             LOG.info("Adding " + cyphers.size() + " indices and constraints");

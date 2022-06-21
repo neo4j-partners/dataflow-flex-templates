@@ -1,5 +1,6 @@
 package com.google.cloud.teleport.v2.neo4j.common.database;
 
+import com.google.cloud.teleport.v2.neo4j.common.model.Config;
 import com.google.cloud.teleport.v2.neo4j.common.model.Mapping;
 import com.google.cloud.teleport.v2.neo4j.common.model.Target;
 import com.google.cloud.teleport.v2.neo4j.common.model.enums.FragmentType;
@@ -31,22 +32,8 @@ public class CypherGenerator {
         /// RELATIONSHIP TYPE
         if (target.type == TargetType.relationship) {
 
-            /*
-            SaveMode.ErrorIfExists builds a CREATE query.
-            SaveMode.Append builds a MERGE query.
-            If you are using Spark 3, the default save mode ErrorIfExists does not work.
-                For SaveMode.Append mode, you need to have unique constraints on the keys.
-            */
-            SaveMode effectiveSaveMode = target.saveMode;
-            if (target.saveMode == SaveMode.append && (ModelUtils.getUniqueProperties(FragmentType.source, target).size() == 0 || ModelUtils.getUniqueProperties(FragmentType.target, target).size() == 0)) {
-                effectiveSaveMode = SaveMode.error_if_exists;
-                //For SaveMode.Overwrite mode, you need to have unique constraints on the keys.
-            } else if (target.saveMode == SaveMode.overwrite && ModelUtils.getUniqueProperties(FragmentType.source, target).size() == 0 || ModelUtils.getUniqueProperties(FragmentType.target, target).size() == 0) {
-                effectiveSaveMode = SaveMode.error_if_exists;
-            }
-
             // Verb
-            if (effectiveSaveMode == SaveMode.append || effectiveSaveMode == SaveMode.overwrite) { // merge
+            if (target.saveMode == SaveMode.merge) { // merge
                 sb.append("UNWIND $" + CONST_ROW_VARIABLE_NAME + " AS row ");
                 //MERGE (variable1:Label1 {nodeProperties1})-[:REL_TYPE]->
                 //(variable2:Label2 {nodeProperties2})
@@ -57,19 +44,11 @@ public class CypherGenerator {
                 sb.append(" -[" + getRelationshipTypePropertiesListFragment("rel", false, target) + "]-> ");
                 sb.append("(target)");
                 // SET properties...
-            } else if (effectiveSaveMode == SaveMode.error_if_exists) { // Fast, blind create
+            } else if (target.saveMode  == SaveMode.append) { // Fast, blind create
                 sb.append("UNWIND $" + CONST_ROW_VARIABLE_NAME + " AS row CREATE ");
                 sb.append("(" + getLabelsPropertiesListCypherFragment("source", false, FragmentType.source, Arrays.asList(RoleType.key,RoleType.property), target) + ")");
                 sb.append(" -[" + getRelationshipTypePropertiesListFragment("rel", false, target) + "]-> ");
                 sb.append("(" + getLabelsPropertiesListCypherFragment("target", false, FragmentType.target, Arrays.asList(RoleType.key,RoleType.property), target) + ")");
-                // SET properties
-            } else  if (effectiveSaveMode == SaveMode.match) { // Update
-                sb.append("UNWIND $" + CONST_ROW_VARIABLE_NAME + " AS row CREATE ");
-                sb.append(" MATCH (" + getLabelsPropertiesListCypherFragment("source", true, FragmentType.source, Arrays.asList(RoleType.key,RoleType.property), target) + ")");
-                sb.append(" , (" + getLabelsPropertiesListCypherFragment("target", true, FragmentType.target, Arrays.asList(RoleType.key,RoleType.property), target) + ")");
-                sb.append(" MERGE (source)");
-                sb.append(" -[" + getRelationshipTypePropertiesListFragment("rel", false, target) + "]-> ");
-                sb.append(" (target)");
             } else {
                 LOG.error("Unhandled saveMode: " + target.saveMode);
             }
@@ -84,16 +63,9 @@ public class CypherGenerator {
             For SaveMode.Overwrite mode, you need to have unique constraints on the keys.
              */
 
-            SaveMode effectiveSaveMode = target.saveMode;
-            if (target.saveMode == SaveMode.append && ModelUtils.getUniqueProperties(FragmentType.node, target).size() == 0) {
-                effectiveSaveMode = SaveMode.error_if_exists;
-                //For SaveMode.Overwrite mode, you need to have unique constraints on the keys.
-            } else if (target.saveMode == SaveMode.overwrite && ModelUtils.getUniqueProperties(FragmentType.node, target).size() == 0) {
-                effectiveSaveMode = SaveMode.error_if_exists;
-            }
 
             // Verb
-            if (effectiveSaveMode == SaveMode.append || effectiveSaveMode == SaveMode.overwrite || effectiveSaveMode == SaveMode.match) { // merge
+            if (target.saveMode  == SaveMode.merge) { // merge
                 sb.append("UNWIND $" + CONST_ROW_VARIABLE_NAME + " AS row ");
                 // MERGE clause represents matching properties
                 // MERGE (charlie {name: 'Charlie Sheen', age: 10})  A new node with the name 'Charlie Sheen' will be created since not all properties matched the existing 'Charlie Sheen' node.
@@ -102,7 +74,7 @@ public class CypherGenerator {
                 if (nodePropertyMapStr.length() > 0) {
                     sb.append(" SET n+=" + nodePropertyMapStr);
                 }
-            } else if (effectiveSaveMode == SaveMode.error_if_exists) { // fast create
+            } else if (target.saveMode  == SaveMode.append) { // fast create
                 sb.append("UNWIND $" + CONST_ROW_VARIABLE_NAME + " AS row ");
                 sb.append("CREATE (" + getLabelsPropertiesListCypherFragment("n", false, FragmentType.node, Arrays.asList(RoleType.key, RoleType.property), target) + ")");
             } else {
@@ -159,14 +131,14 @@ public class CypherGenerator {
     }
 
 
-    public static List<String> getNodeIndexAndConstraintsCypherStatements(Target target) {
+    public static List<String> getNodeIndexAndConstraintsCypherStatements(Config config, Target target) {
 
         List<String> cyphers = new ArrayList<>();
         // Model node creation statement
         //  "UNWIND $rows AS row CREATE(c:Customer { id : row.id, name: row.name, firstName: row.firstName })
         //derive labels
         List<String> labels = ModelUtils.getStaticLabels(FragmentType.node, target);
-        List<String> indexedProperties = ModelUtils.getIndexedProperties(FragmentType.node, target);
+        List<String> indexedProperties = ModelUtils.getIndexedProperties(config,FragmentType.node, target);
         List<String> uniqueProperties = ModelUtils.getUniqueProperties(FragmentType.node, target);
         List<String> mandatoryProperties = ModelUtils.getRequiredProperties(FragmentType.node, target);
         List<String> nodeKeyProperties = ModelUtils.getNodeKeyProperties(FragmentType.node, target);

@@ -29,7 +29,7 @@ public class DataCastingUtils {
     private static final SimpleDateFormat jsTimeFormatter = new SimpleDateFormat("HH:MM:SS");
 
     public static List<Object> sourceTextToTargetObjects(final Row rowOfStrings, Target target) {
-        Schema targetSchema=BeamSchemaUtils.toBeamSchema(target);
+        Schema targetSchema= BeamUtils.toBeamSchema(target);
         List<Mapping> targetMappings=target.mappings;
         List<Object> castVals = new ArrayList<>();
         Iterator<Schema.Field> it = targetSchema.getFields().iterator();
@@ -116,39 +116,53 @@ public class DataCastingUtils {
         for (Schema.Field field : dataSchema.getFields()) {
             String fieldName = field.getName();
             Schema.FieldType type = field.getType();
-            // BYTE, INT16, INT32, INT64, DECIMAL, FLOAT, DOUBLE, STRING, DATETIME, BOOLEAN, BYTES, ARRAY, ITERABLE, MAP, ROW, LOGICAL_TYPE;
-            // NUMERIC_TYPES; STRING_TYPES; DATE_TYPES; COLLECTION_TYPES; MAP_TYPES; COMPOSITE_TYPES;
-            if (row.getValue(fieldName) == null) {
-                map.put(fieldName, null);
-                continue;
-            }
-            if (type.getTypeName().isNumericType()) {
-                if (type.getTypeName() == Schema.TypeName.DECIMAL) {
-                    map.put(fieldName, row.getDecimal(fieldName).doubleValue());
-                } else if (type.getTypeName() == Schema.TypeName.FLOAT) {
-                    map.put(fieldName, row.getFloat(fieldName).doubleValue());
-                } else if (type.getTypeName() == Schema.TypeName.DOUBLE) {
-                    map.put(fieldName, row.getDouble(fieldName));
-                } else {
-                    map.put(fieldName, Long.parseLong(row.getValue(fieldName) + ""));
+
+            try {
+                // BYTE, INT16, INT32, INT64, DECIMAL, FLOAT, DOUBLE, STRING, DATETIME, BOOLEAN, BYTES, ARRAY, ITERABLE, MAP, ROW, LOGICAL_TYPE;
+                // NUMERIC_TYPES; STRING_TYPES; DATE_TYPES; COLLECTION_TYPES; MAP_TYPES; COMPOSITE_TYPES;
+                if (row.getValue(fieldName) == null) {
+                    map.put(fieldName, null);
+                    continue;
                 }
-            } else if (type.getTypeName().isLogicalType()) {
-                map.put(fieldName, Boolean.parseBoolean(row.getBoolean(fieldName) + ""));
-            } else if (type.getTypeName().isDateType()) {
-                ReadableDateTime dt = row.getDateTime(fieldName);
-                ZonedDateTime zdt = ZonedDateTime.ofLocal(
-                        LocalDateTime.of(
-                                dt.getYear(),
-                                dt.getMonthOfYear(),
-                                dt.getDayOfMonth(),
-                                dt.getHourOfDay(),
-                                dt.getMinuteOfHour(),
-                                dt.getSecondOfMinute(),
-                                dt.getMillisOfSecond() * 1_000_000),
-                        ZoneId.of(dt.getZone().getID(), ZoneId.SHORT_IDS),
-                        ZoneOffset.ofTotalSeconds(dt.getZone().getOffset(dt) / 1000));
-                map.put(fieldName, zdt);
-            } else {
+                if (type.getTypeName().isNumericType()) {
+                    if (type.getTypeName() == Schema.TypeName.DECIMAL) {
+                        map.put(fieldName, row.getDecimal(fieldName).doubleValue());
+                    } else if (type.getTypeName() == Schema.TypeName.FLOAT) {
+                        map.put(fieldName, row.getFloat(fieldName).doubleValue());
+                    } else if (type.getTypeName() == Schema.TypeName.DOUBLE) {
+                        map.put(fieldName, row.getDouble(fieldName));
+                    } else {
+                        map.put(fieldName, Long.parseLong(row.getValue(fieldName) + ""));
+                    }
+                // TODO: this is an upstream error.  Dates are coming across as LOGICAL_TYPE.  Logical type identifier does include ":date:"
+                } else if ((type.getLogicalType()==null?"":type.getLogicalType().getIdentifier()).contains(":date:")){
+                    //SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
+                    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+                    sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
+                    java.util.Date parsedDate= sdf.parse(row.getValue(fieldName));
+                    ZonedDateTime zdt=ZonedDateTime.from(parsedDate.toInstant());
+                    map.put(fieldName, zdt);
+                } else if (type.getTypeName().isDateType()) {
+                    ReadableDateTime dt = row.getDateTime(fieldName);
+                    ZonedDateTime zdt = ZonedDateTime.ofLocal(
+                            LocalDateTime.of(
+                                    dt.getYear(),
+                                    dt.getMonthOfYear(),
+                                    dt.getDayOfMonth(),
+                                    dt.getHourOfDay(),
+                                    dt.getMinuteOfHour(),
+                                    dt.getSecondOfMinute(),
+                                    dt.getMillisOfSecond() * 1_000_000),
+                            ZoneId.of(dt.getZone().getID(), ZoneId.SHORT_IDS),
+                            ZoneOffset.ofTotalSeconds(dt.getZone().getOffset(dt) / 1000));
+                    map.put(fieldName, zdt);
+                } else if (type.typesEqual(Schema.FieldType.BOOLEAN)) {
+                    map.put(fieldName, Boolean.parseBoolean(row.getBoolean(fieldName) + ""));
+                } else {
+                    map.put(fieldName, row.getValue(fieldName) + "");
+                }
+            } catch (Exception e){
+                LOG.error("Error casting "+type.getTypeName().name()+", "+ type.getLogicalType()+", "+fieldName+": "+row.getValue(fieldName) + " ["+e.getMessage()+"]");
                 map.put(fieldName, row.getValue(fieldName) + "");
             }
         }

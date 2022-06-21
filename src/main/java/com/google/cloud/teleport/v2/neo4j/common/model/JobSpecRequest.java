@@ -2,6 +2,7 @@ package com.google.cloud.teleport.v2.neo4j.common.model;
 
 import com.google.cloud.teleport.v2.neo4j.common.model.enums.TargetType;
 import com.google.cloud.teleport.v2.neo4j.common.utils.GsUtils;
+import org.apache.beam.repackaged.core.org.apache.commons.lang3.StringUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.slf4j.Logger;
@@ -14,8 +15,9 @@ public class JobSpecRequest implements Serializable {
 
     private static final Logger LOG = LoggerFactory.getLogger(JobSpecRequest.class);
 
+    private static String DEFAULT_SOURCE_NAME="__DEFAULT__";
     //initialize defaults;
-    public Source source;
+    public Map<String,Source> sources=new HashMap<>();
     public List<Target> targets = new ArrayList<>();
     public Config config =new Config();
     public Map<String,String> options= new HashMap<>();
@@ -38,7 +40,24 @@ public class JobSpecRequest implements Serializable {
             }
 
             if (jobSpecObj.has("source")) {
-                source = new Source(jobSpecObj.getJSONObject("source"));
+                Source source = new Source(jobSpecObj.getJSONObject("source"));
+                if (StringUtils.isNotEmpty(source.name)) {
+                    sources.put(source.name, source);
+                } else {
+                    sources.put(DEFAULT_SOURCE_NAME, source);
+                }
+            } else if (jobSpecObj.has("sources")) {
+
+                JSONArray sourceArray = jobSpecObj.getJSONArray("sources");
+                for (int i = 0; i < sourceArray.length(); i++) {
+                    final Source source = new Source( sourceArray.getJSONObject(i));
+                    if (StringUtils.isNotEmpty(source.name)) {
+                        sources.put(source.name, source);
+                    } else {
+                        sources.put(DEFAULT_SOURCE_NAME, source);
+                    }
+                }
+
             } else {
                 // there is no source defined this could be used in a big query job...
             }
@@ -70,33 +89,57 @@ public class JobSpecRequest implements Serializable {
         }
     }
 
-    public List<Target> getActiveTargets(){
+    public List<Target> getActiveTargetsBySource(String sourceName){
         List<Target> targets=new ArrayList<>();
         for (Target target : this.targets) {
-            if (target.active) {
+            if (target.active && target.source.equals(sourceName)) {
                 targets.add(target);
             }
         }
         return targets;
     }
 
-    public List<Target> getActiveNodeTargets(){
+    public List<Target> getActiveNodeTargetsBySource(String sourceName){
         List<Target> targets=new ArrayList<>();
         for (Target target : this.targets) {
-            if (target.active && target.type==TargetType.node) {
+            if (target.active && target.type==TargetType.node && target.source.equals(sourceName)) {
                 targets.add(target);
             }
         }
         return targets;
     }
 
-        public List<Target> getActiveRelationshipTargets(){
+        public List<Target> getActiveRelationshipTargetsBySource(String sourceName){
             List<Target> targets=new ArrayList<>();
             for (Target target : this.targets) {
-                if (target.active && target.type==TargetType.relationship) {
+                if (target.active && target.type==TargetType.relationship && target.source.equals(sourceName)) {
                     targets.add(target);
                 }
             }
             return targets;
         }
+
+        public Source getSourceByName(String name){
+            return
+            sources.get(name);
+        }
+        public Source getDefaultSource(){
+            return sources.get(DEFAULT_SOURCE_NAME);
+        }
+
+    public List<Source> getSourceList(){
+        ArrayList<Source> sourceList=new ArrayList<>();
+        Iterator<String> sourceKeySet=sources.keySet().iterator();
+        while(sourceKeySet.hasNext()){
+            sourceList.add(sources.get(sourceKeySet.next()));
+        }
+        return sourceList;
+    }
+    public List<String> getAllFieldNames(){
+        ArrayList<String> fieldNameList=new ArrayList<>();
+        for (Target target:targets){
+            fieldNameList.addAll(target.fieldNames);
+        }
+        return fieldNameList;
+    }
 }

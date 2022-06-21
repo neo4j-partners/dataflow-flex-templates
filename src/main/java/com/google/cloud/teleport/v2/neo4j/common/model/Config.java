@@ -6,6 +6,7 @@ import java.io.Serializable;
 
 public class Config implements Serializable {
     public Boolean resetDb = false;
+    public Boolean indexAllProperties=false;
 
     public Integer nodeParallelism = 5;
     public Integer edgeParallelism = 1;
@@ -19,5 +20,7 @@ public class Config implements Serializable {
         // not currently implemented
         nodeBatchSize = jsonObject.has("node_write_parallelism")?jsonObject.getInt("node_write_parallelism"):nodeBatchSize;
         edgeBatchSize = jsonObject.has("edge_write_parallelism")?jsonObject.getInt("edge_write_parallelism"):edgeBatchSize;
+        indexAllProperties = jsonObject.has("index_all_properties")?jsonObject.getBoolean("index_all_properties"):indexAllProperties;
+
     }
 }

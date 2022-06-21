@@ -24,12 +24,11 @@ import com.google.cloud.teleport.v2.neo4j.bq.options.BigQueryToNeo4jImportOption
 import com.google.cloud.teleport.v2.neo4j.common.InputOptimizer;
 import com.google.cloud.teleport.v2.neo4j.common.InputValidator;
 import com.google.cloud.teleport.v2.neo4j.common.database.Neo4jConnection;
-import com.google.cloud.teleport.v2.neo4j.common.transforms.DeleteEmptyRowsFn;
 import com.google.cloud.teleport.v2.neo4j.common.transforms.Neo4jRowWriterTransform;
 import com.google.cloud.teleport.v2.neo4j.common.model.ConnectionParams;
 import com.google.cloud.teleport.v2.neo4j.common.model.JobSpecRequest;
 import com.google.cloud.teleport.v2.neo4j.common.model.Target;
-import com.google.cloud.teleport.v2.neo4j.common.utils.BeamSchemaUtils;
+import com.google.cloud.teleport.v2.neo4j.common.utils.BeamUtils;
 import com.google.cloud.teleport.v2.neo4j.common.utils.ModelUtils;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -41,11 +40,8 @@ import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
 import org.apache.beam.sdk.schemas.Schema;
 import org.apache.beam.sdk.schemas.SchemaCoder;
-import org.apache.beam.sdk.transforms.Flatten;
 import org.apache.beam.sdk.transforms.MapElements;
-import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.values.PCollection;
-import org.apache.beam.sdk.values.PCollectionList;
 import org.apache.beam.sdk.values.Row;
 import org.apache.beam.sdk.values.TypeDescriptor;
 import org.slf4j.Logger;
@@ -105,8 +101,8 @@ public class BigQueryToNeo4j {
 
         ///////////////////////////////////
         // Text input specific options and validation
-        if (this.jobSpec.source == null) {
-            String errMsg = "JobSpec source is required for text imports.";
+        if (this.jobSpec.sources.size() == 0) {
+            String errMsg = "JobSpec source is required.";
             LOG.error(errMsg);
             throw new RuntimeException(errMsg);
         }
@@ -135,6 +131,7 @@ public class BigQueryToNeo4j {
             directConnect.resetDatabase();
         }
 
+
         ////////////////////////////
         // Dry run won't return schema so use regular query
         // We need fieldSet for SQL generation later
@@ -146,7 +143,7 @@ public class BigQueryToNeo4j {
         try {
             LOG.info("Metadata query: " + ZERO_ROW_SQL);
             TableResult zeroRowQueryResult = bigquery.query(queryConfig);
-            initSchema = BeamSchemaUtils.toBeamSchema(zeroRowQueryResult.getSchema());
+            initSchema = BeamUtils.toBeamSchema(zeroRowQueryResult.getSchema());
             fieldSet = ModelUtils.getBeamFieldSet(initSchema);
         } catch (Exception e) {
             String errMsg = "Error running query: " + e.getMessage();
@@ -196,7 +193,7 @@ public class BigQueryToNeo4j {
 
             ///////////////////////////////////////////
             //Block until nodes are collected...
-            PCollection<Row> blocked = PCollectionList.of(blockingList).apply("Block", Flatten.pCollections()).apply(ParDo.of(new DeleteEmptyRowsFn())).setRowSchema(initSchema);
+            PCollection<Row> blocked = BeamUtils.blockCollection(blockingList, initSchema);
 
             ////////////////////////////
             // Write relationship targets
@@ -208,10 +205,7 @@ public class BigQueryToNeo4j {
                     LOG.info("Relationship target (" + target.name + ") specific sql: " + TARGET_SPECIFIC_SQL);
                     beamRows = queryBq(target, TARGET_SPECIFIC_SQL);
                 }
-                List<PCollection<Row>> unblockedList = new ArrayList<>();
-                unblockedList.add(beamRows);
-                unblockedList.add(blocked);
-                PCollection<Row> unblockedBeamRows = PCollectionList.of(unblockedList).apply(target.sequence + ": Unblock", Flatten.pCollections());
+                PCollection<Row> unblockedBeamRows = BeamUtils.unblockCollection(blocked, beamRows,target.sequence + ": Unblock");
                 PCollection<Row> returnVoid = unblockedBeamRows.apply(target.sequence + ": Writing Neo4j " + target.name, targetWriterTransform);
             }
         }

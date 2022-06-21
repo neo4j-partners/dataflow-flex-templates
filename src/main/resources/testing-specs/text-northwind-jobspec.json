@@ -7,7 +7,7 @@
   "source": {
     "type": "text",
     "format": "EXCEL",
-    "name": "1k orders",
+    "name": "1k orders text",
     "uri": "gs://neo4j-datasets/northwinds/nw_orders_1k_noheader.csv",
     "//uri": "can be supplied at run-time in the template, or simply specified here. assumes that no security is required in vpc",
     "delimiter": ",",
@@ -16,10 +16,11 @@
   "targets": [
     {
       "name": "Customer Nodes",
+      "source": "1k orders text",
       "active": true,
       "type": "node",
-      "save_mode": "append",
-      "query": {
+      "mode": "merge",
+      "transform": {
         "group": true
       },
       "mappings": [
@@ -59,9 +60,10 @@
     },
     {
       "name": "Product Nodes",
+      "source": "1k orders text",
       "type": "node",
-      "save_mode": "append",
-      "query": {
+      "mode": "merge",
+      "transform": {
         "aggregations": [{
           "expr": "SUM(unit_price*quantity)",
           "field": "total_amount_sold"
@@ -115,9 +117,10 @@
     },
     {
       "name": "Purchase Edges",
+      "source": "1k orders text",
       "type": "relationship",
-      "save_mode": "append",
-      "query": {
+      "mode": "merge",
+      "transform": {
         "aggregations": [{
           "expr": "SUM(unit_price*quantity)",
           "field": "sum_amount"

@@ -3,10 +3,13 @@ package com.google.cloud.teleport.v2.neo4j.common.transforms;
 import com.google.cloud.teleport.v2.neo4j.common.database.Neo4jConnection;
 import org.apache.beam.sdk.metrics.Counter;
 import org.apache.beam.sdk.metrics.Metrics;
+import org.apache.beam.sdk.schemas.Schema;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.SerializableFunction;
 import org.apache.beam.sdk.transforms.windowing.BoundedWindow;
 import org.apache.beam.sdk.transforms.windowing.GlobalWindow;
+import org.apache.beam.sdk.values.KV;
+import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.Row;
 import org.neo4j.driver.Result;
 import org.neo4j.driver.TransactionConfig;
@@ -16,7 +19,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.*;
 
-public class Neo4jBlockingUnwindFn extends DoFn<Row, Row> {
+public class Neo4jBlockingUnwindFn extends DoFn<KV<Integer, Row>, Row> {
 
     private final Counter numRecords = Metrics.counter(Neo4jBlockingUnwindFn.class, "norecords");
 
@@ -59,12 +62,13 @@ public class Neo4jBlockingUnwindFn extends DoFn<Row, Row> {
     @ProcessElement
     public void processElement(ProcessContext context){
 
-        Row parameters=context.element();
+        KV<Integer, Row> parameters=context.element();
+        LOG.info("Processing row from group/key: "+parameters.getKey());
 
         if (parametersFunction != null) {
             // Every input element creates a new Map<String,Object> entry in unwindList
             //
-            unwindList.add(parametersFunction.apply(parameters));
+            unwindList.add(parametersFunction.apply(parameters.getValue()));
         } else {
             // Someone is writing a bunch of static or procedurally generated values to Neo4j
             unwindList.add(Collections.emptyMap());
@@ -83,11 +87,6 @@ public class Neo4jBlockingUnwindFn extends DoFn<Row, Row> {
         executeCypherUnwindStatement();
         context.output(returnEmpty, BoundedWindow.TIMESTAMP_MIN_VALUE, GlobalWindow.INSTANCE);
     }
-    /*
-            Row input = processContext.element();
-           // processContext.output(row);
-           // return input.apply(new UnwindWriterFn(this)).getPipeline().apply(Create.empty(input.getCoder()));
-     */
 
     private void executeCypherUnwindStatement() {
         // In case of errors and no actual input read (error in mapper) we don't have input

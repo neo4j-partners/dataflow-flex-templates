@@ -8,11 +8,18 @@ import com.google.cloud.teleport.v2.neo4j.common.model.ConnectionParams;
 import com.google.cloud.teleport.v2.neo4j.common.model.JobSpecRequest;
 import com.google.cloud.teleport.v2.neo4j.common.model.Target;
 import com.google.cloud.teleport.v2.neo4j.common.model.enums.TargetType;
+import com.google.cloud.teleport.v2.neo4j.common.utils.BeamUtils;
 import com.google.cloud.teleport.v2.neo4j.common.utils.DataCastingUtils;
+import com.google.common.base.MoreObjects;
+import org.apache.beam.sdk.coders.BigEndianIntegerCoder;
+import org.apache.beam.sdk.coders.KvCoder;
 import org.apache.beam.sdk.coders.RowCoder;
+import org.apache.beam.sdk.options.ValueProvider;
+import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.transforms.SerializableFunction;
+import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.Row;
 import org.slf4j.Logger;
@@ -20,6 +27,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class Neo4jRowWriterTransform extends PTransform<PCollection<Row>, PCollection<Row>> {
     private static final Logger LOG = LoggerFactory.getLogger(Neo4jRowWriterTransform.class);
@@ -68,32 +76,6 @@ public class Neo4jRowWriterTransform extends PTransform<PCollection<Row>, PColle
         String unwindCypher = CypherGenerator.getUnwindCreateCypher(target);
         LOG.info("Unwind cypher: " + unwindCypher);
 
-        /////////////////////////
-        // Batch load data rows using Matt's Neo4jIO connector
-        /////////////////////////
-
-        /*
-        final Neo4jIO.DriverConfiguration driverConfiguration =
-                Neo4jIO.DriverConfiguration.create(neoConnection.serverUrl, neoConnection.username, neoConnection.password)
-                        .withConfig(Config.defaultConfig());
-
-        final SessionConfig sessionConfig = SessionConfig.builder()
-                .withDatabase(neoConnection.database)
-                .build();
-
-        // This IO is not blocking since it currently does not return PCollection<Row>
-        final PTransform writeNeo4jIO = Neo4jIO.<Row>writeUnwind()
-                .withCypher(unwindCypher)
-                .withBatchSize(batchSize)
-                .withSessionConfig(sessionConfig)
-                .withUnwindMapName("rows")
-                .withParametersFunction(
-                        row -> {
-                            return DataCastingUtils.rowToNeo4jDataMap(row, target);
-                        })
-                .withDriverConfiguration(driverConfiguration);
-        */
-
         Neo4jConnection neo4jConnection = new Neo4jConnection(neoConnection);
         Row emptyRow=Row.nullRow(input.getSchema());
 
@@ -109,7 +91,10 @@ public class Neo4jRowWriterTransform extends PTransform<PCollection<Row>, PColle
                                 getRowCastingFunction()
                         );
 
-        PCollection<Row> output = input.apply(target.sequence + ": Neo4j write " + target.name, ParDo.of(neo4jUnwindFn)).setCoder(RowCoder.of(input.getSchema()));
+        PCollection<Row> output = input
+                .apply("Create KV pairs", CreateKvTransform.of(parallelism))
+                .apply(target.sequence + ": Neo4j write " + target.name, ParDo.of(neo4jUnwindFn))
+                .setRowSchema(input.getSchema());
         return output;
     }
 
@@ -118,5 +103,6 @@ public class Neo4jRowWriterTransform extends PTransform<PCollection<Row>, PColle
             return DataCastingUtils.rowToNeo4jDataMap(row, target);
         };
     }
+
 
 }

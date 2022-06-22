@@ -36,7 +36,8 @@ import org.apache.beam.sdk.values.Row;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Dataflow template which reads BigQuery data and writes it to Neo4j. The source data can be

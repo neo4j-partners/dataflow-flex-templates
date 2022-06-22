@@ -1,8 +1,8 @@
 package com.google.cloud.teleport.v2.neo4j.common.model;
 
 import com.google.cloud.teleport.v2.neo4j.common.model.enums.SourceType;
-import com.google.cloud.teleport.v2.neo4j.common.utils.BeamUtils;
 import com.google.cloud.teleport.v2.neo4j.common.model.enums.TextFormat;
+import com.google.cloud.teleport.v2.neo4j.common.utils.BeamUtils;
 import com.google.cloud.teleport.v2.neo4j.common.utils.TextParserUtils;
 import org.apache.beam.repackaged.core.org.apache.commons.lang3.StringUtils;
 import org.apache.beam.sdk.schemas.Schema;

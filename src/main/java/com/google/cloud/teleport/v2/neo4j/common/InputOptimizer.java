@@ -2,7 +2,6 @@ package com.google.cloud.teleport.v2.neo4j.common;
 
 import com.google.cloud.teleport.v2.neo4j.common.model.JobSpecRequest;
 import com.google.cloud.teleport.v2.neo4j.common.model.Target;
-import com.google.cloud.teleport.v2.neo4j.common.model.enums.PropertyType;
 import org.apache.beam.repackaged.core.org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

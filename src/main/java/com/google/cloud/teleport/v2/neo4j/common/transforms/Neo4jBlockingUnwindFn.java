@@ -1,28 +1,20 @@
 package com.google.cloud.teleport.v2.neo4j.common.transforms;
 
 import com.google.cloud.teleport.v2.neo4j.common.database.Neo4jConnection;
-import org.apache.beam.sdk.Pipeline;
-import org.apache.beam.sdk.coders.RowCoder;
 import org.apache.beam.sdk.metrics.Counter;
-import org.apache.beam.sdk.schemas.Schema;
-import org.apache.beam.sdk.transforms.*;
-import org.apache.beam.sdk.metrics.Counter;
-import org.apache.beam.sdk.metrics.Distribution;
 import org.apache.beam.sdk.metrics.Metrics;
+import org.apache.beam.sdk.transforms.DoFn;
+import org.apache.beam.sdk.transforms.SerializableFunction;
 import org.apache.beam.sdk.transforms.windowing.BoundedWindow;
 import org.apache.beam.sdk.transforms.windowing.GlobalWindow;
-import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.Row;
-import org.checkerframework.checker.nullness.qual.NonNull;
-import org.checkerframework.checker.nullness.qual.Nullable;
-import org.neo4j.driver.*;
+import org.neo4j.driver.Result;
+import org.neo4j.driver.TransactionConfig;
+import org.neo4j.driver.TransactionWork;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.time.Instant;
 import java.util.*;
-
-import static org.apache.beam.vendor.guava.v26_0_jre.com.google.common.base.Preconditions.checkArgument;
 
 public class Neo4jBlockingUnwindFn extends DoFn<Row, Row> {
 

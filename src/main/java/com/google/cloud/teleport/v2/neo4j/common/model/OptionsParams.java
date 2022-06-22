@@ -1,9 +1,7 @@
 package com.google.cloud.teleport.v2.neo4j.common.model;
 
 import com.google.cloud.teleport.v2.neo4j.common.options.Neo4jFlexTemplateOptions;
-import com.google.cloud.teleport.v2.neo4j.common.utils.GsUtils;
 import org.apache.beam.repackaged.core.org.apache.commons.lang3.StringUtils;
-import org.apache.beam.sdk.options.PipelineOptions;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

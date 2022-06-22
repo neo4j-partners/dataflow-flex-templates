@@ -1,7 +1,9 @@
 package com.google.cloud.teleport.v2.neo4j.common;
 
 import com.google.cloud.teleport.v2.neo4j.common.model.*;
-import com.google.cloud.teleport.v2.neo4j.common.model.enums.*;
+import com.google.cloud.teleport.v2.neo4j.common.model.enums.FragmentType;
+import com.google.cloud.teleport.v2.neo4j.common.model.enums.RoleType;
+import com.google.cloud.teleport.v2.neo4j.common.model.enums.TargetType;
 import com.google.cloud.teleport.v2.neo4j.common.options.Neo4jFlexTemplateOptions;
 import com.google.cloud.teleport.v2.neo4j.common.utils.ModelUtils;
 import com.google.gson.Gson;
@@ -10,7 +12,10 @@ import org.apache.beam.repackaged.core.org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 

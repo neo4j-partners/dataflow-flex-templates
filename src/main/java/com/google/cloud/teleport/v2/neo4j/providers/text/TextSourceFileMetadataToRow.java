@@ -2,14 +2,9 @@ package com.google.cloud.teleport.v2.neo4j.providers.text;
 
 import com.google.cloud.teleport.v2.neo4j.common.model.OptionsParams;
 import com.google.cloud.teleport.v2.neo4j.common.model.Source;
-import com.google.cloud.teleport.v2.neo4j.common.utils.ModelUtils;
-import com.google.cloud.teleport.v2.neo4j.providers.SourceQuerySpec;
-import org.apache.beam.repackaged.core.org.apache.commons.lang3.StringUtils;
-import org.apache.beam.sdk.io.TextIO;
 import org.apache.beam.sdk.schemas.Schema;
 import org.apache.beam.sdk.transforms.Create;
 import org.apache.beam.sdk.transforms.PTransform;
-import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.values.PBegin;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.Row;

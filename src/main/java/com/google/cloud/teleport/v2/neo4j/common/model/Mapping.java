@@ -6,7 +6,6 @@ import com.google.cloud.teleport.v2.neo4j.common.model.enums.RoleType;
 import com.google.cloud.teleport.v2.neo4j.common.model.enums.TargetType;
 import org.apache.beam.repackaged.core.org.apache.commons.lang3.StringUtils;
 import org.json.JSONObject;
-import org.neo4j.driver.types.Relationship;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

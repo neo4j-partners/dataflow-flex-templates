@@ -1,8 +1,9 @@
 package com.google.cloud.teleport.v2.neo4j.providers;
 
 
-import com.google.cloud.teleport.v2.neo4j.common.model.*;
-import org.apache.beam.sdk.schemas.Schema;
+import com.google.cloud.teleport.v2.neo4j.common.model.JobSpecRequest;
+import com.google.cloud.teleport.v2.neo4j.common.model.OptionsParams;
+import com.google.cloud.teleport.v2.neo4j.common.model.Source;
 import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.values.PBegin;
 import org.apache.beam.sdk.values.PCollection;

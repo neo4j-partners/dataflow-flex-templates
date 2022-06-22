@@ -2,7 +2,6 @@ package com.google.cloud.teleport.v2.neo4j.providers.bq;
 
 import com.google.api.services.bigquery.model.TableRow;
 import com.google.cloud.teleport.v2.neo4j.common.model.OptionsParams;
-import com.google.cloud.teleport.v2.neo4j.common.model.Source;
 import com.google.cloud.teleport.v2.neo4j.common.utils.ModelUtils;
 import org.apache.beam.repackaged.core.org.apache.commons.lang3.StringUtils;
 import org.apache.beam.sdk.coders.Coder;

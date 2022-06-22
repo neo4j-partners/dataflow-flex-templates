@@ -1,6 +1,8 @@
 package com.google.cloud.teleport.v2.neo4j.providers.bq;
 
-import com.google.cloud.teleport.v2.neo4j.common.model.*;
+import com.google.cloud.teleport.v2.neo4j.common.model.JobSpecRequest;
+import com.google.cloud.teleport.v2.neo4j.common.model.OptionsParams;
+import com.google.cloud.teleport.v2.neo4j.common.model.Source;
 import com.google.cloud.teleport.v2.neo4j.common.utils.ModelUtils;
 import com.google.cloud.teleport.v2.neo4j.providers.IProvider;
 import com.google.cloud.teleport.v2.neo4j.providers.SourceQuerySpec;

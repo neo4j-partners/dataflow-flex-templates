@@ -1,6 +1,6 @@
-#  Composite (Text)  to Neo4J Dataflow Template
+#  Composite (Text) to Neo4J Dataflow Template
 
-The [TextToNeo4j](../src/main/java/com/google/cloud/teleport/v2/neo4j/TextToNeo4j.java) pipeline exports data
+The [GcpToNeo4j](../src/main/java/com/google/cloud/teleport/v2/neo4j/GcpToNeo4j.java) pipeline exports data
 from Text using a query into a Neo4j graph database.
 
 NOTE: This template is currently unreleased. If you wish to use it now, you

@@ -1,7 +1,7 @@
-# Composite (BigQuery) to Neo4J Dataflow Template
+# Composite (Inline) to Neo4J Dataflow Template
 
 The [GcpToNeo4j](../src/main/java/com/google/cloud/teleport/v2/neo4j/GcpToNeo4j.java) pipeline exports data
-from BigQuery using a query into a Neo4j graph database.
+from Inline using a query into a Neo4j graph database.
 
 NOTE: This template is currently unreleased. If you wish to use it now, you
 will need to follow the steps outlined below to add it to and run it from
@@ -55,10 +55,6 @@ run on Dataflow.
 >     --region=$REGION \
 >     --workerMachineType=$MACHINE_TYPE \
 >     --maxNumWorkers=2 \
->     --readQuery=\"SELECT customer_id,contact_name,company_name,seller_id,seller_first_name, \
->     seller_last_name,seller_title,product_id,product_name,category_name,supplier_name, \
->     supplier_postal_code, supplier_country,order_id, \
->     quantity,unit_price, discount FROM neo4jbusinessdev.northwind.V_CUSTOMER_ORDERS LIMIT 10000\" \
 >     --jobSpecUri=gs://neo4j-dataflow/job-specs/testing/bigquery/bq-northwind-jobspec.json \
 >     --neo4jConnectionUri=gs://neo4j-dataflow/job-specs/testing/common/auradb-free-connection.json"
 > ```

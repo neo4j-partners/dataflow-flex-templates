@@ -55,7 +55,7 @@ run on Dataflow.
 >     --region=$REGION \
 >     --workerMachineType=$MACHINE_TYPE \
 >     --maxNumWorkers=2 \
->     --jobSpecUri=gs://neo4j-dataflow/job-specs/testing/bigquery/inline-json-bq-northwind-jobspec.json \
+>     --jobSpecUri=gs://neo4j-dataflow/job-specs/testing/bigquery/inline-json-serialize-targets-bq-northwind-jobspec.json \
 >     --neo4jConnectionUri=gs://neo4j-dataflow/job-specs/testing/common/auradb-free-connection.json"
 > ```
 > </details>

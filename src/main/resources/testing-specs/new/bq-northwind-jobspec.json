@@ -21,7 +21,6 @@
           "group": true
         },
         "mappings": {
-          "automap": false,
           "labels": [
             "\"Customer\""
           ],
@@ -29,6 +28,7 @@
             "customer_id"
           ],
           "properties": {
+            "automap": false,
             "unique": [],
             "indexed": [
               "contact_name",
@@ -37,12 +37,12 @@
             "strings": [],
             "dates": [],
             "numbers": []
+          },
+          "names": {
+            "customer_id": "Customer Id",
+            "contact_name": "Contact Name",
+            "company_name": "Company Name"
           }
-        },
-        "names": {
-          "customer_id": "Customer Id",
-          "contact_name": "Contact Name",
-          "company_name": "Company Name"
         }
       }
     },
@@ -68,7 +68,6 @@
           "limit": -1
         },
         "mappings": {
-          "automap": false,
           "labels": [
             "\"Product\""
           ],
@@ -76,6 +75,7 @@
             "product_id"
           ],
           "properties": {
+            "automap": false,
             "unique": [],
             "indexed": [
               "contact_name",
@@ -83,18 +83,18 @@
             ],
             "strings": [],
             "dates": [],
-            "numbers": []
-          },
-          "names": {
-            "product_name": "Product Name",
-            "total_amount_sold": "Total product order amount",
-            "total_quantity_sold": "Total product quantity"
+            "numbers": [],
+            "names": {
+              "product_name": "Product Name",
+              "total_amount_sold": "Total product order amount",
+              "total_quantity_sold": "Total product quantity"
+            }
           }
         }
       }
     },
     {
-      "relationship": {
+      "edge": {
         "source": "1k orders",
         "name": "Purchase Edges",
         "mode": "merge",
@@ -115,7 +115,6 @@
           "limit": -1
         },
         "mappings": {
-          "automap": false,
           "type": [
             "\"Purchases\""
           ],
@@ -128,6 +127,7 @@
             "key": "product_id"
           },
           "properties": {
+            "automap": false,
             "unique": [],
             "indexed": [
               "order_id"
@@ -136,11 +136,11 @@
             "dates": [],
             "numbers": [
               "sum_amount"
-            ]
-          },
-          "names": {
-            "sum_amount": "Calculated order amount",
-            "sum_quantity": "Calculated order quantity"
+            ],
+            "names": {
+              "sum_amount": "Calculated order amount",
+              "sum_quantity": "Calculated order quantity"
+            }
           }
         }
       }

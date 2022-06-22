@@ -4,7 +4,7 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
-public class Query implements Serializable {
+public class Transform implements Serializable {
     public String sql = "";
     public List<Aggregation> aggregations = new ArrayList<>();
     public boolean group;

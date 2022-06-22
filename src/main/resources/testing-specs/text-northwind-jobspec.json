@@ -118,7 +118,7 @@
     {
       "name": "Purchase Edges",
       "source": "1k orders text",
-      "type": "relationship",
+      "type": "edge",
       "mode": "merge",
       "transform": {
         "aggregations": [{

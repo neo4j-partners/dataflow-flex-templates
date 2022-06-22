@@ -112,7 +112,7 @@ public class JobSpecRequest implements Serializable {
         public List<Target> getActiveRelationshipTargetsBySource(String sourceName){
             List<Target> targets=new ArrayList<>();
             for (Target target : this.targets) {
-                if (target.active && target.type==TargetType.relationship && target.source.equals(sourceName)) {
+                if (target.active && target.type==TargetType.edge && target.source.equals(sourceName)) {
                     targets.add(target);
                 }
             }

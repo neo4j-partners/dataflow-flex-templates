@@ -7,7 +7,6 @@ import com.google.cloud.teleport.v2.neo4j.common.utils.ModelUtils;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import org.apache.beam.repackaged.core.org.apache.commons.lang3.StringUtils;
-import org.apache.beam.vendor.calcite.v1_28_0.org.apache.calcite.util.mapping.Mappings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -99,15 +98,15 @@ public class InputValidator {
             }
 
             // Check that SQL does not have order by...
-            if (target.query != null && StringUtils.isNotBlank(target.query.sql)) {
-                if (target.query.sql.toUpperCase().matches("")) {
-                    Matcher m = ORDER_BY_PATTERN.matcher(target.query.sql);
+            if (target.transform != null && StringUtils.isNotBlank(target.transform.sql)) {
+                if (target.transform.sql.toUpperCase().matches("")) {
+                    Matcher m = ORDER_BY_PATTERN.matcher(target.transform.sql);
                     if (m.find()) {
                         validationMessages.add("SQL contains ORDER BY which is not supported");
                     }
                 }
             }
-            if (target.type == TargetType.relationship) {
+            if (target.type == TargetType.edge) {
                 for (Mapping mapping : target.mappings) {
                     if (mapping.fragmentType == FragmentType.node) {
                         validationMessages.add("Invalid fragment type " + mapping.fragmentType + " for node mapping: " + mapping.name);
@@ -146,8 +145,8 @@ public class InputValidator {
                 }
             }
             // check that calculated fields are used
-            if (target.query != null && target.query.aggregations.size() > 0) {
-                for (Aggregation aggregation : target.query.aggregations) {
+            if (target.transform != null && target.transform.aggregations.size() > 0) {
+                for (Aggregation aggregation : target.transform.aggregations) {
                     if (!fieldIsMapped(target, aggregation.field)) {
                         validationMessages.add("Aggregation for field " + aggregation.field + " is unmapped.");
                     }

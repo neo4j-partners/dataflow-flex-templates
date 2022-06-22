@@ -88,7 +88,7 @@ public class ModelUtils {
     public static boolean nodesOnly(JobSpecRequest jobSpec) {
         for (Target target : jobSpec.targets) {
             if (target.active) {
-                if (target.type == TargetType.relationship) {
+                if (target.type == TargetType.edge) {
                     return false;
                 }
             }
@@ -109,8 +109,8 @@ public class ModelUtils {
 
     public static boolean targetHasTransforms(Target target) {
         boolean requiresRequery = false;
-        if (target.query != null) {
-            if (target.query.group || target.query.aggregations.size() > 0 || StringUtils.isNotEmpty(target.query.orderBy) || StringUtils.isNotEmpty(target.query.where)) {
+        if (target.transform != null) {
+            if (target.transform.group || target.transform.aggregations.size() > 0 || StringUtils.isNotEmpty(target.transform.orderBy) || StringUtils.isNotEmpty(target.transform.where)) {
                 return true;
             }
         }
@@ -138,24 +138,24 @@ public class ModelUtils {
         StringBuffer sb = new StringBuffer();
 
         String orderByClause = "";
-        if (target.type == TargetType.relationship) {
+        if (target.type == TargetType.edge) {
             String sortField = getRelationshipKeyField(target, FragmentType.target);
             if (StringUtils.isNotBlank(sortField)) {
                 orderByClause = " ORDER BY " + sortField + " ASC";
-            } else if (StringUtils.isNotBlank(target.query.orderBy)) {
-                orderByClause = " ORDER BY " + target.query.orderBy;
+            } else if (StringUtils.isNotBlank(target.transform.orderBy)) {
+                orderByClause = " ORDER BY " + target.transform.orderBy;
             }
         } else {
-            if (StringUtils.isNotBlank(target.query.orderBy)) {
-                orderByClause = " ORDER BY " + target.query.orderBy;
+            if (StringUtils.isNotBlank(target.transform.orderBy)) {
+                orderByClause = " ORDER BY " + target.transform.orderBy;
             }
         }
 
-        if (target.query != null) {
+        if (target.transform != null) {
             List<String> fieldList = new ArrayList<>();
             /////////////////////////////////
             // Grouping transform
-            Query query = target.query;
+            Transform query = target.transform;
             if (query.group || query.aggregations.size() > 0) {
                 for (int i = 0; i < target.mappings.size(); i++) {
                     Mapping mapping = target.mappings.get(i);
@@ -223,7 +223,7 @@ public class ModelUtils {
     }
 
 
-    public static List<String> getRelationshipTypeFields(Target target) {
+    public static List<String> getStaticOrDynamicRelationshipType(String dynamicRowPrefix, Target target) {
         StringBuffer sb = new StringBuffer();
         List<String> relationships = new ArrayList<>();
         for (Mapping m : target.mappings) {
@@ -233,7 +233,7 @@ public class ModelUtils {
                         relationships.add(m.constant);
                     } else {
                         //TODO: handle dynamic labels
-                        relationships.add(m.field);
+                        relationships.add(dynamicRowPrefix + "." + m.field);
                     }
                 }
             }
@@ -264,7 +264,7 @@ public class ModelUtils {
         return labels;
     }
 
-    public static List<String> getStaticOrDynamicLabels(String prefix, FragmentType entityType, Target target) {
+    public static List<String> getStaticOrDynamicLabels(String dynamicRowPrefix, FragmentType entityType, Target target) {
         List<String> labels = new ArrayList<>();
         for (Mapping m : target.mappings) {
             if (m.fragmentType == entityType) {
@@ -274,7 +274,7 @@ public class ModelUtils {
                     if (StringUtils.isNotEmpty(m.constant)) {
                         labels.add(m.constant);
                     } else {
-                        labels.add(prefix + "." + m.field);
+                        labels.add(dynamicRowPrefix + "." + m.field);
                     }
                 }
             }

@@ -34,6 +34,7 @@
             "customer_id"
           ],
           "properties": {
+            "automap": false,
             "unique": [],
             "indexed": [
               "contact_name",
@@ -47,9 +48,7 @@
             "customer_id": "Customer Id",
             "contact_name": "Contact Name",
             "company_name": "Company Name"
-          },
-          "fields": [],
-          "//fields": "field wise configuration can be done here"
+          }
         }
       }
     },
@@ -75,7 +74,6 @@
           "limit": -1
         },
         "mappings": {
-          "automap": false,
           "labels": [
             "\"Product\""
           ],
@@ -83,6 +81,7 @@
             "product_id"
           ],
           "properties": {
+            "automap": false,
             "unique": [],
             "indexed": [
               "contact_name",
@@ -90,18 +89,18 @@
             ],
             "strings": [],
             "dates": [],
-            "numbers": []
-          },
-          "names": {
-            "product_name": "Product Name",
-            "total_amount_sold": "Total product order amount",
-            "total_quantity_sold": "Total product quantity"
+            "numbers": [],
+            "names": {
+              "product_name": "Product Name",
+              "total_amount_sold": "Total product order amount",
+              "total_quantity_sold": "Total product quantity"
+            }
           }
         }
       }
     },
     {
-      "relationship": {
+      "edge": {
         "source": "1k orders",
         "name": "Purchase Edges",
         "mode": "merge",
@@ -134,6 +133,7 @@
             "key": "product_id"
           },
           "properties": {
+            "automap": false,
             "unique": [],
             "indexed": [
               "order_id"
@@ -142,11 +142,11 @@
             "dates": [],
             "numbers": [
               "sum_amount"
-            ]
-          },
-          "names": {
-            "sum_amount": "Calculated order amount",
-            "sum_quantity": "Calculated order quantity"
+            ],
+            "names": {
+              "sum_amount": "Calculated order amount",
+              "sum_quantity": "Calculated order quantity"
+            }
           }
         }
       }

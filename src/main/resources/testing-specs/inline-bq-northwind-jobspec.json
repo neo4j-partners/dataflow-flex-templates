@@ -118,7 +118,7 @@
     },
     {
       "name": "Purchase Edges",
-      "type": "relationship",
+      "type": "edge",
       "mode": "merge",
       "source": "1k orders inline",
       "transform": {

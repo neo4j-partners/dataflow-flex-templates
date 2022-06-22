@@ -17,7 +17,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import static com.google.cloud.teleport.v2.neo4j.common.utils.ModelUtils.getRelationshipTypeFields;
+import static com.google.cloud.teleport.v2.neo4j.common.utils.ModelUtils.getStaticOrDynamicRelationshipType;
 
 public class CypherGenerator {
     private static final Logger LOG = LoggerFactory.getLogger(CypherGenerator.class);
@@ -30,7 +30,7 @@ public class CypherGenerator {
         String nodeAlias = "N_" + RandomStringUtils.randomAlphanumeric(8);
 
         /// RELATIONSHIP TYPE
-        if (target.type == TargetType.relationship) {
+        if (target.type == TargetType.edge) {
 
             // Verb
             if (target.saveMode == SaveMode.merge) { // merge
@@ -88,7 +88,7 @@ public class CypherGenerator {
 
     public static String getLabelsPropertiesListCypherFragment(String alias, boolean onlyIndexedProperties, FragmentType entityType, List<RoleType> roleTypes, Target target) {
         StringBuffer sb = new StringBuffer();
-        List<String> labels = ModelUtils.getStaticOrDynamicLabels("row",entityType, target);
+        List<String> labels = ModelUtils.getStaticOrDynamicLabels(CONST_ROW_VARIABLE_NAME,entityType, target);
         String propertiesKeyListStr = getPropertiesListCypherFragment(entityType, onlyIndexedProperties, roleTypes, target);
         // Labels
         if (labels.size() > 0) {
@@ -161,8 +161,8 @@ public class CypherGenerator {
     }
     public static String getRelationshipTypePropertiesListFragment(String prefix, boolean onlyIndexedProperties, Target target) {
         StringBuffer sb = new StringBuffer();
-        List<String> relationships = getRelationshipTypeFields(target);
-        sb.append(prefix + ":" + StringUtils.join(relationships, ":"));
+        List<String> relType = getStaticOrDynamicRelationshipType(CONST_ROW_VARIABLE_NAME,target);
+        sb.append(prefix + ":" + StringUtils.join(relType, ":"));
         sb.append(" " + getPropertiesListCypherFragment(FragmentType.rel, onlyIndexedProperties, Arrays.asList(RoleType.key, RoleType.property), target));
         return sb.toString();
     }

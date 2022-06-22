@@ -25,6 +25,8 @@ import com.google.cloud.teleport.v2.neo4j.common.utils.BeamUtils;
 import com.google.cloud.teleport.v2.neo4j.common.utils.ModelUtils;
 import com.google.cloud.teleport.v2.neo4j.providers.IProvider;
 import com.google.cloud.teleport.v2.neo4j.providers.ProviderFactory;
+import com.google.cloud.teleport.v2.neo4j.providers.SourceQuerySpec;
+import com.google.cloud.teleport.v2.neo4j.providers.TargetQuerySpec;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.io.FileSystems;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
@@ -130,14 +132,17 @@ public class GcpToNeo4j {
             IProvider providerImpl= ProviderFactory.of(source.sourceType);
             providerImpl.configure(optionsParams,jobSpec);
 
-            Schema sourceBeamSchema=providerImpl.getSourceBeamSchema(source);
-            PCollection sourceBeamRows = null;
+
+            PCollection<Row> sourceMetadata = pipeline.apply("Source metadata",providerImpl.queryMetadata(source));
+            Schema sourceBeamSchema=sourceMetadata.getSchema();
+            PCollection nullableSourceBeamRows = null;
 
             ////////////////////////////
-            // Optimization: if single source query, reuse this PRecordset rather than write it again
+            // Optimization: if single source query, reuse this PCollection rather than write it again
             boolean targetsHaveTransforms=ModelUtils.targetsHaveTransforms( jobSpec,  source);
             if (!targetsHaveTransforms || !providerImpl.supportsSqlPushDown()) {
-                sourceBeamRows = providerImpl.getSourceBeamRows(pipeline,source,sourceBeamSchema);
+                SourceQuerySpec sourceQuerySpec=SourceQuerySpec.builder().source(source).sourceSchema(sourceBeamSchema).build();
+                nullableSourceBeamRows = pipeline.apply("Common query",providerImpl.querySourceBeamRows(sourceQuerySpec));
             }
 
             ////////////////////////////
@@ -147,10 +152,16 @@ public class GcpToNeo4j {
                 for (Target target : jobSpec.getActiveTargetsBySource(source.name)) {
                     Neo4jRowWriterTransform targetWriterTransform = new Neo4jRowWriterTransform(jobSpec, neo4jConnection, target);
                     if (ModelUtils.targetHasTransforms( target)) {
-                        PCollection<Row> transformedRows = providerImpl.getTargetBeamRows(pipeline,source,sourceBeamSchema,sourceBeamRows, target);
+                        TargetQuerySpec targetQuerySpec=TargetQuerySpec.builder()
+                                .source(source)
+                                .sourceBeamSchema(sourceBeamSchema)
+                                .nullableSourceRows(nullableSourceBeamRows)
+                                .target(target)
+                                .build();
+                        PCollection<Row> transformedRows = pipeline.apply(target.sequence + ": Target query " + target.name, providerImpl.queryTargetBeamRows(targetQuerySpec));
                         transformedRows.apply(target.sequence + ": Writing Neo4j " + target.name, targetWriterTransform);
                     } else {
-                        sourceBeamRows.apply(target.sequence + ": Writing Neo4j " + target.name, targetWriterTransform);
+                        nullableSourceBeamRows.apply(target.sequence + ": Writing Neo4j " + target.name, targetWriterTransform);
                     }
                 }
             } else {
@@ -160,9 +171,19 @@ public class GcpToNeo4j {
                 List<Target> nodeTargets = jobSpec.getActiveNodeTargetsBySource(source.name);
                 List<PCollection<Row>> blockingList = new ArrayList<>();
                 for (Target target : nodeTargets) {
-                    PCollection<Row> preInsertBeamRows= optionallyTransformAndCastCollection( providerImpl, sourceBeamRows, source, sourceBeamSchema, target);
+                    TargetQuerySpec targetQuerySpec=TargetQuerySpec.builder()
+                            .source(source)
+                            .sourceBeamSchema(sourceBeamSchema)
+                            .nullableSourceRows(nullableSourceBeamRows)
+                            .target(target)
+                            .build();
+                    PCollection<Row> preInsertBeamRows;
+                    if (ModelUtils.targetHasTransforms(target)){
+                        preInsertBeamRows = pipeline.apply(target.sequence + ": Target nodes query " + target.name, providerImpl.queryTargetBeamRows(targetQuerySpec));
+                    } else {
+                        preInsertBeamRows = nullableSourceBeamRows;
+                    }
                     Neo4jRowWriterTransform targetWriterTransform = new Neo4jRowWriterTransform(jobSpec, neo4jConnection, target);
-                    //TODO: not sure if (PCollection) casting required here...
                     PCollection<Row> emptyReturn = preInsertBeamRows.apply(target.sequence + ": Writing Neo4j " + target.name, targetWriterTransform);
                     blockingList.add(emptyReturn);
                 }
@@ -175,7 +196,18 @@ public class GcpToNeo4j {
                 // Write relationship targets
                 List<Target> relationshipTargets = jobSpec.getActiveRelationshipTargetsBySource(source.name);
                 for (Target target : relationshipTargets) {
-                    PCollection<Row> preInsertBeamRows= optionallyTransformAndCastCollection( providerImpl, sourceBeamRows, source, sourceBeamSchema, target);
+                    TargetQuerySpec targetQuerySpec=TargetQuerySpec.builder()
+                            .source(source)
+                            .nullableSourceRows(nullableSourceBeamRows)
+                            .sourceBeamSchema(sourceBeamSchema)
+                            .target(target)
+                            .build();
+                    PCollection<Row> preInsertBeamRows;
+                    if (ModelUtils.targetHasTransforms(target)){
+                        preInsertBeamRows = pipeline.apply(target.sequence + ": Target edges query " + target.name, providerImpl.queryTargetBeamRows(targetQuerySpec));
+                    } else {
+                       preInsertBeamRows = nullableSourceBeamRows;
+                    }
                     PCollection<Row> unblockedBeamRows = BeamUtils.unblockCollection(blocked, preInsertBeamRows,target.sequence + ": Unblock");
                     Neo4jRowWriterTransform targetWriterTransform = new Neo4jRowWriterTransform(jobSpec, neo4jConnection, target);
                     PCollection<Row> emptyReturn = unblockedBeamRows.apply(target.sequence + ": Writing Neo4j " + target.name, targetWriterTransform);
@@ -191,14 +223,6 @@ public class GcpToNeo4j {
         // For a Dataflow Flex Template, do NOT waitUntilFinish().
         pipeline.run();
 
-    }
-
-    private PCollection<Row> optionallyTransformAndCastCollection(IProvider provider, PCollection<Row> sourceBeamRows, Source source, Schema sourceSchema, Target target){
-        if (ModelUtils.targetHasTransforms( target)) {
-            return provider.getTargetBeamRows(pipeline,source,sourceSchema,sourceBeamRows, target);
-        } else {
-           return sourceBeamRows;
-        }
     }
 
 }

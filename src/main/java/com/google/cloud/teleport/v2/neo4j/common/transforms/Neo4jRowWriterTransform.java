@@ -57,7 +57,7 @@ public class Neo4jRowWriterTransform extends PTransform<PCollection<Row>, PColle
         int batchSize = jobSpec.config.nodeBatchSize;
         int parallelism = jobSpec.config.nodeParallelism;
 
-        if (target.type == TargetType.relationship) {
+        if (target.type == TargetType.edge) {
             batchSize = jobSpec.config.edgeBatchSize;
             parallelism = jobSpec.config.edgeParallelism;
         }

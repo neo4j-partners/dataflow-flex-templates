@@ -2,7 +2,6 @@ package com.google.cloud.teleport.v2.neo4j.common.model;
 
 
 import com.google.cloud.teleport.v2.neo4j.common.model.enums.*;
-import org.apache.beam.vendor.grpc.v1p43p2.com.google.api.Property;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -19,7 +18,7 @@ public class Target implements Serializable, Comparable {
     public boolean active = true;
     public TargetType type;
     public boolean autoMap=false;
-    public Query query = new Query();
+    public Transform transform = new Transform();
     public List<Mapping> mappings = new ArrayList<>();
     public SaveMode saveMode = SaveMode.append;
     public Map<String,Mapping> mappingByFieldMap =new HashMap();
@@ -71,12 +70,12 @@ public class Target implements Serializable, Comparable {
                     agg.field= aggregationObj.getString("field");
                     aggregations.add(agg);
                 }
-                this.query.aggregations =aggregations;
+                this.transform.aggregations =aggregations;
             }
-            this.query.group = queryObj.has("group") && queryObj.getBoolean("group");
-            this.query.orderBy = queryObj.has("order_by")?queryObj.getString("order_by"):"";
-            this.query.limit = queryObj.has("limit")?queryObj.getInt("limit"):-1;
-            this.query.where = queryObj.has("where")?queryObj.getString("where"):"";
+            this.transform.group = queryObj.has("group") && queryObj.getBoolean("group");
+            this.transform.orderBy = queryObj.has("order_by")?queryObj.getString("order_by"):"";
+            this.transform.limit = queryObj.has("limit")?queryObj.getInt("limit"):-1;
+            this.transform.where = queryObj.has("where")?queryObj.getString("where"):"";
 
         }
 
@@ -99,7 +98,7 @@ public class Target implements Serializable, Comparable {
     public int compareTo(Object o) {
         if (this.type==((Target)o).type) {
             return 0;
-        } else if (this.type== TargetType.relationship && ((Target)o).type== TargetType.node) {
+        } else if (this.type== TargetType.edge && ((Target)o).type== TargetType.node) {
             return 1;
         } else {
             return -1;

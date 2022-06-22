@@ -32,7 +32,6 @@ public class Source implements Serializable {
     public CSVFormat csvFormat = CSVFormat.DEFAULT;
     public String[] fieldNames = new String[0];
     public Map<String, Integer> fieldPosByName = new HashMap();
-
     public List<List<String>> inline =null;
 
     public Source(final JSONObject sourceObj) {

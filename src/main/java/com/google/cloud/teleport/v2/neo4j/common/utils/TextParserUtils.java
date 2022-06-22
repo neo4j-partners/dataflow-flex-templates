@@ -45,30 +45,10 @@ public class TextParserUtils {
     }
 
     //Function useful for small in-memory datasets
-    public static List<List<String>> parseDelimitedLines(CSVFormat csvFormat, String csv) {
+    public static List<List<Object>> parseDelimitedLines(CSVFormat csvFormat, String[] lines) {
         List rows = new ArrayList<>();
-        if (StringUtils.isEmpty(csv)) {
-            return null;
-        } else {
-            try {
-                CSVParser csvParser = CSVParser.parse(csv, csvFormat);
-                Iterator<CSVRecord> recordsIterator = csvParser.iterator();
-                while (recordsIterator.hasNext()) {
-                    CSVRecord csvRecord = recordsIterator.next();
-                    List<Object> row = new ArrayList<>();
-                    Iterator<String> it = csvRecord.iterator();
-                    while (it.hasNext()) {
-                        // cast to text
-                        row.add( it.next()+"");
-                    }
-                    rows.add(row);
-                }
-                LOG.info("Csv format: "+csvFormat.toString()+", csv: "+StringUtils.truncate(csv,100)+", records: "+rows.size());
-
-            } catch (IOException ioException) {
-                LOG.error("Error parsing text file, exception: " + ioException.getMessage());
-                return rows;
-            }
+        for (String line: lines){
+            rows.add(parseDelimitedLine(csvFormat, line));
         }
         return rows;
     }

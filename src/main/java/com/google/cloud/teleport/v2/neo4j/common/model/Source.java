@@ -17,67 +17,83 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 public class Source implements Serializable {
     private static final Logger LOG = LoggerFactory.getLogger(Source.class);
+
+    Pattern NEWLINE_PATTERN = Pattern.compile("\\R");
+
     public SourceType sourceType=SourceType.text;
     public String name="";
     public String uri = "";
     public String delimiter = "";
     //row separator
-    public String separator = "";
+    public String separator = null;
 
     public String query="";
-    public TextFormat textFormat= TextFormat.CSV;
     public CSVFormat csvFormat = CSVFormat.DEFAULT;
     public String[] fieldNames = new String[0];
     public Map<String, Integer> fieldPosByName = new HashMap();
-    public List<List<String>> inline =null;
+    public List<List<Object>> inline =new ArrayList<>();
 
     public Source(final JSONObject sourceObj) {
         this.name = sourceObj.getString("name");
         //TODO: avro, parquet, etc.
         this.sourceType=sourceObj.has("type")?SourceType.valueOf(sourceObj.getString("type")):SourceType.text;
 
-        String csvFormatStr = sourceObj.has("format") ? sourceObj.getString("format").toUpperCase() : "DEFAULT";
-        if (csvFormatStr.equals("JSON")){
-            textFormat = TextFormat.JSON;
-        } else if (csvFormatStr.equals("EXCEL")) {
+        boolean isJson=false;
+        String formatStr = sourceObj.has("format") ? sourceObj.getString("format").toUpperCase() : "DEFAULT";
+        if (formatStr.equals("EXCEL")) {
             csvFormat = CSVFormat.EXCEL;
-        } else if (csvFormatStr.equals("MONGO")) {
+        } else if (formatStr.equals("MONGO")) {
             csvFormat = CSVFormat.MONGODB_CSV;
-        } else if (csvFormatStr.equals("INFORMIX")) {
+        } else if (formatStr.equals("INFORMIX")) {
             csvFormat = CSVFormat.INFORMIX_UNLOAD_CSV;
-        } else if (csvFormatStr.equals("POSTGRES")) {
+        } else if (formatStr.equals("POSTGRES")) {
             csvFormat = CSVFormat.POSTGRESQL_CSV;
-        } else if (csvFormatStr.equals("MYSQL")) {
+        } else if (formatStr.equals("MYSQL")) {
             csvFormat = CSVFormat.MYSQL;
-        } else if (csvFormatStr.equals("ORACLE")) {
+        } else if (formatStr.equals("ORACLE")) {
             csvFormat = CSVFormat.ORACLE;
-        } else if (csvFormatStr.equals("MONGO_TSV")) {
+        } else if (formatStr.equals("MONGO_TSV")) {
             csvFormat = CSVFormat.MONGODB_TSV;
-        } else if (csvFormatStr.equals("RFC4180")) {
+        } else if (formatStr.equals("RFC4180")) {
             csvFormat = CSVFormat.RFC4180;
-        } else if (csvFormatStr.equals("POSTGRESQL_CSV")) {
+        } else if (formatStr.equals("POSTGRESQL_CSV")) {
             csvFormat = CSVFormat.POSTGRESQL_CSV;
         } else {
             csvFormat = CSVFormat.DEFAULT;
         }
 
-        delimiter = sourceObj.has("delimiter") ? sourceObj.getString("delimiter") : "";
-        separator = sourceObj.has("separator") ? sourceObj.getString("separator") : "";
+        delimiter = sourceObj.has("delimiter") ? sourceObj.getString("delimiter") : delimiter;
+        separator = sourceObj.has("separator") ? sourceObj.getString("separator") : separator;
         //handle inline data
-        if (sourceObj.has("data")){
-            if (textFormat==TextFormat.JSON) {
-                this.inline = jsonToListArray(sourceObj.getJSONArray("data"));
+            if (sourceObj.get("data") instanceof JSONArray) {
+
+                if (csvFormat==CSVFormat.DEFAULT) {
+                    this.inline = jsonToListOfListsArray(sourceObj.getJSONArray("data"));
+                } else {
+                    String[] rows= jsonToListOfStringArray( sourceObj.getJSONArray("data"), csvFormat.getDelimiterString());
+                    this.inline = TextParserUtils.parseDelimitedLines(csvFormat,rows);
+                }
+
             } else {
                 String csv=sourceObj.getString("data");
-                if (StringUtils.isNotEmpty(separator)){
-                    csv=StringUtils.join(StringUtils.split(csv,separator),System.lineSeparator());
+                String[] rows;
+                if (separator!=null && csv.contains(separator)){
+                    rows = StringUtils.split(csv, separator);
+                    // we may have more luck with varieties of newline
+                } else {
+                    rows = NEWLINE_PATTERN.split(csv);
                 }
-                this.inline = TextParserUtils.parseDelimitedLines(csvFormat,csv);
+                if (rows.length<2){
+                    String errMsg="Cold not parse inline data.  Check separator: "+separator;
+                    LOG.error(errMsg);
+                    throw new RuntimeException(errMsg);
+                }
+                this.inline = TextParserUtils.parseDelimitedLines(csvFormat,rows);
             }
-        }
         query = sourceObj.has("query") ? sourceObj.getString("query"):"";
         uri = sourceObj.has("uri") ? sourceObj.getString("uri"):"";
         final String colNamesStr = sourceObj.has("ordered_field_names") ? sourceObj.getString("ordered_field_names") : "";
@@ -92,30 +108,39 @@ public class Source implements Serializable {
         }
     }
 
-    public Integer lookupColIndexByFieldName(String fieldName){
-        if (fieldPosByName.containsKey(fieldName)) {
-            return fieldPosByName.get(fieldName);
-        } else {
-            LOG.warn("Unable to find field named in input data structure: "+fieldName);
-            return -1;
-        }
-    }
     public Schema getTextFileSchema(){
         return BeamUtils.textToBeamSchema(fieldNames);
     }
 
-    public static List<List<String>> jsonToListArray(JSONArray lines) {
+    public static List<List<Object>> jsonToListOfListsArray(JSONArray lines) {
         if(lines==null)
-            return null;
+            return new ArrayList<>();
 
-        List<List<String>> rows=new ArrayList<>();
+        List<List<Object>> rows=new ArrayList<>();
         for(int i=0; i<lines.length(); i++) {
             JSONArray rowArr=lines.getJSONArray(i);
-            List<String> tuples=new ArrayList<>();
+            List<Object> tuples=new ArrayList<>();
             for(int j=0; j<rowArr.length(); j++) {
                 tuples.add(rowArr.optString(j));
             }
             rows.add(tuples);
+        }
+        return rows;
+    }
+
+    public static String[] jsonToListOfStringArray(JSONArray lines, String delimiter) {
+        if(lines==null)
+            return new String[0];
+
+        String[] rows=new String[lines.length()];;
+        for(int i=0; i<lines.length(); i++) {
+            JSONArray rowArr=lines.getJSONArray(i);
+            StringBuffer sb=new StringBuffer();
+            for(int j=0; j<rowArr.length(); j++) {
+                if (j>0) sb.append(delimiter);
+                sb.append(rowArr.optString(j));
+            }
+            rows[i]=sb.toString();
         }
         return rows;
     }

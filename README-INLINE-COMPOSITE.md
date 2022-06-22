@@ -30,8 +30,8 @@ run on Dataflow.
 > export JAVA_HOME=`/usr/libexec/java_home -v 11`
 > export PROJECT=neo4jbusinessdev
 > export GS_WORKING_DIR=gs://neo4j-sandbox/dataflow-working
-> export APP_NAME=bigquery-to-neo4j
-> export JOB_NAME=test-bq-to-neo4j-auradb
+> export APP_NAME=googlecloud-to-neo4j
+> export JOB_NAME=test-inline-to-neo4j-auradb
 > export REGION=us-central1
 > export MACHINE_TYPE=n2-highmem-8
 > ```
@@ -55,7 +55,7 @@ run on Dataflow.
 >     --region=$REGION \
 >     --workerMachineType=$MACHINE_TYPE \
 >     --maxNumWorkers=2 \
->     --jobSpecUri=gs://neo4j-dataflow/job-specs/testing/bigquery/bq-northwind-jobspec.json \
+>     --jobSpecUri=gs://neo4j-dataflow/job-specs/testing/bigquery/inline-json-bq-northwind-jobspec.json \
 >     --neo4jConnectionUri=gs://neo4j-dataflow/job-specs/testing/common/auradb-free-connection.json"
 > ```
 > </details>

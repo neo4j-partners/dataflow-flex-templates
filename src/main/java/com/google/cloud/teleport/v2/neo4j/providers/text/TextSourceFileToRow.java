@@ -5,6 +5,7 @@ import com.google.cloud.teleport.v2.neo4j.common.model.Source;
 import com.google.cloud.teleport.v2.neo4j.common.utils.ModelUtils;
 import com.google.cloud.teleport.v2.neo4j.providers.SourceQuerySpec;
 import org.apache.beam.repackaged.core.org.apache.commons.lang3.StringUtils;
+import org.apache.beam.sdk.coders.StringUtf8Coder;
 import org.apache.beam.sdk.io.TextIO;
 import org.apache.beam.sdk.schemas.Schema;
 import org.apache.beam.sdk.transforms.Create;
@@ -42,7 +43,7 @@ public class TextSourceFileToRow extends PTransform<PBegin, PCollection<Row>>{
             LOG.info("Processing " + source.inline.size() + " rows inline.");
             return input
                     .apply("Ingest inline dataset: " + source.name, Create.of(source.inline))
-                    .apply("Parse lines into string columns.", ParDo.of(new StringListToRowFn(source, beamTextSchema)))
+                    .apply("Parse lines into string columns.", ParDo.of(new ListOfStringToRowFn(beamTextSchema)))
                     .setRowSchema(beamTextSchema);
         } else {
             throw new RuntimeException("Data not found.");

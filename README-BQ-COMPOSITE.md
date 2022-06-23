@@ -59,7 +59,7 @@ run on Dataflow.
 >     seller_last_name,seller_title,product_id,product_name,category_name,supplier_name, \
 >     supplier_postal_code, supplier_country,order_id, \
 >     quantity,unit_price, discount FROM neo4jbusinessdev.northwind.V_CUSTOMER_ORDERS LIMIT 10000\" \
->     --jobSpecUri=gs://neo4j-dataflow/job-specs/testing/bigquery/bq-northwind-jobspec.json \
+>     --jobSpecUri=gs://neo4j-dataflow/job-specs/testing/bigquery/bq-audit-northwind-jobspec.json \
 >     --neo4jConnectionUri=gs://neo4j-dataflow/job-specs/testing/common/auradb-free-connection.json"
 > ```
 > </details>

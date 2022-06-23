@@ -20,7 +20,7 @@ import com.google.cloud.teleport.v2.neo4j.common.InputValidator;
 import com.google.cloud.teleport.v2.neo4j.common.database.Neo4jConnection;
 import com.google.cloud.teleport.v2.neo4j.common.model.*;
 import com.google.cloud.teleport.v2.neo4j.common.options.Neo4jFlexTemplateOptions;
-import com.google.cloud.teleport.v2.neo4j.common.transforms.LogTransform;
+import com.google.cloud.teleport.v2.neo4j.common.transforms.GcsLogTransform;
 import com.google.cloud.teleport.v2.neo4j.common.transforms.Neo4jRowWriterTransform;
 import com.google.cloud.teleport.v2.neo4j.common.utils.BeamBlock;
 import com.google.cloud.teleport.v2.neo4j.common.utils.ModelUtils;
@@ -171,7 +171,7 @@ public class GcpToNeo4j {
                 Neo4jRowWriterTransform targetWriterTransform = new Neo4jRowWriterTransform(jobSpec, neo4jConnection, target);
                 PCollection<Row> emptyReturn = preInsertBeamRows.apply(target.sequence + ": Writing Neo4j " + target.name, targetWriterTransform);
                 if (!StringUtils.isEmpty(jobSpec.config.auditGsUri)) {
-                    LogTransform logTransform=new LogTransform(jobSpec,target);
+                    GcsLogTransform logTransform=new GcsLogTransform(jobSpec,target);
                     preInsertBeamRows.apply(target.sequence + ": Logging " + target.name, logTransform);
                 }
                 blockingQueue.addEmptyBlockingCollection(emptyReturn);
@@ -197,7 +197,7 @@ public class GcpToNeo4j {
                 Neo4jRowWriterTransform targetWriterTransform = new Neo4jRowWriterTransform(jobSpec, neo4jConnection, target);
                 PCollection<Row> emptyReturn = unblockedBeamRows.apply(target.sequence + ": Writing Neo4j " + target.name, targetWriterTransform);
                 if (!StringUtils.isEmpty(jobSpec.config.auditGsUri)) {
-                    LogTransform logTransform=new LogTransform(jobSpec,target);
+                    GcsLogTransform logTransform=new GcsLogTransform(jobSpec,target);
                     unblockedBeamRows.apply(target.sequence + ": Logging " + target.name, logTransform);
                 }
                 //serialize relationships

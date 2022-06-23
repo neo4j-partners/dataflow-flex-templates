@@ -20,6 +20,7 @@ import com.google.cloud.teleport.v2.neo4j.common.InputValidator;
 import com.google.cloud.teleport.v2.neo4j.common.database.Neo4jConnection;
 import com.google.cloud.teleport.v2.neo4j.common.model.*;
 import com.google.cloud.teleport.v2.neo4j.common.options.Neo4jFlexTemplateOptions;
+import com.google.cloud.teleport.v2.neo4j.common.transforms.LogTransform;
 import com.google.cloud.teleport.v2.neo4j.common.transforms.Neo4jRowWriterTransform;
 import com.google.cloud.teleport.v2.neo4j.common.utils.BeamBlock;
 import com.google.cloud.teleport.v2.neo4j.common.utils.ModelUtils;
@@ -27,6 +28,7 @@ import com.google.cloud.teleport.v2.neo4j.providers.IProvider;
 import com.google.cloud.teleport.v2.neo4j.providers.ProviderFactory;
 import com.google.cloud.teleport.v2.neo4j.providers.SourceQuerySpec;
 import com.google.cloud.teleport.v2.neo4j.providers.TargetQuerySpec;
+import org.apache.beam.repackaged.core.org.apache.commons.lang3.StringUtils;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.io.FileSystems;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
@@ -168,6 +170,10 @@ public class GcpToNeo4j {
                 }
                 Neo4jRowWriterTransform targetWriterTransform = new Neo4jRowWriterTransform(jobSpec, neo4jConnection, target);
                 PCollection<Row> emptyReturn = preInsertBeamRows.apply(target.sequence + ": Writing Neo4j " + target.name, targetWriterTransform);
+                if (!StringUtils.isEmpty(jobSpec.config.auditGsUri)) {
+                    LogTransform logTransform=new LogTransform(jobSpec,target);
+                    preInsertBeamRows.apply(target.sequence + ": Logging " + target.name, logTransform);
+                }
                 blockingQueue.addEmptyBlockingCollection(emptyReturn);
             }
 
@@ -190,6 +196,10 @@ public class GcpToNeo4j {
                 PCollection<Row> unblockedBeamRows = blockingQueue.release(preInsertBeamRows, target.sequence + ": "+target.name);
                 Neo4jRowWriterTransform targetWriterTransform = new Neo4jRowWriterTransform(jobSpec, neo4jConnection, target);
                 PCollection<Row> emptyReturn = unblockedBeamRows.apply(target.sequence + ": Writing Neo4j " + target.name, targetWriterTransform);
+                if (!StringUtils.isEmpty(jobSpec.config.auditGsUri)) {
+                    LogTransform logTransform=new LogTransform(jobSpec,target);
+                    unblockedBeamRows.apply(target.sequence + ": Logging " + target.name, logTransform);
+                }
                 //serialize relationships
                 blockingQueue.addEmptyBlockingCollection(emptyReturn);
             }

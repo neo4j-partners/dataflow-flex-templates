@@ -51,3 +51,9 @@ Duration/java.time.temporal.TemporalAmount
 Node/org.neo4j.graphdb.Node
 Relationship/org.neo4j.graphdb.Relationship
 Path/org.neo4j.graphdb.Path
+
+## Running Apache Hop
+export JAVA_HOME=`/usr/libexec/java_home -v 8`
+cd ~/Documents/hop
+./hop-gui.sh
+

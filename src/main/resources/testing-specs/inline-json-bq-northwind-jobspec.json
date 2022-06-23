@@ -2,7 +2,9 @@
   "config": {
     "reset_db": true,
     "node_write_batch_size": 5000,
-    "edge_write_batch_size": 1000
+    "edge_write_batch_size": 1000,
+    "node_write_parallelism": 10,
+    "edge_write_parallelism": 1
   },
   "source": {
     "type": "text",

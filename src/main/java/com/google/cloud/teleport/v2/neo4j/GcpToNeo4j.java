@@ -140,7 +140,7 @@ public class GcpToNeo4j {
             ////////////////////////////
             // Optimization: if single source query, reuse this PCollection rather than write it again
             boolean targetsHaveTransforms = ModelUtils.targetsHaveTransforms(jobSpec, source);
-            if (!targetsHaveTransforms || !providerImpl.supportsSqlPushDown()) {
+            if (!targetsHaveTransforms || !providerImpl.supportsSqlPushDown() ) {
                 SourceQuerySpec sourceQuerySpec = SourceQuerySpec.builder().source(source).sourceSchema(sourceBeamSchema).build();
                 nullableSourceBeamRows = pipeline.apply("Common query", providerImpl.querySourceBeamRows(sourceQuerySpec)).setRowSchema(sourceBeamSchema);
             }

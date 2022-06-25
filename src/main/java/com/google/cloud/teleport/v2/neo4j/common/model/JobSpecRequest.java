@@ -15,7 +15,7 @@ public class JobSpecRequest implements Serializable {
 
     private static final Logger LOG = LoggerFactory.getLogger(JobSpecRequest.class);
 
-    private static String DEFAULT_SOURCE_NAME="__DEFAULT__";
+    private static String DEFAULT_SOURCE_NAME="";
     //initialize defaults;
     public Map<String,Source> sources=new HashMap<>();
     public List<Target> targets = new ArrayList<>();
@@ -60,6 +60,7 @@ public class JobSpecRequest implements Serializable {
 
             } else {
                 // there is no source defined this could be used in a big query job...
+                // this would be an error
             }
 
             if (jobSpecObj.has("targets")) {

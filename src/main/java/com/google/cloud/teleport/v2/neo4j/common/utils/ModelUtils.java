@@ -8,6 +8,8 @@ import com.google.cloud.teleport.v2.neo4j.common.model.enums.FragmentType;
 import com.google.cloud.teleport.v2.neo4j.common.model.enums.RoleType;
 import com.google.cloud.teleport.v2.neo4j.common.model.enums.SourceType;
 import com.google.cloud.teleport.v2.neo4j.common.model.enums.TargetType;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import org.apache.beam.repackaged.core.org.apache.commons.lang3.StringUtils;
 import org.apache.beam.sdk.schemas.Schema;
 import org.slf4j.Logger;
@@ -19,14 +21,14 @@ import java.util.regex.Pattern;
 
 public class ModelUtils {
     private static final Logger LOG = LoggerFactory.getLogger(ModelUtils.class);
-
+    final static Gson gson = new GsonBuilder().setPrettyPrinting().create();
     final public static String DEFAULT_STAR_QUERY = "SELECT * FROM PCOLLECTION";
     final static String LEGAL_CHARS_REGEX = "[^a-zA-Z0-9_]";
     final static String LEGAL_CHARS_REGEX_SPACE = "[^a-zA-Z0-9_ ]";
     final static String ALPHA_CHARS_REGEX = "[^a-zA-Z]";
-    final public static String CYPHER_DELETE_ALL = "MATCH (n) DETACH DELETE n";
+    final public static String CYPHER_DELETE_ALL = "CREATE OR REPLACE DATABASE `neo4j`";
     final public static long MAX_ROWS = 10000000000000l;
-    final static Pattern variablePattern = Pattern.compile("\\[(.+?)\\]");
+    final static Pattern variablePattern = Pattern.compile("(\\$([a-zA-Z0-9_]+))");
 
 
     public static Target generateDefaultTarget(Source source) throws RuntimeException {
@@ -249,8 +251,8 @@ public class ModelUtils {
         List<String> labels = new ArrayList<>();
         for (Mapping m : target.mappings) {
             if (m.fragmentType == entityType) {
-                if (StringUtils.isNotEmpty(m.label)) {
-                    labels.add(m.label);
+                if (m.labels.size()>0) {
+                    labels.addAll(m.labels);
                 } else if (m.role == RoleType.label) {
                     if (StringUtils.isNotEmpty(m.constant)) {
                         labels.add(m.constant);
@@ -264,12 +266,13 @@ public class ModelUtils {
         return labels;
     }
 
+
     public static List<String> getStaticOrDynamicLabels(String dynamicRowPrefix, FragmentType entityType, Target target) {
         List<String> labels = new ArrayList<>();
         for (Mapping m : target.mappings) {
             if (m.fragmentType == entityType) {
-                if (StringUtils.isNotEmpty(m.label)) {
-                    labels.add(m.label);
+                if (m.labels.size()>0) {
+                    labels.addAll(m.labels);
                 } else if (m.role == RoleType.label) {
                     if (StringUtils.isNotEmpty(m.constant)) {
                         labels.add(m.constant);
@@ -310,11 +313,12 @@ public class ModelUtils {
         return fieldOrConstants;
     }
 
-    public static String replaceTokens(String text, HashMap<String, String> replacements) {
+    public static String replaceVariableTokens(String text, HashMap<String, String> replacements) {
         Matcher matcher = variablePattern.matcher(text);
         //populate the replacements map ...
         StringBuilder builder = new StringBuilder();
         int i = 0;
+        LOG.info("Replacing variable tokens: "+text);
         while (matcher.find()) {
             String replacement = replacements.get(matcher.group(1));
             builder.append(text.substring(i, matcher.start()));
@@ -325,7 +329,9 @@ public class ModelUtils {
             i = matcher.end();
         }
         builder.append(text.substring(i, text.length()));
-        return builder.toString();
+        String repacedText= builder.toString();
+        LOG.info("Before: "+text+", after: "+repacedText);
+        return repacedText;
     }
 
     public static List<String> getIndexedProperties(Config config, FragmentType entityType, Target target) {

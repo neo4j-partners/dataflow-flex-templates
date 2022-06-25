@@ -68,12 +68,13 @@ public class BigQueryImpl implements IProvider {
     public BqQuerySpec getMetadataQueryBeamSpec(Source source) {
 
         String BASE_SQL = getBaseQuery(source);
-        LOG.info("Reading from BQ with query: " + BASE_SQL);
 
         ////////////////////////////
         // Dry run won't return schema so use regular query
         // We need fieldSet for SQL generation later
         String ZERO_ROW_SQL = "SELECT * FROM (" + BASE_SQL + ") LIMIT 0";
+        LOG.info("Reading BQ metadata with query: " + ZERO_ROW_SQL);
+
         return BqQuerySpec.builder()
                 .readDescription("Read from BQ " + source.name)
                 .castDescription("Cast to BeamRow " + source.name)
@@ -92,7 +93,10 @@ public class BigQueryImpl implements IProvider {
     public BqQuerySpec getTargetQueryBeamSpec(TargetQuerySpec targetQuerySpec) {
         Set<String> sourceFieldSet = ModelUtils.getBeamFieldSet( targetQuerySpec.sourceBeamSchema);
         String BASE_SQL = getBaseQuery(targetQuerySpec.source);
-        String TARGET_SPECIFIC_SQL = ModelUtils.getTargetSql(sourceFieldSet, targetQuerySpec.target, true, BASE_SQL);
+        String TARGET_SPECIFIC_SQL = ModelUtils.getTargetSql(sourceFieldSet,
+                targetQuerySpec.target,
+                true,
+                BASE_SQL);
         return BqQuerySpec.builder()
                 .readDescription(targetQuerySpec.target.sequence + ": Read from BQ " + targetQuerySpec.target.name)
                 .castDescription(targetQuerySpec.target.sequence + ": Cast to BeamRow " + targetQuerySpec.target.name)
@@ -106,7 +110,7 @@ public class BigQueryImpl implements IProvider {
             LOG.info("Overriding source query with run-time option");
             BASE_SQL = optionsParams.readQuery;
         }
-        return ModelUtils.replaceTokens(BASE_SQL, optionsParams.tokenMap);
+        return BASE_SQL;
     }
 
 

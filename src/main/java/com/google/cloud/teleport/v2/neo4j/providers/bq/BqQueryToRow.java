@@ -2,8 +2,6 @@ package com.google.cloud.teleport.v2.neo4j.providers.bq;
 
 import com.google.api.services.bigquery.model.TableRow;
 import com.google.cloud.teleport.v2.neo4j.common.model.OptionsParams;
-import com.google.cloud.teleport.v2.neo4j.common.utils.ModelUtils;
-import org.apache.beam.repackaged.core.org.apache.commons.lang3.StringUtils;
 import org.apache.beam.sdk.coders.Coder;
 import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO;
 import org.apache.beam.sdk.schemas.Schema;
@@ -29,8 +27,12 @@ public class BqQueryToRow extends PTransform<PBegin, PCollection<Row>>{
 
     @Override
     public PCollection<Row> expand(PBegin input) {
+
+        String rewrittenSql=this.bqQuerySpec.SQL;
+        LOG.info("Reading BQ with query: " + rewrittenSql);
+
         PCollection<TableRow> sourceRows = input.apply(bqQuerySpec.readDescription,BigQueryIO.readTableRowsWithSchema()
-                .fromQuery(getRewritten(this.bqQuerySpec.SQL))
+                .fromQuery(rewrittenSql)
                 .usingStandardSql()
                 .withTemplateCompatibility());
 
@@ -46,12 +48,6 @@ public class BqQueryToRow extends PTransform<PBegin, PCollection<Row>>{
         return beamRows;
     }
 
-    private String getRewritten(String sql) {
-        if (StringUtils.isNotEmpty(optionsParams.readQuery)){
-            LOG.info("Overriding source uri with run-time option");
-            sql=optionsParams.readQuery;
-        }
-        return ModelUtils.replaceTokens(sql,optionsParams.tokenMap);
-    }
+
 
 }

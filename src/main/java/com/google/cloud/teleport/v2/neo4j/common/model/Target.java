@@ -1,17 +1,24 @@
 package com.google.cloud.teleport.v2.neo4j.common.model;
 
 
-import com.google.cloud.teleport.v2.neo4j.common.model.enums.*;
+import com.google.cloud.teleport.v2.neo4j.common.model.enums.MappingType;
+import com.google.cloud.teleport.v2.neo4j.common.model.enums.SaveMode;
+import com.google.cloud.teleport.v2.neo4j.common.model.enums.TargetType;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class Target implements Serializable, Comparable {
+
+    private static final Logger LOG = LoggerFactory.getLogger(Target.class);
+
+    final static Gson gson = new GsonBuilder().setPrettyPrinting().create();
 
     public String source="";
     public String name="";
@@ -28,33 +35,47 @@ public class Target implements Serializable, Comparable {
 
     public Target(){}
 
-    public static Target createSimpleNode(String source, String label, String[] propertyNames, PropertyType propertyType, boolean indexed){
-        Target target=new Target();
-        target.type=TargetType.node;
-        target.active=true;
-        target.saveMode= SaveMode.append;
-        target.source=source;
-        Mapping mapping=new Mapping(TargetType.node);
-
-        mapping.constant=label;
-        mapping.fragmentType= FragmentType.node;
-        mapping.type = PropertyType.String;
-        mapping.role= RoleType.label;
-        for (String fieldname: propertyNames){
-            mapping.field=fieldname;
-            mapping.fragmentType=FragmentType.node;
-            mapping.type= propertyType;
-            mapping.indexed=indexed;
-            mapping.unique=false;
-            mapping.role=RoleType.property;
-        }
-        target.mappings.add(mapping);
-        return target;
-    }
     public Target(final JSONObject targetObj) {
+        if (targetObj.has("node")){
+            this.type=TargetType.node;
+            parseMappingsObject(MappingType.node,targetObj.getJSONObject("node"));
+        } else if (targetObj.has("edge")){
+            this.type=TargetType.edge;
+            parseMappingsObject(MappingType.edge,targetObj.getJSONObject("edge"));
+        }  else {
+            this.type = TargetType.valueOf(targetObj.getString("type"));
+            parseMappingsArray(targetObj);
+        }
+    }
+
+    public void parseMappingsObject(MappingType mappingType, final JSONObject targetObj){
+        parseHeader(targetObj);
+        List<Mapping> mappings=MappingTransposed.parseMappings(mappingType, targetObj.getJSONObject("mappings"));
+        for (Mapping mapping: mappings){
+            addMapping(mapping);
+        }
+    }
+
+    public void parseMappingsArray( final JSONObject targetObj){
+        parseHeader(targetObj);
+        JSONArray mappingsArray = targetObj.getJSONArray("mappings");
+        for (int i = 0; i < mappingsArray.length(); i++) {
+            final JSONObject mappingObj = mappingsArray.getJSONObject(i);
+            addMapping(new Mapping(mappingObj));
+        }
+    }
+
+    private void addMapping(Mapping mapping){
+        this.mappings.add(mapping);
+        if (mapping.field!=null) {
+            this.mappingByFieldMap.put(mapping.field, mapping);
+            this.fieldNames.add(mapping.field);
+        }
+    }
+
+    private void parseHeader(final JSONObject targetObj){
         this.name = targetObj.getString("name");
         this.active = !targetObj.has("active") || targetObj.getBoolean("active");
-        this.type = TargetType.valueOf(targetObj.getString("type"));
         this.saveMode = SaveMode.valueOf(targetObj.getString("mode"));
         this.source =  targetObj.has("source")?targetObj.getString("source"):"";
         this.autoMap = !targetObj.has("automap") || targetObj.getBoolean("automap");
@@ -76,18 +97,7 @@ public class Target implements Serializable, Comparable {
             this.transform.orderBy = queryObj.has("order_by")?queryObj.getString("order_by"):"";
             this.transform.limit = queryObj.has("limit")?queryObj.getInt("limit"):-1;
             this.transform.where = queryObj.has("where")?queryObj.getString("where"):"";
-
         }
-
-        JSONArray mappingsArray = targetObj.getJSONArray("mappings");
-        for (int i = 0; i < mappingsArray.length(); i++) {
-            final JSONObject mappingObj = mappingsArray.getJSONObject(i);
-                final Mapping mapping = new Mapping(this.type,mappingObj);
-                this.mappings.add(mapping);
-                this.mappingByFieldMap.put(mapping.field, mapping);
-           this.fieldNames.add(mapping.field);
-        }
-
     }
 
     public Mapping getMappingByFieldName(String fieldName){

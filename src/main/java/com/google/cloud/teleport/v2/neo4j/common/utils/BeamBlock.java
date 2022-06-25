@@ -13,6 +13,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/*
+BeamBlock blockingQueue = BeamBlock.create("Serial");
+blockingQueue.addEmptyBlockingCollection(emptyReturn);
+
+ */
+
 public class BeamBlock {
 
     //registry of blocks

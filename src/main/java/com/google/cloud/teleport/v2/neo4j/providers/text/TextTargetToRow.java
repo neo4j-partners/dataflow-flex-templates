@@ -1,13 +1,11 @@
 package com.google.cloud.teleport.v2.neo4j.providers.text;
 
 import com.google.cloud.teleport.v2.neo4j.common.model.OptionsParams;
-import com.google.cloud.teleport.v2.neo4j.common.model.Source;
 import com.google.cloud.teleport.v2.neo4j.common.model.Target;
 import com.google.cloud.teleport.v2.neo4j.common.transforms.CastExpandTargetRowFn;
 import com.google.cloud.teleport.v2.neo4j.common.utils.BeamUtils;
 import com.google.cloud.teleport.v2.neo4j.common.utils.ModelUtils;
 import com.google.cloud.teleport.v2.neo4j.providers.TargetQuerySpec;
-import org.apache.beam.repackaged.core.org.apache.commons.lang3.StringUtils;
 import org.apache.beam.sdk.extensions.sql.SqlTransform;
 import org.apache.beam.sdk.schemas.Schema;
 import org.apache.beam.sdk.transforms.DoFn;
@@ -44,7 +42,7 @@ public class TextTargetToRow extends PTransform<PBegin, PCollection<Row>>{
 
         // conditionally apply sql to rows..
         if (ModelUtils.targetHasTransforms(target)) {
-            String SQL = ModelUtils.getTargetSql(sourceFieldSet, target, false);
+            String SQL = getRewritten(ModelUtils.getTargetSql(sourceFieldSet, target, false));
             LOG.info("Target schema: {}",targetSchema);
             LOG.info("Executing SQL on PCOLLECTION: " + SQL);
             PCollection<Row> sqlDataRow = sourceBeamRows
@@ -59,15 +57,9 @@ public class TextTargetToRow extends PTransform<PBegin, PCollection<Row>>{
                     .setRowSchema(targetSchema);
         }
     }
-
-    private String getRewritten(Source source) {
-
-        String dataFileUri=source.uri;
-        if (StringUtils.isNotEmpty(optionsParams.inputFilePattern)){
-            LOG.info("Overriding source uri with run-time option");
-            dataFileUri=optionsParams.inputFilePattern;
-        }
-        return ModelUtils.replaceTokens(dataFileUri,optionsParams.tokenMap);
+    private String getRewritten(String sql) {
+        return ModelUtils.replaceVariableTokens(sql,optionsParams.tokenMap);
     }
+
 
 }

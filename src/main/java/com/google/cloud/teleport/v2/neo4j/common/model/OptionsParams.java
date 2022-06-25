@@ -24,6 +24,7 @@ public class OptionsParams implements Serializable {
             return;
         }
         try {
+            LOG.info("Pipeline options: "+optionsJsonStr);
             final JSONObject optionsJson = new JSONObject(optionsJsonStr);
             if (StringUtils.isNotEmpty(pipelineOptions.getReadQuery())){
                 readQuery = pipelineOptions.getReadQuery();
@@ -34,12 +35,13 @@ public class OptionsParams implements Serializable {
             Iterator<String> optionsKeys=optionsJson.keys();
             while (optionsKeys.hasNext()){
                 String optionsKey=optionsKeys.next();
-                tokenMap.put(optionsKey,optionsJson.getString(optionsKey));
+                tokenMap.put(optionsKey,optionsJson.opt(optionsKey)+"");
                 if (optionsKey.equals("readQuery")) {
                     readQuery = optionsJson.getString("readQuery");
                 } else if (optionsKey.equals("inputFilePattern")) {
                     inputFilePattern = optionsJson.getString("inputFilePattern");
                 }
+                LOG.info(optionsKey + ": "+optionsJson.opt(optionsKey));
             }
 
         } catch (final Exception e) {

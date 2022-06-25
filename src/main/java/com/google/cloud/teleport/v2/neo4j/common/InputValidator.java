@@ -117,14 +117,15 @@ public class InputValidator {
                         validationMessages.add("Invalid fragment type " + mapping.fragmentType + " for node mapping: " + mapping.name);
                     }
                     if (mapping.fragmentType == FragmentType.target || mapping.fragmentType == FragmentType.source) {
-                        if (mapping.role != RoleType.key) {
+                        if (mapping.role != RoleType.key && mapping.role != RoleType.label) {
                             validationMessages.add("Invalid role " + mapping.role + " on relationship: " + mapping.fragmentType);
                         }
-                        if (StringUtils.isEmpty(mapping.label)) {
+                        if (mapping.labels.size()==0) {
                             validationMessages.add(mapping.fragmentType + " missing label attribute");
                         }
                     }
                 }
+
                 //relationship validation checks..
                 if (StringUtils.isBlank(ModelUtils.getFirstFieldOrConstant(target, FragmentType.source, List.of(RoleType.key)))) {
                     validationMessages.add("Could not find target key field for relationship: " + target.name);
@@ -132,8 +133,8 @@ public class InputValidator {
                 if (StringUtils.isBlank(ModelUtils.getFirstFieldOrConstant(target, FragmentType.target, List.of(RoleType.key)))) {
                     validationMessages.add("Could not find target key field for relationship: " + target.name);
                 }
-                if (StringUtils.isBlank(ModelUtils.getRelationshipKeyField(target, FragmentType.rel))) {
-                    validationMessages.add("Could not find relation name: " + target.name);
+                if (StringUtils.isBlank(ModelUtils.getFirstFieldOrConstant(target, FragmentType.rel, List.of(RoleType.type)))) {
+                    validationMessages.add("Could not find relationship type: " + target.name);
                 }
             } else if (target.type == TargetType.node) {
                 for (Mapping mapping : target.mappings) {
@@ -152,6 +153,7 @@ public class InputValidator {
             // check that calculated fields are used
             if (target.transform != null && target.transform.aggregations.size() > 0) {
                 for (Aggregation aggregation : target.transform.aggregations) {
+                    LOG.info("Looking for aggregation: "+gson.toJson(aggregation)+" in mappings: "+gson.toJson(target.mappings));
                     if (!fieldIsMapped(target, aggregation.field)) {
                         validationMessages.add("Aggregation for field " + aggregation.field + " is unmapped.");
                     }
@@ -174,8 +176,9 @@ public class InputValidator {
     }
 
     public static boolean fieldIsMapped(Target target, String fieldName) {
+        if (fieldName==null) return false;
         for (Mapping mapping : target.mappings) {
-            if (mapping.field.equals(fieldName)) {
+            if (fieldName.equals(mapping.field)) {
                 return true;
             }
         }

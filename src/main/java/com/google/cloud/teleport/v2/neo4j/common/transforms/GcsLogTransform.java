@@ -5,16 +5,14 @@ import com.google.cloud.teleport.v2.neo4j.common.model.Target;
 import com.google.cloud.teleport.v2.neo4j.common.model.enums.AvroType;
 import com.google.cloud.teleport.v2.neo4j.common.utils.AvroSinkWithJodaDatesConversion;
 import org.apache.avro.generic.GenericRecord;
-import org.apache.beam.sdk.coders.AvroCoder;
 import org.apache.beam.sdk.io.FileIO;
 import org.apache.beam.sdk.io.parquet.ParquetIO;
+import org.apache.beam.sdk.schemas.transforms.Convert;
 import org.apache.beam.sdk.schemas.utils.AvroUtils;
-import org.apache.beam.sdk.transforms.MapElements;
 import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.POutput;
 import org.apache.beam.sdk.values.Row;
-import org.apache.beam.sdk.values.TypeDescriptor;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.parquet.hadoop.metadata.CompressionCodecName;
 import org.slf4j.Logger;
@@ -54,9 +52,7 @@ public class GcsLogTransform extends PTransform<PCollection<Row>, POutput> {
         }
         LOG.info("Logging to "+auditFilePath+" with prefix: "+input.getPipeline().getOptions().getJobName());
         PCollection<GenericRecord> genericInput = input.apply(target.sequence + ": Log xform " + target.name,
-                        MapElements.into(new TypeDescriptor<GenericRecord>() {
-                        }).via(AvroUtils.getRowToGenericRecordFunction(targetAvroSchema)))
-                .setCoder(AvroCoder.of(GenericRecord.class, targetAvroSchema));
+                        Convert.to(GenericRecord.class));
         return genericInput.apply(target.sequence + ": Log write " + target.name,
                 FileIO.<GenericRecord>write()
                         .via(sink)

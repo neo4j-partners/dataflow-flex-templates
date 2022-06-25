@@ -15,7 +15,7 @@
  */
 package com.google.cloud.teleport.v2.neo4j;
 
-import com.google.cloud.teleport.v2.neo4j.common.InputOptimizer;
+import com.google.cloud.teleport.v2.neo4j.common.InputRefactoring;
 import com.google.cloud.teleport.v2.neo4j.common.InputValidator;
 import com.google.cloud.teleport.v2.neo4j.common.database.Neo4jConnection;
 import com.google.cloud.teleport.v2.neo4j.common.model.*;
@@ -76,6 +76,7 @@ public class GcpToNeo4j {
         pipelineOptions.setJobName(jobName);
         this.pipeline = Pipeline.create(pipelineOptions);
         FileSystems.setDefaultPipelineOptions(pipelineOptions);
+        this.optionsParams = new OptionsParams(pipelineOptions);
 
         List<String> validationMessages = InputValidator.validateNeo4jPipelineOptions(pipelineOptions);
         StringBuffer sb = new StringBuffer();
@@ -89,8 +90,11 @@ public class GcpToNeo4j {
         this.neo4jConnection = new ConnectionParams(pipelineOptions.getNeo4jConnectionUri());
         this.jobSpec = new JobSpecRequest(pipelineOptions.getJobSpecUri());
 
+        InputRefactoring inputRefactoring=new InputRefactoring(optionsParams);
+        // Variable substitution
+        inputRefactoring.refactorJobSpec(jobSpec);
         // Optimizations
-        InputOptimizer.refactorJobSpec(jobSpec);
+        inputRefactoring.optimizeJobSpec(jobSpec);
 
         ///////////////////////////////////
         // Text input specific options and validation
@@ -113,7 +117,7 @@ public class GcpToNeo4j {
             }
         }
 
-        this.optionsParams = new OptionsParams(pipelineOptions);
+
     }
 
 
@@ -129,7 +133,6 @@ public class GcpToNeo4j {
         }
 
         BeamBlock blockingQueue = BeamBlock.create("Serial");
-
         for (Source source : jobSpec.getSourceList()) {
 
             //get provider implementation for source

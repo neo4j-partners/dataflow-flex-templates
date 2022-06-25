@@ -111,9 +111,13 @@ public class Neo4jConnection implements Serializable {
         // Direct connect utility...
          LOG.info("Resetting database");
         try {
-            LOG.info("Executing cypher: " + ModelUtils.CYPHER_DELETE_ALL);
-            executeCypher(
-                    ModelUtils.CYPHER_DELETE_ALL);
+            String deleteCypher=ModelUtils.CYPHER_DELETE_ALL;
+            if (!StringUtils.isEmpty(database)) {
+                StringUtils.replace(deleteCypher,"neo4j",database);
+            }
+            LOG.info("Executing cypher: " + deleteCypher);
+            executeCypher(deleteCypher);
+
         } catch (Exception e) {
             LOG.error("Error executing cypher: " + ModelUtils.CYPHER_DELETE_ALL + ", " + e.getMessage());
         }

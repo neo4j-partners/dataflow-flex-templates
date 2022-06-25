@@ -18,7 +18,7 @@
   ],
   "targets": [
     {
-      "node:": {
+      "node": {
         "source": "1k orders",
         "name": "Customer",
         "active": true,
@@ -26,6 +26,7 @@
         "transform": {
           "group": true
         },
+        "automap": false,
         "mappings": {
           "labels": [
             "\"Customer\""
@@ -34,7 +35,6 @@
             "customer_id"
           ],
           "properties": {
-            "automap": false,
             "unique": [],
             "indexed": [
               "contact_name",
@@ -73,6 +73,7 @@
           "order_by": "product_name ASC",
           "limit": -1
         },
+        "automap": false,
         "mappings": {
           "labels": [
             "\"Product\""
@@ -81,7 +82,6 @@
             "product_id"
           ],
           "properties": {
-            "automap": false,
             "unique": [],
             "indexed": [
               "contact_name",
@@ -120,10 +120,9 @@
           "order_by": "product_name ASC",
           "limit": -1
         },
+        "automap": false,
         "mappings": {
-          "type": [
-            "\"Purchases\""
-          ],
+          "type": "\"Purchases\"",
           "source": {
             "label": "\"Customer\"",
             "key": "customer_id"
@@ -133,7 +132,6 @@
             "key": "product_id"
           },
           "properties": {
-            "automap": false,
             "unique": [],
             "indexed": [
               "order_id"

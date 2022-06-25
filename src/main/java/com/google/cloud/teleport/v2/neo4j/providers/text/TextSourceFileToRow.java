@@ -2,7 +2,6 @@ package com.google.cloud.teleport.v2.neo4j.providers.text;
 
 import com.google.cloud.teleport.v2.neo4j.common.model.OptionsParams;
 import com.google.cloud.teleport.v2.neo4j.common.model.Source;
-import com.google.cloud.teleport.v2.neo4j.common.utils.ModelUtils;
 import com.google.cloud.teleport.v2.neo4j.providers.SourceQuerySpec;
 import org.apache.beam.repackaged.core.org.apache.commons.lang3.StringUtils;
 import org.apache.beam.sdk.io.TextIO;
@@ -30,7 +29,7 @@ public class TextSourceFileToRow extends PTransform<PBegin, PCollection<Row>>{
     public PCollection<Row> expand(PBegin input) {
         Source source=sourceQuerySpec.source;
         Schema beamTextSchema = sourceQuerySpec.sourceSchema;
-        String dataFileUri= getRewritten(source);
+        String dataFileUri= source.uri;
 
         if (StringUtils.isNotBlank(dataFileUri)) {
             LOG.info("Ingesting file: " + dataFileUri + ".");
@@ -49,14 +48,6 @@ public class TextSourceFileToRow extends PTransform<PBegin, PCollection<Row>>{
         }
     }
 
-    private String getRewritten(Source source) {
 
-        String dataFileUri=source.uri;
-        if (StringUtils.isNotEmpty(optionsParams.inputFilePattern)){
-            LOG.info("Overriding source uri with run-time option");
-            dataFileUri=optionsParams.inputFilePattern;
-        }
-        return ModelUtils.replaceTokens(dataFileUri,optionsParams.tokenMap);
-    }
 
 }

@@ -179,14 +179,20 @@ mvn test
 ```
 
 ## TODO
-__ Unit tests
-__ Update CypherGenerator with cypher-dsl
-__ Data driven labels in relationships will fail
-__ Incomplete multi-label support
-__ Support Parquet as text source
-__ Support Parquet as audit
+<ul>
+<li> Unit tests
+<li> Update CypherGenerator with cypher-dsl
+<li> Data driven labels in relationships will fail
+<li> Incomplete multi-label support
+<li> Support Parquet as text source
+<li> Support Parquet as audit
+<li> Use of secrets manager for Neo4j credentials
+</ul>
 
-
+## Maintainer
+    Anthony Krinsky 
+    Sr. Partner Solution Architect
+    anthony.krinsky@neo4j.com
 
 
 

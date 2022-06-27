@@ -13,6 +13,11 @@ _Sources from Excel formatted Text file_<br>
 _Sources from Excel formatted Text file in the job file specification_<br>
 [TEST-TEXT-INLINE](src/test/resources/test-scripts/TEST-TEXT-INLINE.md)<br/>
 
+In each of these files, you will find links to configuration files such as:
+
+    --jobSpecUri=gs://neo4j-dataflow/job-specs/testing/new/bq-northwind-jobspec.json \
+    --neo4jConnectionUri=gs://neo4j-dataflow/job-specs/testing/common/auradb-free-connection.json"
+
 The following test _fail_ because functionality is incomplete:
 
 _Audits to parquet_<br>

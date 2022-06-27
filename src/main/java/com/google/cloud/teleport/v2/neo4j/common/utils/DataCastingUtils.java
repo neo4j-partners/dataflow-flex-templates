@@ -22,6 +22,25 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public class DataCastingUtils {
+
+    /*
+    Cypher type/Java type
+    =========================
+    String/String
+    Integer/Long
+    Float/Double
+    Boolean/Boolean
+    Point/org.neo4j.graphdb.spatial.Point
+    Date/java.time.LocalDate
+    Time/java.time.OffsetTime
+    LocalTime/java.time.LocalTime
+    DateTime/java.time.ZonedDateTime
+    LocalDateTime/java.time.LocalDateTime
+    Duration/java.time.temporal.TemporalAmount
+    Node/org.neo4j.graphdb.Node
+    Relationship/org.neo4j.graphdb.Relationship
+    Path/org.neo4j.graphdb.Path
+     */
     private static final Logger LOG = LoggerFactory.getLogger(DataCastingUtils.class);
 
     private static final DateTimeFormatter jsDateTimeFormatter = DateTimeFormat.forPattern("YYYY-MM-DD HH:MM:SSZ");

@@ -1,4 +1,4 @@
-#  Integration Test: Inline Text
+#  Integration Test: Parquet
 
 ## Requirements
 * Java 11
@@ -15,16 +15,18 @@ Run the Apache Beam pipeline locally for development.
  export PROJECT=neo4jbusinessdev
  export GS_WORKING_DIR=gs://neo4j-sandbox/dataflow-working
  export APP_NAME=gcpToNeo4j
- export JOB_NAME=test-inline
+ export JOB_NAME=test-bq-audit
  export REGION=us-central1
  export MACHINE_TYPE=n2-highmem-8
  ```
  * Note that to enable_vertical_memory_autoscaling needs Dataflow Prime which requires enabling the "Cloud Autoscaling API"
  * https://cloud.google.com/dataflow/docs/guides/enable-dataflow-prime
-   --dataflowServiceOptions=enable_prime 
-   --experiments=enable_vertical_memory_autoscaling 
+       --dataflowServiceOptions=enable_prime
+       --experiments=enable_vertical_memory_autoscaling
  * Additional testing required to determine optimal memory
  ```sh
+pushd ../../../../../
+ cd ${basedir}/googlecloud-to-neo4j
  mvn compile exec:java \
    -Dexec.mainClass=com.google.cloud.teleport.v2.neo4j.GcpToNeo4j \
    -Dexec.cleanupDaemonThreads=false \
@@ -39,7 +41,7 @@ Run the Apache Beam pipeline locally for development.
      --region=$REGION \
      --workerMachineType=$MACHINE_TYPE \
      --maxNumWorkers=2 \
-     --jobSpecUri=gs://neo4j-dataflow/job-specs/testing/new/inline-northwind-jobspec.json \
+     --inputFilePattern=gs://neo4j-datasets/northwinds/nw_orders_1k_noheader.csv \
+     --jobSpecUri=gs://neo4j-dataflow/job-specs/testing/bigquery/bq-audit-northwind-jobspec.json \
      --neo4jConnectionUri=gs://neo4j-dataflow/job-specs/testing/common/auradb-free-connection.json"
  ```
-

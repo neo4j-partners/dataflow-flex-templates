@@ -18,10 +18,10 @@ package com.google.cloud.teleport.v2.neo4j;
 import com.google.api.services.bigquery.model.TableFieldSchema;
 import com.google.api.services.bigquery.model.TableRow;
 import com.google.api.services.bigquery.model.TableSchema;
-import com.google.cloud.bigquery.*;
+import com.google.cloud.bigquery.BigQuery;
+import com.google.cloud.bigquery.TableResult;
 import com.google.cloud.bigquery.storage.v1beta1.BigQueryStorageClient;
 import com.google.common.collect.ImmutableList;
-import com.google.re2j.Pattern;
 import org.apache.avro.Schema;
 import org.apache.beam.sdk.io.gcp.bigquery.BigQueryServices;
 import org.apache.beam.sdk.io.gcp.testing.FakeDatasetService;
@@ -36,15 +36,7 @@ import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 
 import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Scanner;
-
-import static com.google.re2j.Pattern.CASE_INSENSITIVE;
-import static com.google.re2j.Pattern.DOTALL;
 
 /**
  * Unit tests for {@link GcpToNeo4j}.
@@ -53,7 +45,6 @@ import static com.google.re2j.Pattern.DOTALL;
 public class GoogleToNeo4jTest {
     private static final String PROJECT = "test-project1";
     private static final String DATASET = "test-dataset1";
-    private static final int MAX_PARALLEL_REQUESTS = 5;
 
     @Rule
     public final MockitoRule mockito = MockitoJUnit.rule();
@@ -165,42 +156,6 @@ public class GoogleToNeo4jTest {
         fakeDatasetService = new FakeDatasetService();
         fakeDatasetService.createDataset(PROJECT, DATASET, "", "", null);
 
-
     }
 
-    private static final Pattern TABLE_QUERY_PATTERN =
-            Pattern.compile(
-                    "select.*table_id.*last_modified_time.*partitioning_column", CASE_INSENSITIVE | DOTALL);
-    private static final Pattern PARTITION_QUERY_PATTERN =
-            Pattern.compile("select.*partition_id.*last_modified_time", CASE_INSENSITIVE | DOTALL);
-
-
-    private String readFirstLine(File outputFile) throws FileNotFoundException {
-        Scanner fileReader = new Scanner(outputFile);
-        String result = fileReader.nextLine();
-        fileReader.close();
-        return result;
-    }
-
-    private File writeOutputFile(String folderName, String filename, String data) throws IOException {
-        File outputDir = tmpDir.newFolder("out", folderName);
-        outputDir.mkdirs();
-        File outputFile = new File(outputDir.getAbsolutePath() + "/" + filename);
-        outputFile.createNewFile();
-        FileWriter writer = new FileWriter(outputFile);
-        writer.write(data);
-        writer.close();
-        return outputFile;
-    }
-
-    private static TableId tableId(String tableName) {
-        return TableId.of(PROJECT, DATASET, tableName);
-    }
-    private static FieldValueList fields(Object... fieldValues) {
-        List<FieldValue> list = new ArrayList<>(fieldValues.length);
-        for (Object fieldValue : fieldValues) {
-            list.add(FieldValue.of(FieldValue.Attribute.RECORD, fieldValue));
-        }
-        return FieldValueList.of(list);
-    }
 }

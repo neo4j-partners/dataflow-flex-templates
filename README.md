@@ -2,11 +2,29 @@
 
 This project contains FlexTemplates that facilitate loading files within the Google BCloud to the Neo4j graph database
 
-## Building
+## Local Integration Test Scripts
 
+You will find local integration tests in <i>/src/test/resources/test-scripts</i>
+
+_Sources from BigQuery_<br>
+[TEST-BQ](src/test/resources/test-scripts/TEST-BQ.md)<br/>
+_Sources from Excel formatted Text file_<br>
+[TEST-TEXT](src/test/resources/test-scripts/TEST-TEXT.md)<br/>
+_Sources from Excel formatted Text file in the job file specification_<br>
+[TEST-TEXT-INLINE](src/test/resources/test-scripts/TEST-TEXT-INLINE.md)<br/>
+
+The following test _fail_ because functionality is incomplete:
+
+_Audits to parquet_<br>
+[TEST-BQ-AUDIT](src/test/resources/test-scripts/failing/TEST-BQ-AUDIT.md)<br/>
+_Sources from parquet_<br>
+[TEST-BQ-PARQUET](src/test/resources/test-scripts/failing/TEST-BQ-PARQUET.md)<br/>
+
+## Building
 ### Create jar
 
 ```sh
+ export JAVA_HOME=`/usr/libexec/java_home -v 11`
 # Build and package the application as an uber-jar file.
 mvn clean package
 ```
@@ -22,24 +40,18 @@ This will create an all-in-one, shaded jar in project /target directory.
 export JAVA_HOME=`/usr/libexec/java_home -v 1.11`
 export PROJECT=neo4jbusinessdev
 export GS_WORKING_DIR=gs://neo4j-sandbox/dataflow-working
-export APP_NAME=text-to-neo4j
-export JOB_NAME=test-txt-to-neo4j-auradb
+export APP_NAME=googlecloud-to-neo4j
 export REGION=us-central1
 export MACHINE_TYPE=n2-highmem-8
-
-export IMAGE_NAME=text-to-neo4j
+export IMAGE_NAME=googlecloud-to-neo4j
 export BUCKET_NAME=gs://neo4j-sandbox/flex-templates
 export TARGET_GCR_IMAGE=gcr.io/${PROJECT}/${IMAGE_NAME}
 export BASE_CONTAINER_IMAGE=gcr.io/dataflow-templates-base/java11-template-launcher-base
 export BASE_CONTAINER_IMAGE_VERSION=latest
-export TEMPLATE_POM_MODULE=neo4j-flex-templates
+export TEMPLATE_POM_MODULE=googlecloud-to-neo4j
 export APP_ROOT=/template/${APP_NAME}
 export COMMAND_SPEC=${APP_ROOT}/resources/${APP_NAME}-command-spec.json
 export TEMPLATE_IMAGE_SPEC=${BUCKET_NAME}/images/${APP_NAME}-image-spec.json
-
-export PARAM_INPUT_FILE_PATTERN=gs://neo4j-datasets/northwinds/nw_orders_1k_noheader.csv \
-export PARAM_JOB_SPEC_URI=gs://neo4j-dataflow/job-specs/testing/text/text-northwind-jobspec.json
-export PARAM_NEO4J_CONNECTION_URI=gs://neo4j-dataflow/job-specs/testing/common/auradb-free-connection.json
 ``` 
 * Set gcloud CLI project
 ```sh
@@ -48,7 +60,7 @@ gcloud config set project ${PROJECT}
 * Build and push image to Google Container Repository from current directory
 ```sh
 mvn clean package \
-    -Djib.container.mainClass=com.google.cloud.teleport.v2.neo4j.TextToNeo4j \
+    -Djib.container.mainClass=com.google.cloud.teleport.v2.neo4j.GcpToNeo4j \
     -Dimage=${TARGET_GCR_IMAGE} \
     -Dbase-container-image=${BASE_CONTAINER_IMAGE} \
     -Dbase-container-image.version=${BASE_CONTAINER_IMAGE_VERSION} \
@@ -64,8 +76,8 @@ Create file in Cloud Storage with path to container image in Google Container Re
 echo '{
   "image": "'${TARGET_GCR_IMAGE}'",
   "metadata": {
-    "name": "Text to Neo4j",
-    "description": "Export Text data into Neo4j",
+    "name": "Google Cloud to Neo4j",
+    "description": "BigQuery, Text, and other source import into Neo4j",
     "parameters": [
       {
         "name": "jobSpecUri",
@@ -84,10 +96,17 @@ echo '{
       {
         "name": "inputFilePattern",
         "label": "Text file",
-        "helpText": "GS hosted data file",
+        "helpText": "Override text file pattern (optional)",
         "paramType": "TEXT",
         "isOptional": true
-      }   
+      } ,  
+      {
+        "name": "readQuery",
+        "label": "Query SQL",
+        "helpText": "Override SQL query (optional)",
+        "paramType": "TEXT",
+        "isOptional": true
+      }     
     ]
   },
   "sdk_info": {
@@ -98,14 +117,7 @@ gsutil cp image_spec.json ${TEMPLATE_IMAGE_SPEC}
 rm image_spec.json
 ```
 
-### Testing Template
-
-The template unit tests can be run using:
-```sh
-mvn test
-```
-
-### Executing Template
+### Executing Template Example
 
 The template requires the following parameters:
 * jobSpecUri: GS hosted job specification file
@@ -114,7 +126,11 @@ The template requires the following parameters:
 * readQuery: Job spec source override with query
 
 Template can be executed using the following gcloud command:
+
 ```sh
+export PARAM_INPUT_FILE_PATTERN=gs://neo4j-datasets/northwinds/nw_orders_1k_noheader.csv \
+export PARAM_JOB_SPEC_URI=gs://neo4j-dataflow/job-specs/testing/new/text-northwind-jobspec.json
+export PARAM_NEO4J_CONNECTION_URI=gs://neo4j-dataflow/job-specs/testing/common/auradb-free-connection.json
 export JOB_NAME="${APP_NAME}-`date +%Y%m%d-%H%M%S`"
 gcloud dataflow flex-template run ${JOB_NAME} \
         --project=${PROJECT} --region=${REGION} \
@@ -130,14 +146,6 @@ gcloud dataflow flex-template run ${JOB_NAME} \
     https://cloud.google.com/sdk/gcloud/reference/dataflow/flex-template/build
     https://cloud.google.com/sdk/gcloud/reference/dataflow/flex-template/run
 
-## Testing
-
-### Big Query to Neo4j
-[TEST-BQ](TEST-BQ.md)
-
-### Text to Neo4j
-[TEST-TXT](TEST-TEXT.md)
-
 ## Known issues
 
 ### Insert overloading
@@ -151,42 +159,27 @@ gcloud dataflow flex-template run ${JOB_NAME} \
 - When loading Neo4j, opinionated flow-control is required. DONE.
 - Nodes must obviously be loaded before edges.  Node loads can be highly parallelized but edge loads should be limited to 2 threads. DONE.
 - Also, edges should be loaded in order of target edgeIds to minimize locking. DONE if sources support SQL pushdown.
-- There are two methods commonly used to serialize (block/unblock) flow in Beam: Wait.on and creating collection group dependencies.  We use the latter since the former is finicky.
 - When the job specification requires creating nodes and edges, nodes are bound together with a flattening function.  This blocks additional processing until nodes are written.
-- What is flattened are empty PCollection<Row> records, returned by Neo4jRowWriterTransform.
-- To unblock, we combine the empty PCollection<Row> records with PCollections used to load relations/edges, creating a copy + 0 rows.
-- This works because PCollection is schema agnostic. We can cast the unblocked PCollection to whatever we want.
-- At the moment, the scheme is leaky because the Neo4jIO writer itself returns POutput which is non-blocking.  
-- The current best effort is to apply a zero row collapsing transform to the cast data inside Neo4jRowWriterTransform.
-
-## Data Type casting
-
-Cypher type/Java type
-=========================
-String/String
-Integer/Long
-Float/Double
-Boolean/Boolean
-Point/org.neo4j.graphdb.spatial.Point
-Date/java.time.LocalDate
-Time/java.time.OffsetTime
-LocalTime/java.time.LocalTime
-DateTime/java.time.ZonedDateTime
-LocalDateTime/java.time.LocalDateTime
-Duration/java.time.temporal.TemporalAmount
-Node/org.neo4j.graphdb.Node
-Relationship/org.neo4j.graphdb.Relationship
-Path/org.neo4j.graphdb.Path
 
 ## Running Apache Hop
 export JAVA_HOME=`/usr/libexec/java_home -v 8`
 cd ~/Documents/hop
 ./hop-gui.sh
 
+### Testing Template
+
+The template unit tests can be run using:
+```sh
+mvn test
+```
+
 ## TODO
+__ Unit tests
 __ Update CypherGenerator with cypher-dsl
 __ Data driven labels in relationships will fail
 __ Incomplete multi-label support
+__ Support Parquet as text source
+__ Support Parquet as audit
 
 
 

@@ -21,11 +21,9 @@ import java.util.Map;
 
 public class Neo4jRowWriterTransform extends PTransform<PCollection<Row>, PCollection<Row>> {
     private static final Logger LOG = LoggerFactory.getLogger(Neo4jRowWriterTransform.class);
-
     JobSpecRequest jobSpec;
     ConnectionParams neoConnection;
     Target target;
-
 
     public Neo4jRowWriterTransform(JobSpecRequest jobSpec, ConnectionParams neoConnection, Target target) {
         this.jobSpec = jobSpec;

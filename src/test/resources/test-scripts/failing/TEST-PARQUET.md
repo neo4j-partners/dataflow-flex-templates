@@ -15,7 +15,7 @@ Run the Apache Beam pipeline locally for development.
  export PROJECT=neo4jbusinessdev
  export GS_WORKING_DIR=gs://neo4j-sandbox/dataflow-working
  export APP_NAME=gcpToNeo4j
- export JOB_NAME=test-bq-audit
+ export JOB_NAME=test-bq-parquet
  export REGION=us-central1
  export MACHINE_TYPE=n2-highmem-8
  ```
@@ -25,6 +25,7 @@ Run the Apache Beam pipeline locally for development.
        --experiments=enable_vertical_memory_autoscaling
  * Additional testing required to determine optimal memory
  ```sh
+pushd ../../../../../
  cd ${basedir}/googlecloud-to-neo4j
  mvn compile exec:java \
    -Dexec.mainClass=com.google.cloud.teleport.v2.neo4j.GcpToNeo4j \
@@ -41,6 +42,6 @@ Run the Apache Beam pipeline locally for development.
      --workerMachineType=$MACHINE_TYPE \
      --maxNumWorkers=2 \
      --inputFilePattern=gs://neo4j-datasets/northwinds/nw_orders_1k_noheader.csv \
-     --jobSpecUri=gs://neo4j-dataflow/job-specs/testing/bigquery/bq-audit-northwind-jobspec.json \
+     --jobSpecUri=gs://neo4j-dataflow/job-specs/testing/bigquery/parquet-northwind-jobspec.json \
      --neo4jConnectionUri=gs://neo4j-dataflow/job-specs/testing/common/auradb-free-connection.json"
  ```

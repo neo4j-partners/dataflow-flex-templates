@@ -25,6 +25,7 @@ Run the Apache Beam pipeline locally for development.
        --experiments=enable_vertical_memory_autoscaling
  * Additional testing required to determine optimal memory
  ```sh
+pushd ../../../../../
  cd ${basedir}/googlecloud-to-neo4j
  mvn compile exec:java \
    -Dexec.mainClass=com.google.cloud.teleport.v2.neo4j.GcpToNeo4j \

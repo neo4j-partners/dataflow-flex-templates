@@ -19,6 +19,7 @@ public class OptionsParams implements Serializable {
     public HashMap<String,String> tokenMap=new HashMap<>();
 
     public OptionsParams(Neo4jFlexTemplateOptions pipelineOptions) {
+
         String optionsJsonStr=pipelineOptions.getOptionsJson();
         if (StringUtils.isEmpty(optionsJsonStr)){
             return;

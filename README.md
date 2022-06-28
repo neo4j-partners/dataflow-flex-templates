@@ -111,7 +111,15 @@ echo "{
         \"helpText\": \"Override SQL query (optional)\",
         \"paramType\": \"TEXT\",
         \"isOptional\": true
-      }]
+      } ,  
+      {
+        \"name\": \"optionsJson\",
+        \"label\": \"Options JSON\",
+        \"helpText\": \"Runtime tokens like: {token1:value1,token2:value2}\",
+        \"paramType\": \"TEXT\",
+        \"isOptional\": true
+      }
+      ]
     },
     \"sdk_info\": {
        \"language\": \"JAVA\"

@@ -49,7 +49,7 @@ export APP_NAME=googlecloud-to-neo4j
 export REGION=us-central1
 export MACHINE_TYPE=n2-highmem-8
 export IMAGE_NAME=googlecloud-to-neo4j
-export BUCKET_NAME=gs://neo4j-sandbox/flex-templates
+export BUCKET_NAME=gs://neo4j-dataflow/flex-templates
 export TARGET_GCR_IMAGE=gcr.io/${PROJECT}/${IMAGE_NAME}
 export BASE_CONTAINER_IMAGE=gcr.io/dataflow-templates-base/java11-template-launcher-base
 export BASE_CONTAINER_IMAGE_VERSION=latest
@@ -78,46 +78,45 @@ mvn clean package \
 
 Create file in Cloud Storage with path to container image in Google Container Repository.
 ```sh
-echo '{
-  "image": "'${TARGET_GCR_IMAGE}'",
-  "metadata": {
-    "name": "Google Cloud to Neo4j",
-    "description": "BigQuery, Text, and other source import into Neo4j",
-    "parameters": [
+echo "{
+  \"image\": \"${TARGET_GCR_IMAGE}\",
+  \"metadata\": {
+    \"name\": \"Google Cloud to Neo4j\",
+    \"description\": \"BigQuery, Text, and other source import into Neo4j\",
+    \"parameters\": [
       {
-        "name": "jobSpecUri",
-        "label": "Target mapping configuration file",
-        "helpText": "Source to target mapping json file",
-        "paramType": "TEXT",
-        "isOptional": false
+        \"name\": \"jobSpecUri\",
+        \"label\": \"Target mapping configuration file\",
+        \"helpText\": \"Source to target mapping json file\",
+        \"paramType\": \"TEXT\",
+        \"isOptional\": false
       }, 
       {
-        "name": "neo4jConnectionUri",
-        "label": "Neo4j connection metadata",
-        "helpText": "Neo4j connection metadata json file",
-        "paramType": "TEXT",
-        "isOptional": false
+        \"name\": \"neo4jConnectionUri\",
+        \"label\": \"Neo4j connection metadata\",
+        \"helpText\": \"Neo4j connection metadata json file\",
+        \"paramType\": \"TEXT\",
+        \"isOptional\": false
       },  
       {
-        "name": "inputFilePattern",
-        "label": "Text file",
-        "helpText": "Override text file pattern (optional)",
-        "paramType": "TEXT",
-        "isOptional": true
+        \"name\": \"inputFilePattern\",
+        \"label\": \"Text file\",
+        \"helpText\": \"Override text file pattern (optional)\",
+        \"paramType\": \"TEXT\",
+        \"isOptional\": true
       } ,  
       {
-        "name": "readQuery",
-        "label": "Query SQL",
-        "helpText": "Override SQL query (optional)",
-        "paramType": "TEXT",
-        "isOptional": true
-      }     
-    ]
-  },
-  "sdk_info": {
-    "language": "JAVA"
-  }
-}' > image_spec.json
+        \"name\": \"readQuery\",
+        \"label\": \"Query SQL\",
+        \"helpText\": \"Override SQL query (optional)\",
+        \"paramType\": \"TEXT\",
+        \"isOptional\": true
+      }]
+    },
+    \"sdk_info\": {
+       \"language\": \"JAVA\"
+    }
+  }" > image_spec.json
 gsutil cp image_spec.json ${TEMPLATE_IMAGE_SPEC}
 rm image_spec.json
 ```

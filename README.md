@@ -45,10 +45,10 @@ This will create an all-in-one, shaded jar in project /target directory.
 export JAVA_HOME=`/usr/libexec/java_home -v 1.11`
 export PROJECT=neo4jbusinessdev
 export GS_WORKING_DIR=gs://neo4j-sandbox/dataflow-working
-export APP_NAME=googlecloud-to-neo4j
+export APP_NAME=gcp-to-neo4j
 export REGION=us-central1
 export MACHINE_TYPE=n2-highmem-8
-export IMAGE_NAME=googlecloud-to-neo4j
+export IMAGE_NAME=gcp-to-neo4j
 export BUCKET_NAME=gs://neo4j-dataflow/flex-templates
 export TARGET_GCR_IMAGE=gcr.io/${PROJECT}/${IMAGE_NAME}
 export BASE_CONTAINER_IMAGE=gcr.io/dataflow-templates-base/java11-template-launcher-base
@@ -86,8 +86,8 @@ echo "{
     \"parameters\": [
       {
         \"name\": \"jobSpecUri\",
-        \"label\": \"Target mapping configuration file\",
-        \"helpText\": \"Source to target mapping json file\",
+        \"label\": \"Job configuration file\",
+        \"helpText\": \"Configuration, source and target metadatga\",
         \"paramType\": \"TEXT\",
         \"isOptional\": false
       }, 

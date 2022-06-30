@@ -2,6 +2,27 @@
 
 This project contains FlexTemplates that facilitate loading files within the Google BCloud to the Neo4j graph database
 
+## Introductory Blog
+
+Neo4j has released flex templates for GCP Dataflow which support complex ETL processes through configuration not code.  
+This capability fills a gap for joint GCP and Neo4j customers who are looking for cloud native data integration without having to manage Spark services.
+<br>
+
+[Neo4j comes to GCP Dataflow Town
+](https://docs.google.com/document/d/1sWZN_lw5p-mhqJglh2Zw-LQYGE9BJ-uUxEvNiO8K8h0/edit?usp=sharing)<br/>
+
+There are many ways to move data into Neo4j.  The most popular approach for bulk loading Neo4j is the LOAD CSV cypher command from any client connection such as Java, Python, Go, .NET, Node, Spring and others.  
+Data scientists tend to favor the Neo4j Spark connector and Data Warehouse connector, which both run on DataProc and are easily incorporated into python notebooks.  
+For individual users, the graphical ETL import tool is very convenient and for enterprises needing lifecycle management, Apache Hop, a project co-sponsored by Neo4j, is a great option.
+
+The Dataflow approach is interesting and different for a few reasons.  Although it requires a customized JSON configuration file, that’s all that is required.  
+No notebooks, no Spark environment, no code, no cost when the system is idle.  Also, Dataflow runs within the context of GCP security so if a resource is accessible to the project and service account there is no need 
+to track and secure another resource locator and set of credentials.  Finally, the Neo4j flex  template implements java API best practices as described below.
+
+These features make this solution ideal for copy-and-paste re-use between customer environments.  For example, a best-practices mapping that loads Google Analytics from BigQuery to Neo4j could be leveraged by any GA customer.  
+As a result, highly reusable solution templates will dramatically accelerate time to value across the joint GCP-Neo4j customer base.  ISVs will leverage this capability to move their solutions to the Google cloud 
+and Google Data Lake adopters will accelerate their adoption of graph as an essential side-car service in their reference data architectures.
+
 ## Local Integration Test Scripts
 
 You will find local integration tests in <i>/src/test/resources/test-scripts</i>
@@ -25,7 +46,7 @@ _Audits to parquet_<br>
 _Sources from parquet_<br>
 [TEST-BQ-PARQUET](src/test/resources/test-scripts/failing/TEST-BQ-PARQUET.md)<br/>
 
-## Building
+## Building Project
 ### Create jar
 
 ```sh
@@ -160,18 +181,17 @@ gcloud dataflow flex-template run ${JOB_NAME} \
 
 ## Known issues
 
-### Insert overloading
-- The template parallelizes insertion of nodes, limited only to the number of workers in the cluster.  
+### Known limitations
+- This is not implemented in the Text writer since order by operations do not work well in Beam SQL
 - For any one label, insertion parallelism will be limited by parameter, but these will accumulate over many nodes.  This is by design currently.
 
-### Sorting relationships by target node id. 
-- This is not implemented in the Text writer since order by operations do not work well in Beam SQL
-
-### Flow serialization
-- When loading Neo4j, opinionated flow-control is required. DONE.
-- Nodes must obviously be loaded before edges.  Node loads can be highly parallelized but edge loads should be limited to 2 threads. DONE.
-- Also, edges should be loaded in order of target edgeIds to minimize locking. DONE if sources support SQL pushdown.
-- When the job specification requires creating nodes and edges, nodes are bound together with a flattening function.  This blocks additional processing until nodes are written.
+### Roadmap
+- Support for reading data from other non-SQL sources including Avro, Parquet, and MongoDb
+- Support for reading data from other SQL based sources including Spanner and Postgres
+- Support for auditing writes to Parquet on GCS
+- Supporting join transformations inside the job
+- Implement automap to auto-generate properties
+- Performance benchmark documentation
 
 ## Running Apache Hop
 export JAVA_HOME=`/usr/libexec/java_home -v 8`

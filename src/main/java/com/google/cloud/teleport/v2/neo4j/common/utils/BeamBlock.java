@@ -56,6 +56,7 @@ public class BeamBlock {
         blockingQueue.add(collection);
     }
 
+
     public PCollection<Row> release(PCollection<Row> release, String description){
         PCollection<Row> unblockedCollection= unblockCollection(release,description);
         return unblockedCollection;
@@ -64,7 +65,7 @@ public class BeamBlock {
     //This pattern accepts the emptyBlockingList and returns a copy of beamRows after the blocking list collections have processed
     private PCollection<Row> unblockCollection( PCollection<Row> beamRows, String description){
 
-        PCollection<Row> blockedCollection=blockCollection(beamRows.getSchema(), description);
+        PCollection<Row> blockedCollection= getBlockedCollection(beamRows.getSchema(), description);
         List<PCollection<Row>> waitForUnblocked = new ArrayList<>();
         waitForUnblocked.add(beamRows);
         //null row must be added after data row.
@@ -73,7 +74,7 @@ public class BeamBlock {
         return PCollectionList.of(waitForUnblocked).apply(description+" Release", Flatten.pCollections());
     }
 
-     private PCollection<Row> blockCollection( Schema anySchema, String description){
+    public PCollection<Row> getBlockedCollection(Schema anySchema, String description){
         List<PCollection<Row>> allQueues=new ArrayList<>();
         allQueues.addAll(blockingQueue);
         for (List<PCollection<Row>> chainedQueue: chainedQueues){

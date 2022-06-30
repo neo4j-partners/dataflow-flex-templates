@@ -1,4 +1,4 @@
-#  Integration Test: Text
+#  Integration Test: BQ
 
 ## Requirements
 * Java 11
@@ -9,20 +9,21 @@
 
 Run the Apache Beam pipeline locally for development.
 
+* Set environment variables that will be used in the build process.
  * Set environment variables that will be used in the build process.
  ```sh
  export JAVA_HOME=`/usr/libexec/java_home -v 11`
  export PROJECT=neo4jbusinessdev
  export GS_WORKING_DIR=gs://neo4j-sandbox/dataflow-working
  export APP_NAME=gcpToNeo4j
- export JOB_NAME=test-text
+ export JOB_NAME=test-bq
  export REGION=us-central1
  export MACHINE_TYPE=n2-highmem-8
  ```
  * Note that to enable_vertical_memory_autoscaling needs Dataflow Prime which requires enabling the "Cloud Autoscaling API"
  * https://cloud.google.com/dataflow/docs/guides/enable-dataflow-prime
-       --dataflowServiceOptions=enable_prime
-       --experiments=enable_vertical_memory_autoscaling
+   --dataflowServiceOptions=enable_prime 
+   --experiments=enable_vertical_memory_autoscaling 
  * Additional testing required to determine optimal memory
  ```sh
 pushd ../../../../
@@ -40,7 +41,7 @@ pushd ../../../../
      --region=$REGION \
      --workerMachineType=$MACHINE_TYPE \
      --maxNumWorkers=2 \
-     --inputFilePattern=gs://neo4j-datasets/northwinds/nw_orders_1k_noheader.csv \
-     --jobSpecUri=gs://neo4j-dataflow/job-specs/testing/new/text-northwind-jobspec.json \
+     --jobSpecUri=gs://neo4j-dataflow/job-specs/testing/new/bq-northwind-jobspec.json \
      --neo4jConnectionUri=gs://neo4j-dataflow/job-specs/testing/common/auradb-free-connection.json"
  ```
+

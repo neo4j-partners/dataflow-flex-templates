@@ -89,12 +89,14 @@ public class GcpToNeo4j {
         }
         this.neo4jConnection = new ConnectionParams(pipelineOptions.getNeo4jConnectionUri());
         this.jobSpec = new JobSpecRequest(pipelineOptions.getJobSpecUri());
+        validationMessages.addAll(InputValidator.validateNeo4jConnection(this.neo4jConnection));
+        validationMessages.addAll(InputValidator.validateJobSpec(this.jobSpec));
 
-        InputRefactoring inputRefactoring=new InputRefactoring(optionsParams);
+        InputRefactoring inputRefactoring=new InputRefactoring(this.optionsParams);
         // Variable substitution
-        inputRefactoring.refactorJobSpec(jobSpec);
+        inputRefactoring.refactorJobSpec(this.jobSpec);
         // Optimizations
-        inputRefactoring.optimizeJobSpec(jobSpec);
+        inputRefactoring.optimizeJobSpec(this.jobSpec);
 
         ///////////////////////////////////
         // Text input specific options and validation
@@ -116,8 +118,6 @@ public class GcpToNeo4j {
                 throw new RuntimeException("Errors found validating pipeline input for " + source.name + ".  Please see logs for more details.");
             }
         }
-
-
     }
 
 

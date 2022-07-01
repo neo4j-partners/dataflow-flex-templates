@@ -3,6 +3,7 @@ package com.google.cloud.teleport.v2.neo4j.common.model;
 import com.google.cloud.teleport.v2.neo4j.common.model.enums.SourceType;
 import com.google.cloud.teleport.v2.neo4j.common.utils.BeamUtils;
 import com.google.cloud.teleport.v2.neo4j.common.utils.TextParserUtils;
+import net.minidev.json.annotate.JsonIgnore;
 import org.apache.beam.repackaged.core.org.apache.commons.lang3.StringUtils;
 import org.apache.beam.sdk.schemas.Schema;
 import org.apache.commons.csv.CSVFormat;
@@ -21,6 +22,7 @@ import java.util.regex.Pattern;
 public class Source implements Serializable {
     private static final Logger LOG = LoggerFactory.getLogger(Source.class);
 
+    @JsonIgnore
     Pattern NEWLINE_PATTERN = Pattern.compile("\\R");
 
     public SourceType sourceType = SourceType.text;

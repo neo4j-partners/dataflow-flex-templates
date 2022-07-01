@@ -211,6 +211,14 @@ public class ModelUtils {
         }
     }
 
+    public static boolean messagesContains(List<String> messages, String text){
+        for (String msg:messages){
+            if (msg.toUpperCase().contains(text.toUpperCase())){
+                return true;
+            }
+        }
+        return false;
+    }
     public static String makeValidNeo4jIdentifier(String proposedIdString) {
         String finalIdString = proposedIdString.replaceAll(LEGAL_CHARS_REGEX, "_").trim();
         if (finalIdString.substring(0, 1).matches(ALPHA_CHARS_REGEX)) {

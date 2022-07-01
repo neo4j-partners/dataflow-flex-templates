@@ -50,17 +50,11 @@ public class InputValidator {
             validationMessages.add("Job spec URI not provided.");
         }
 
-        ConnectionParams neoConnection = new ConnectionParams(pipelineOptions.getNeo4jConnectionUri());
-        validationMessages.addAll(InputValidator.validateNeo4jConnection(neoConnection));
-
-        JobSpecRequest jobSpec = new JobSpecRequest(pipelineOptions.getJobSpecUri());
-
-        validationMessages.addAll(InputValidator.validateJobSpec(jobSpec));
         return validationMessages;
     }
 
 
-    private static List<String> validateNeo4jConnection(ConnectionParams connectionParams) {
+    public static List<String> validateNeo4jConnection(ConnectionParams connectionParams) {
         List<String> validationMessages = new ArrayList<>();
         if (StringUtils.isEmpty(connectionParams.serverUrl)) {
             validationMessages.add("Missing connection server URL");
@@ -74,15 +68,22 @@ public class InputValidator {
         return validationMessages;
     }
 
-    private static List<String> validateJobSpec(JobSpecRequest jobSpec) {
+    public static List<String> validateJobSpec(JobSpecRequest jobSpec) {
 
         List<String> validationMessages = new ArrayList<>();
 
-        Iterator<String> sourceNames = jobSpec.sources.keySet().iterator();
-        while (sourceNames.hasNext()) {
-            String sourceName = sourceNames.next();
+        for (Source source : jobSpec.getSourceList()) {
+            String sourceName = source.name;
             if (StringUtils.isBlank(sourceName)) {
                 validationMessages.add("Source is not named");
+            }
+            // Check that SQL does not have order by...
+            if (StringUtils.isNotBlank(source.query)) {
+                LOG.info("Checking source for ORDER BY");
+                Matcher m = ORDER_BY_PATTERN.matcher(source.query);
+                if (m.find()) {
+                    validationMessages.add("SQL contains ORDER BY which is not supported");
+                }
             }
         }
 
@@ -107,7 +108,7 @@ public class InputValidator {
                 if (target.transform.sql.toUpperCase().matches("")) {
                     Matcher m = ORDER_BY_PATTERN.matcher(target.transform.sql);
                     if (m.find()) {
-                        validationMessages.add("SQL contains ORDER BY which is not supported");
+                        validationMessages.add("Target " + target.name + " SQL contains ORDER BY which is not supported");
                     }
                 }
             }
@@ -120,7 +121,7 @@ public class InputValidator {
                         if (mapping.role != RoleType.key && mapping.role != RoleType.label) {
                             validationMessages.add("Invalid role " + mapping.role + " on relationship: " + mapping.fragmentType);
                         }
-                        if (mapping.labels.size()==0) {
+                        if (mapping.labels.size() == 0) {
                             validationMessages.add(mapping.fragmentType + " missing label attribute");
                         }
                     }
@@ -153,7 +154,7 @@ public class InputValidator {
             // check that calculated fields are used
             if (target.transform != null && target.transform.aggregations.size() > 0) {
                 for (Aggregation aggregation : target.transform.aggregations) {
-                    LOG.info("Looking for aggregation: "+gson.toJson(aggregation)+" in mappings: "+gson.toJson(target.mappings));
+                    //LOG.info("Looking for aggregation: " + gson.toJson(aggregation) + " in mappings: " + gson.toJson(target.mappings));
                     if (!fieldIsMapped(target, aggregation.field)) {
                         validationMessages.add("Aggregation for field " + aggregation.field + " is unmapped.");
                     }
@@ -176,8 +177,9 @@ public class InputValidator {
     }
 
     public static boolean fieldIsMapped(Target target, String fieldName) {
-        if (fieldName==null) return false;
+        if (fieldName == null) return false;
         for (Mapping mapping : target.mappings) {
+            // LOG.info("Mapping fieldName "+fieldName+": "+gson.toJson(mapping));
             if (fieldName.equals(mapping.field)) {
                 return true;
             }

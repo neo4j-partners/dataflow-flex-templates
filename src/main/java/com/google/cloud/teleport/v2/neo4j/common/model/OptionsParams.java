@@ -18,35 +18,39 @@ public class OptionsParams implements Serializable {
     public String inputFilePattern="";
     public HashMap<String,String> tokenMap=new HashMap<>();
 
+    //for testing
+    public OptionsParams(){}
     public OptionsParams(Neo4jFlexTemplateOptions pipelineOptions) {
 
-        String optionsJsonStr=pipelineOptions.getOptionsJson();
-        if (StringUtils.isEmpty(optionsJsonStr)){
-            return;
-        }
         try {
-            LOG.info("Pipeline options: "+optionsJsonStr);
-            final JSONObject optionsJson = new JSONObject(optionsJsonStr);
+
             if (StringUtils.isNotEmpty(pipelineOptions.getReadQuery())){
                 readQuery = pipelineOptions.getReadQuery();
             }
             if (StringUtils.isNotEmpty(pipelineOptions.getInputFilePattern())){
                 inputFilePattern = pipelineOptions.getInputFilePattern();
             }
-            Iterator<String> optionsKeys=optionsJson.keys();
-            while (optionsKeys.hasNext()){
-                String optionsKey=optionsKeys.next();
-                tokenMap.put(optionsKey,optionsJson.opt(optionsKey)+"");
-                if (optionsKey.equals("readQuery")) {
-                    readQuery = optionsJson.getString("readQuery");
-                } else if (optionsKey.equals("inputFilePattern")) {
-                    inputFilePattern = optionsJson.getString("inputFilePattern");
-                }
-                LOG.info(optionsKey + ": "+optionsJson.opt(optionsKey));
-            }
+            overlayTokens(pipelineOptions.getOptionsJson());
 
         } catch (final Exception e) {
             throw new RuntimeException(e);
+        }
+
+    }
+
+    public void overlayTokens(String optionsJsonStr){
+        LOG.info("Pipeline options: "+optionsJsonStr);
+        final JSONObject optionsJson = new JSONObject(optionsJsonStr);
+        Iterator<String> optionsKeys=optionsJson.keys();
+        while (optionsKeys.hasNext()){
+            String optionsKey=optionsKeys.next();
+            tokenMap.put(optionsKey,optionsJson.opt(optionsKey)+"");
+            if (optionsKey.equals("readQuery")) {
+                readQuery = optionsJson.getString("readQuery");
+            } else if (optionsKey.equals("inputFilePattern")) {
+                inputFilePattern = optionsJson.getString("inputFilePattern");
+            }
+            LOG.info(optionsKey + ": "+optionsJson.opt(optionsKey));
         }
 
     }

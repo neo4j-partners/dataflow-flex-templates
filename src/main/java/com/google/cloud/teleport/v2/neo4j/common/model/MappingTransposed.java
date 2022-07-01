@@ -127,6 +127,8 @@ public class MappingTransposed {
         List<FieldNameTuple> uniques = new ArrayList();
         List<FieldNameTuple> indexed = new ArrayList<>();
 
+        //LOG.info("Parsing mapping: "+gson.toJson(propertyMappingsObject));
+
         if (propertyMappingsObject.has("unique")) uniques =getFieldAndNameTuples( propertyMappingsObject.get("unique"));
         if (propertyMappingsObject.has("indexed"))  indexed = getFieldAndNameTuples( propertyMappingsObject.get("indexed"));
 
@@ -152,22 +154,26 @@ public class MappingTransposed {
         }
 
         if (propertyMappingsObject.has("doubles")) {
+            //LOG.info("Parsing doubles...");
             List<FieldNameTuple> numbers = getFieldAndNameTuples(propertyMappingsObject.get("doubles"));
             for (FieldNameTuple f : numbers) {
                 Mapping mapping = new Mapping(fragmentType, RoleType.property, f);
                 mapping.type = PropertyType.BigDecimal;
                 mapping.indexed = indexed.contains(f);
                 mapping.unique = uniques.contains(f);
+                //LOG.info("double mappings: "+gson.toJson(mapping));
                 mappings.add(mapping);
             }
         }
         if (propertyMappingsObject.has("longs")) {
+            //LOG.info("Parsing longs...");
             List<FieldNameTuple> longs = getFieldAndNameTuples(propertyMappingsObject.get("longs"));
             for (FieldNameTuple f : longs) {
                 Mapping mapping = new Mapping(fragmentType, RoleType.property, f);
                 mapping.type = PropertyType.Long;
                 mapping.indexed = indexed.contains(f);
                 mapping.unique = uniques.contains(f);
+                //LOG.info("longs mappings: "+gson.toJson(mapping));
                 mappings.add(mapping);
             }
         }

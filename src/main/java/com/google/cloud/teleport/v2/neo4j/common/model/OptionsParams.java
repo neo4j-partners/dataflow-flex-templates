@@ -33,26 +33,28 @@ public class OptionsParams implements Serializable {
             overlayTokens(pipelineOptions.getOptionsJson());
 
         } catch (final Exception e) {
+            LOG.error("Error parsing pipeline options: "+e.getMessage(),e);
             throw new RuntimeException(e);
         }
 
     }
 
     public void overlayTokens(String optionsJsonStr){
-        LOG.info("Pipeline options: "+optionsJsonStr);
-        final JSONObject optionsJson = new JSONObject(optionsJsonStr);
-        Iterator<String> optionsKeys=optionsJson.keys();
-        while (optionsKeys.hasNext()){
-            String optionsKey=optionsKeys.next();
-            tokenMap.put(optionsKey,optionsJson.opt(optionsKey)+"");
-            if (optionsKey.equals("readQuery")) {
-                readQuery = optionsJson.getString("readQuery");
-            } else if (optionsKey.equals("inputFilePattern")) {
-                inputFilePattern = optionsJson.getString("inputFilePattern");
+        if (!StringUtils.isEmpty(optionsJsonStr)) {
+            LOG.info("Pipeline options: " + optionsJsonStr);
+            final JSONObject optionsJson = new JSONObject(optionsJsonStr);
+            Iterator<String> optionsKeys = optionsJson.keys();
+            while (optionsKeys.hasNext()) {
+                String optionsKey = optionsKeys.next();
+                tokenMap.put(optionsKey, optionsJson.opt(optionsKey) + "");
+                if (optionsKey.equals("readQuery")) {
+                    readQuery = optionsJson.getString("readQuery");
+                } else if (optionsKey.equals("inputFilePattern")) {
+                    inputFilePattern = optionsJson.getString("inputFilePattern");
+                }
+                LOG.info(optionsKey + ": " + optionsJson.opt(optionsKey));
             }
-            LOG.info(optionsKey + ": "+optionsJson.opt(optionsKey));
         }
-
     }
 }
 

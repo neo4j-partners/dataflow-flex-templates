@@ -1,7 +1,6 @@
 package com.google.cloud.teleport.v2.neo4j.common.utils;
 
-import com.google.cloud.teleport.v2.neo4j.common.transforms.DeleteEmptyRowsFn;
-import org.apache.beam.sdk.schemas.Schema;
+import com.google.cloud.teleport.v2.neo4j.common.transforms.VoidFn;
 import org.apache.beam.sdk.transforms.Flatten;
 import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.values.PCollection;
@@ -56,7 +55,27 @@ public class BeamBlock {
         blockingQueue.add(collection);
     }
 
-    public PCollection<Row> release(PCollection<Row> release, String description){
+    public PCollection<Void> waitOnVoidCollection(String description){
+        List<PCollection<Row>> allQueues=new ArrayList<>();
+        allQueues.addAll(blockingQueue);
+        for (List<PCollection<Row>> chainedQueue: chainedQueues){
+            allQueues.addAll(chainedQueue);
+        }
+        //In this case, "Release" is nonsense but makes the flow easier to read
+        PCollection<Row> combinedQueue = PCollectionList.of(allQueues).apply(description+" Queueing", Flatten.pCollections());
+        return combinedQueue.apply(description+" Unblocking", ParDo.of(new VoidFn()));
+    }
+
+    private void addToBlockRegistry(){
+        BeamBlock beamBlock= blockRegistry.get(name);
+        if (beamBlock==null){
+            blockRegistry.put(name,beamBlock);
+        }
+    }
+
+    /*
+
+        public PCollection<Row> release(PCollection<Row> release, String description){
         PCollection<Row> unblockedCollection= unblockCollection(release,description);
         return unblockedCollection;
     }
@@ -83,13 +102,9 @@ public class BeamBlock {
         return PCollectionList.of(allQueues).apply(description+" Queueing", Flatten.pCollections()).setRowSchema(anySchema)
                 .apply(description+" Unblocking", ParDo.of(new DeleteEmptyRowsFn())).setRowSchema(anySchema);
     }
+    */
 
-    private void addToBlockRegistry(){
-        BeamBlock beamBlock= blockRegistry.get(name);
-        if (beamBlock==null){
-            blockRegistry.put(name,beamBlock);
-        }
-    }
+
 
 
 

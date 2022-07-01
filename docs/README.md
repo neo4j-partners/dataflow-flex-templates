@@ -28,31 +28,25 @@ and Google Data Lake adopters will accelerate their adoption of graph as an esse
 You will find local integration tests in <i>/src/test/resources/test-scripts</i>
 
 _Sources from BigQuery_<br>
-[TEST-BQ](src/test/resources/test-scripts/TEST-BQ.md)<br/>
+[TEST-BQ](cli-scripts/local-test/TEST-BQ.md)<br/>
 _Sources from Excel formatted Text file_<br>
-[TEST-TEXT](src/test/resources/test-scripts/TEST-TEXT.md)<br/>
+[TEST-TEXT](cli-scripts/local-test/TEST-TEXT.md)<br/>
 _Sources from Excel formatted Text file in the job file specification_<br>
-[TEST-TEXT-INLINE](src/test/resources/test-scripts/TEST-TEXT-INLINE.md)<br/>
+[TEST-TEXT-INLINE](cli-scripts/local-test/TEST-TEXT-INLINE.md)<br/>
 
 In each of these files, you will find links to configuration files such as:
 
     --jobSpecUri=gs://neo4j-dataflow/job-specs/testing/new/bq-northwind-jobspec.json \
     --neo4jConnectionUri=gs://neo4j-dataflow/job-specs/testing/common/auradb-free-connection.json"
 
-The following test _fail_ because functionality is incomplete:
-
-_Audits to parquet_<br>
-[TEST-BQ-AUDIT](src/test/resources/test-scripts/failing/TEST-BQ-AUDIT.md)<br/>
-_Sources from parquet_<br>
-[TEST-BQ-PARQUET](src/test/resources/test-scripts/failing/TEST-BQ-PARQUET.md)<br/>
-
 ## Building Project
 ### Create jar
 
 ```sh
  export JAVA_HOME=`/usr/libexec/java_home -v 11`
+ pushd ../
 # Build and package the application as an uber-jar file.
-mvn clean package
+mvn clean compile
 ```
 
 This will create an all-in-one, shaded jar in project /target directory.

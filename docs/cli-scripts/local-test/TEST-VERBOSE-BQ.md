@@ -26,7 +26,7 @@ Run the Apache Beam pipeline locally for development.
    --experiments=enable_vertical_memory_autoscaling 
  * Additional testing required to determine optimal memory
  ```sh
-pushd ../../../../
+pushd ../../../
  mvn compile exec:java \
    -Dexec.mainClass=com.google.cloud.teleport.v2.neo4j.GcpToNeo4j \
    -Dexec.cleanupDaemonThreads=false \
@@ -41,7 +41,11 @@ pushd ../../../../
      --region=$REGION \
      --workerMachineType=$MACHINE_TYPE \
      --maxNumWorkers=2 \
-     --jobSpecUri=gs://neo4j-dataflow/job-specs/testing/new/bq-northwind-jobspec.json \
+     --readQuery=\"SELECT customer_id,contact_name,company_name,seller_id,seller_first_name, \
+     seller_last_name,seller_title,product_id,product_name,category_name,supplier_name, \
+     supplier_postal_code, supplier_country,order_id, \
+     quantity,unit_price, discount FROM neo4jbusinessdev.northwind.V_CUSTOMER_ORDERS LIMIT 10000\" \
+     --jobSpecUri=gs://neo4j-dataflow/job-specs/testing/bigquery/bq-audit-northwind-jobspec.json \
      --neo4jConnectionUri=gs://neo4j-dataflow/job-specs/testing/common/auradb-free-connection.json"
  ```
 

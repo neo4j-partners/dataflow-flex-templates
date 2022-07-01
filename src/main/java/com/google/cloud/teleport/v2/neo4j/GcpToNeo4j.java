@@ -30,9 +30,11 @@ import com.google.cloud.teleport.v2.neo4j.providers.SourceQuerySpec;
 import com.google.cloud.teleport.v2.neo4j.providers.TargetQuerySpec;
 import org.apache.beam.repackaged.core.org.apache.commons.lang3.StringUtils;
 import org.apache.beam.sdk.Pipeline;
+import org.apache.beam.sdk.coders.VoidCoder;
 import org.apache.beam.sdk.io.FileSystems;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
 import org.apache.beam.sdk.schemas.Schema;
+import org.apache.beam.sdk.transforms.Wait;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.Row;
 import org.slf4j.Logger;
@@ -196,12 +198,14 @@ public class GcpToNeo4j {
                 } else {
                     preInsertBeamRows = nullableSourceBeamRows;
                 }
-                PCollection<Row> unblockedBeamRows = blockingQueue.release(preInsertBeamRows, target.sequence + ": "+target.name);
                 Neo4jRowWriterTransform targetWriterTransform = new Neo4jRowWriterTransform(jobSpec, neo4jConnection, target);
-                PCollection<Row> emptyReturn = unblockedBeamRows.apply(target.sequence + ": Writing Neo4j " + target.name, targetWriterTransform);
+                PCollection<Void> unblockedVoid=blockingQueue.waitOnVoidCollection(target.sequence + ": ").setCoder(VoidCoder.of());
+                PCollection<Row> emptyReturn = preInsertBeamRows
+                        .apply(Wait.on(unblockedVoid))
+                        .apply(target.sequence + ": Writing Neo4j " + target.name, targetWriterTransform);
                 if (!StringUtils.isEmpty(jobSpec.config.auditGsUri)) {
                     GcsLogTransform logTransform=new GcsLogTransform(jobSpec,target);
-                    unblockedBeamRows.apply(target.sequence + ": Logging " + target.name, logTransform);
+                    preInsertBeamRows.apply(target.sequence + ": Logging " + target.name, logTransform);
                 }
                 //serialize relationships
                 blockingQueue.addEmptyBlockingCollection(emptyReturn);

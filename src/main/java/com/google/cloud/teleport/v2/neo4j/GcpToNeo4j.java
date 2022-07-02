@@ -30,11 +30,9 @@ import com.google.cloud.teleport.v2.neo4j.providers.SourceQuerySpec;
 import com.google.cloud.teleport.v2.neo4j.providers.TargetQuerySpec;
 import org.apache.beam.repackaged.core.org.apache.commons.lang3.StringUtils;
 import org.apache.beam.sdk.Pipeline;
-import org.apache.beam.sdk.coders.VoidCoder;
 import org.apache.beam.sdk.io.FileSystems;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
 import org.apache.beam.sdk.schemas.Schema;
-import org.apache.beam.sdk.transforms.Wait;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.Row;
 import org.slf4j.Logger;
@@ -49,27 +47,10 @@ import java.util.List;
 public class GcpToNeo4j {
 
     private static final Logger LOG = LoggerFactory.getLogger(GcpToNeo4j.class);
+    public OptionsParams optionsParams;
     ConnectionParams neo4jConnection;
     JobSpecRequest jobSpec;
-
-    public OptionsParams optionsParams;
     Pipeline pipeline;
-
-    /**
-     * Runs a pipeline which reads data from BigQuery and writes it to Bigtable.
-     *
-     * @param args arguments to the pipeline
-     */
-
-    public static void main(final String[] args) {
-        final Neo4jFlexTemplateOptions options =
-                PipelineOptionsFactory.fromArgs(args).withValidation()
-                        .as(Neo4jFlexTemplateOptions.class);
-
-        LOG.info("Job: " + options.getJobSpecUri());
-        final GcpToNeo4j bqToNeo4jTemplate = new GcpToNeo4j(options);
-        bqToNeo4jTemplate.run();
-    }
 
     public GcpToNeo4j(final Neo4jFlexTemplateOptions pipelineOptions) {
         ////////////////////////////
@@ -87,14 +68,14 @@ public class GcpToNeo4j {
                 LOG.error(msg);
                 sb.append(msg);
             }
-            throw new RuntimeException("Errors found validating pipeline input.  Please see logs for more details: " + sb.toString());
+            throw new RuntimeException("Errors found validating pipeline input.  Please see logs for more details: " + sb);
         }
         this.neo4jConnection = new ConnectionParams(pipelineOptions.getNeo4jConnectionUri());
         this.jobSpec = new JobSpecRequest(pipelineOptions.getJobSpecUri());
         validationMessages.addAll(InputValidator.validateNeo4jConnection(this.neo4jConnection));
         validationMessages.addAll(InputValidator.validateJobSpec(this.jobSpec));
 
-        InputRefactoring inputRefactoring=new InputRefactoring(this.optionsParams);
+        InputRefactoring inputRefactoring = new InputRefactoring(this.optionsParams);
         // Variable substitution
         inputRefactoring.refactorJobSpec(this.jobSpec);
         // Optimizations
@@ -122,6 +103,21 @@ public class GcpToNeo4j {
         }
     }
 
+    /**
+     * Runs a pipeline which reads data from BigQuery and writes it to Bigtable.
+     *
+     * @param args arguments to the pipeline
+     */
+
+    public static void main(final String[] args) {
+        final Neo4jFlexTemplateOptions options =
+                PipelineOptionsFactory.fromArgs(args).withValidation()
+                        .as(Neo4jFlexTemplateOptions.class);
+
+        LOG.info("Job: " + options.getJobSpecUri());
+        final GcpToNeo4j bqToNeo4jTemplate = new GcpToNeo4j(options);
+        bqToNeo4jTemplate.run();
+    }
 
     public void run() {
 
@@ -147,7 +143,7 @@ public class GcpToNeo4j {
             ////////////////////////////
             // Optimization: if single source query, reuse this PCollection rather than write it again
             boolean targetsHaveTransforms = ModelUtils.targetsHaveTransforms(jobSpec, source);
-            if (!targetsHaveTransforms || !providerImpl.supportsSqlPushDown() ) {
+            if (!targetsHaveTransforms || !providerImpl.supportsSqlPushDown()) {
                 SourceQuerySpec sourceQuerySpec = SourceQuerySpec.builder().source(source).sourceSchema(sourceBeamSchema).build();
                 nullableSourceBeamRows = pipeline.apply("Common query", providerImpl.querySourceBeamRows(sourceQuerySpec)).setRowSchema(sourceBeamSchema);
             }
@@ -176,7 +172,7 @@ public class GcpToNeo4j {
                 Neo4jRowWriterTransform targetWriterTransform = new Neo4jRowWriterTransform(jobSpec, neo4jConnection, target);
                 PCollection<Row> emptyReturn = preInsertBeamRows.apply(target.sequence + ": Writing Neo4j " + target.name, targetWriterTransform);
                 if (!StringUtils.isEmpty(jobSpec.config.auditGsUri)) {
-                    GcsLogTransform logTransform=new GcsLogTransform(jobSpec,target);
+                    GcsLogTransform logTransform = new GcsLogTransform(jobSpec, target);
                     preInsertBeamRows.apply(target.sequence + ": Logging " + target.name, logTransform);
                 }
                 blockingQueue.addEmptyBlockingCollection(emptyReturn);
@@ -198,14 +194,12 @@ public class GcpToNeo4j {
                 } else {
                     preInsertBeamRows = nullableSourceBeamRows;
                 }
+                PCollection<Row> unblockedBeamRows = blockingQueue.release(preInsertBeamRows, target.sequence + ": " + target.name);
                 Neo4jRowWriterTransform targetWriterTransform = new Neo4jRowWriterTransform(jobSpec, neo4jConnection, target);
-                PCollection<Void> unblockedVoid=blockingQueue.waitOnVoidCollection(target.sequence + ": ").setCoder(VoidCoder.of());
-                PCollection<Row> emptyReturn = preInsertBeamRows
-                        .apply(Wait.on(unblockedVoid))
-                        .apply(target.sequence + ": Writing Neo4j " + target.name, targetWriterTransform);
+                PCollection<Row> emptyReturn = unblockedBeamRows.apply(target.sequence + ": Writing Neo4j " + target.name, targetWriterTransform);
                 if (!StringUtils.isEmpty(jobSpec.config.auditGsUri)) {
-                    GcsLogTransform logTransform=new GcsLogTransform(jobSpec,target);
-                    preInsertBeamRows.apply(target.sequence + ": Logging " + target.name, logTransform);
+                    GcsLogTransform logTransform = new GcsLogTransform(jobSpec, target);
+                    unblockedBeamRows.apply(target.sequence + ": Logging " + target.name, logTransform);
                 }
                 //serialize relationships
                 blockingQueue.addEmptyBlockingCollection(emptyReturn);

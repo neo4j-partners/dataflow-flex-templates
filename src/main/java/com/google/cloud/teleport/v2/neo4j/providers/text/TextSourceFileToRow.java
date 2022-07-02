@@ -15,21 +15,21 @@ import org.apache.beam.sdk.values.Row;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class TextSourceFileToRow extends PTransform<PBegin, PCollection<Row>>{
+public class TextSourceFileToRow extends PTransform<PBegin, PCollection<Row>> {
     private static final Logger LOG = LoggerFactory.getLogger(TextSourceFileToRow.class);
     SourceQuerySpec sourceQuerySpec;
     OptionsParams optionsParams;
 
-    public TextSourceFileToRow(OptionsParams optionsParams, SourceQuerySpec sourceQuerySpec){
-       this.optionsParams=optionsParams;
-        this.sourceQuerySpec=sourceQuerySpec;
+    public TextSourceFileToRow(OptionsParams optionsParams, SourceQuerySpec sourceQuerySpec) {
+        this.optionsParams = optionsParams;
+        this.sourceQuerySpec = sourceQuerySpec;
     }
 
     @Override
     public PCollection<Row> expand(PBegin input) {
-        Source source=sourceQuerySpec.source;
+        Source source = sourceQuerySpec.source;
         Schema beamTextSchema = sourceQuerySpec.sourceSchema;
-        String dataFileUri= source.uri;
+        String dataFileUri = source.uri;
 
         if (StringUtils.isNotBlank(dataFileUri)) {
             LOG.info("Ingesting file: " + dataFileUri + ".");
@@ -47,7 +47,6 @@ public class TextSourceFileToRow extends PTransform<PBegin, PCollection<Row>>{
             throw new RuntimeException("Data not found.");
         }
     }
-
 
 
 }

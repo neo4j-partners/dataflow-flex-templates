@@ -12,12 +12,16 @@ import org.apache.beam.sdk.values.Row;
 import java.util.List;
 
 public interface IProvider {
-    public void configure(OptionsParams optionsParams, JobSpecRequest jobSpecRequest);
-    public boolean supportsSqlPushDown() ;
-    public List<String> validateJobSpec();
+    void configure(OptionsParams optionsParams, JobSpecRequest jobSpecRequest);
 
-    public PTransform<PBegin, PCollection<Row>> querySourceBeamRows(SourceQuerySpec sourceQuerySpec);
-    public PTransform<PBegin, PCollection<Row>> queryTargetBeamRows(TargetQuerySpec targetQuerySpec);
-    public PTransform<PBegin, PCollection<Row>> queryMetadata(Source source);
+    boolean supportsSqlPushDown();
+
+    List<String> validateJobSpec();
+
+    PTransform<PBegin, PCollection<Row>> querySourceBeamRows(SourceQuerySpec sourceQuerySpec);
+
+    PTransform<PBegin, PCollection<Row>> queryTargetBeamRows(TargetQuerySpec targetQuerySpec);
+
+    PTransform<PBegin, PCollection<Row>> queryMetadata(Source source);
 
 }

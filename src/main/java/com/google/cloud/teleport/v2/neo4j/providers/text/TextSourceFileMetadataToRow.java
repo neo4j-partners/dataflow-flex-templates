@@ -11,19 +11,19 @@ import org.apache.beam.sdk.values.Row;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class TextSourceFileMetadataToRow extends PTransform<PBegin, PCollection<Row>>{
+public class TextSourceFileMetadataToRow extends PTransform<PBegin, PCollection<Row>> {
     private static final Logger LOG = LoggerFactory.getLogger(TextSourceFileMetadataToRow.class);
     Source source;
     OptionsParams optionsParams;
 
-    public TextSourceFileMetadataToRow(OptionsParams optionsParams, Source source){
-       this.optionsParams=optionsParams;
-        this.source=source;
+    public TextSourceFileMetadataToRow(OptionsParams optionsParams, Source source) {
+        this.optionsParams = optionsParams;
+        this.source = source;
     }
 
     @Override
     public PCollection<Row> expand(PBegin input) {
-        Schema schema=source.getTextFileSchema();
+        Schema schema = source.getTextFileSchema();
         return input.apply(Create.empty(schema));
     }
 

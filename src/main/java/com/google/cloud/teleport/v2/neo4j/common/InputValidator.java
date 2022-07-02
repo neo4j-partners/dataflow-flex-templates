@@ -1,5 +1,6 @@
 package com.google.cloud.teleport.v2.neo4j.common;
 
+import avro.shaded.com.google.common.collect.Sets;
 import com.google.cloud.teleport.v2.neo4j.common.model.*;
 import com.google.cloud.teleport.v2.neo4j.common.model.enums.FragmentType;
 import com.google.cloud.teleport.v2.neo4j.common.model.enums.RoleType;
@@ -12,16 +13,13 @@ import org.apache.beam.repackaged.core.org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class InputValidator {
 
-    final static Set<String> validOptions = Set.of(
+    final static Set<String> validOptions = Sets.newHashSet(
             "relationship",
             "relationship.save.strategy",
             "relationship.source.labels",
@@ -33,10 +31,8 @@ public class InputValidator {
             "relationship.target.save.mode");
 
     final static Pattern ORDER_BY_PATTERN = Pattern.compile(".*ORDER\\sBY.*");
-
-    private static final Logger LOG = LoggerFactory.getLogger(InputValidator.class);
-
     final static Gson gson = new GsonBuilder().setPrettyPrinting().create();
+    private static final Logger LOG = LoggerFactory.getLogger(InputValidator.class);
 
     public static List<String> validateNeo4jPipelineOptions(Neo4jFlexTemplateOptions pipelineOptions) {
 
@@ -128,13 +124,13 @@ public class InputValidator {
                 }
 
                 //relationship validation checks..
-                if (StringUtils.isBlank(ModelUtils.getFirstFieldOrConstant(target, FragmentType.source, List.of(RoleType.key)))) {
+                if (StringUtils.isBlank(ModelUtils.getFirstFieldOrConstant(target, FragmentType.source, Arrays.asList(RoleType.key)))) {
                     validationMessages.add("Could not find target key field for relationship: " + target.name);
                 }
-                if (StringUtils.isBlank(ModelUtils.getFirstFieldOrConstant(target, FragmentType.target, List.of(RoleType.key)))) {
+                if (StringUtils.isBlank(ModelUtils.getFirstFieldOrConstant(target, FragmentType.target, Arrays.asList(RoleType.key)))) {
                     validationMessages.add("Could not find target key field for relationship: " + target.name);
                 }
-                if (StringUtils.isBlank(ModelUtils.getFirstFieldOrConstant(target, FragmentType.rel, List.of(RoleType.type)))) {
+                if (StringUtils.isBlank(ModelUtils.getFirstFieldOrConstant(target, FragmentType.rel, Arrays.asList(RoleType.type)))) {
                     validationMessages.add("Could not find relationship type: " + target.name);
                 }
             } else if (target.type == TargetType.node) {
@@ -143,11 +139,11 @@ public class InputValidator {
                         validationMessages.add("Invalid fragment type " + mapping.fragmentType + " for node mapping: " + mapping.name);
                     }
                 }
-                if (StringUtils.isBlank(ModelUtils.getFirstFieldOrConstant(target, FragmentType.node, List.of(RoleType.label)))) {
+                if (StringUtils.isBlank(ModelUtils.getFirstFieldOrConstant(target, FragmentType.node, Arrays.asList(RoleType.label)))) {
                     LOG.info("Invalid target: " + gson.toJson(target));
                     validationMessages.add("Missing label in node: " + target.name);
                 }
-                if (StringUtils.isBlank(ModelUtils.getFirstFieldOrConstant(target, FragmentType.node, List.of(RoleType.key)))) {
+                if (StringUtils.isBlank(ModelUtils.getFirstFieldOrConstant(target, FragmentType.node, Arrays.asList(RoleType.key)))) {
                     validationMessages.add("Missing key field in node: " + target.name);
                 }
             }
@@ -177,7 +173,9 @@ public class InputValidator {
     }
 
     public static boolean fieldIsMapped(Target target, String fieldName) {
-        if (fieldName == null) return false;
+        if (fieldName == null) {
+            return false;
+        }
         for (Mapping mapping : target.mappings) {
             // LOG.info("Mapping fieldName "+fieldName+": "+gson.toJson(mapping));
             if (fieldName.equals(mapping.field)) {
@@ -185,6 +183,9 @@ public class InputValidator {
             }
         }
         return false;
+    }
+
+    private InputValidator() {
     }
 
 

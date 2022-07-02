@@ -34,13 +34,12 @@ import java.util.Arrays;
 public class Neo4jConnection implements Serializable {
 
     private static final Logger LOG = LoggerFactory.getLogger(Neo4jConnection.class);
-
-    public String serverUrl = null;
-    public String database = null;
-    public AuthType authType = AuthType.BASIC;
     private final String username;
     private final String password;
-    Driver driver = null;
+    public String serverUrl;
+    public String database;
+    public AuthType authType = AuthType.BASIC;
+    Driver driver;
 
     public Neo4jConnection(ConnectionParams connectionParams) {
         this.username = connectionParams.username;
@@ -101,7 +100,7 @@ public class Neo4jConnection implements Serializable {
         }
     }
 
-    public void writeTransaction(TransactionWork<Void> transactionWork,TransactionConfig transactionConfig) throws Exception {
+    public void writeTransaction(TransactionWork<Void> transactionWork, TransactionConfig transactionConfig) throws Exception {
         try (Session session = getSession()) {
             session.writeTransaction(transactionWork, transactionConfig);
         }
@@ -109,11 +108,11 @@ public class Neo4jConnection implements Serializable {
 
     public void resetDatabase() {
         // Direct connect utility...
-         LOG.info("Resetting database");
+        LOG.info("Resetting database");
         try {
-            String deleteCypher=ModelUtils.CYPHER_DELETE_ALL;
+            String deleteCypher = ModelUtils.CYPHER_DELETE_ALL;
             if (!StringUtils.isEmpty(database)) {
-                StringUtils.replace(deleteCypher,"neo4j",database);
+                StringUtils.replace(deleteCypher, "neo4j", database);
             }
             LOG.info("Executing cypher: " + deleteCypher);
             executeCypher(deleteCypher);

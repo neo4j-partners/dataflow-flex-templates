@@ -10,6 +10,7 @@ import org.apache.beam.sdk.transforms.windowing.GlobalWindow;
 import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.Row;
 import org.neo4j.driver.Result;
+import org.neo4j.driver.Transaction;
 import org.neo4j.driver.TransactionConfig;
 import org.neo4j.driver.TransactionWork;
 import org.slf4j.Logger;
@@ -19,23 +20,23 @@ import java.util.*;
 
 public class Neo4jBlockingUnwindFn extends DoFn<KV<Integer, Row>, Row> {
 
-    private final Counter numRecords = Metrics.counter(Neo4jBlockingUnwindFn.class, "norecords");
-
     private static final Logger LOG = LoggerFactory.getLogger(Neo4jBlockingUnwindFn.class);
-
+    private final Counter numRecords = Metrics.counter(Neo4jBlockingUnwindFn.class, "norecords");
+    protected TransactionConfig transactionConfig = TransactionConfig.empty();
     private Row returnEmpty;
     private String cypher;
-    private SerializableFunction<Row, Map<String, Object>> parametersFunction = null;
+    private SerializableFunction<Row, Map<String, Object>> parametersFunction;
     private boolean logCypher;
     private long batchSize;
     private String unwindMapName;
     private long elementsInput;
     private boolean loggingDone;
     private List<Map<String, Object>> unwindList;
-    protected TransactionConfig transactionConfig = TransactionConfig.empty();
     private Neo4jConnection neo4jConnection;
 
-    private Neo4jBlockingUnwindFn(){}
+    private Neo4jBlockingUnwindFn() {
+    }
+
     public Neo4jBlockingUnwindFn(
             Neo4jConnection neo4jConnection,
             Row returnEmpty,
@@ -50,7 +51,7 @@ public class Neo4jBlockingUnwindFn extends DoFn<KV<Integer, Row>, Row> {
         this.logCypher = logCypher;
         this.batchSize = batchSize;
         this.unwindMapName = unwindMapName;
-        this.returnEmpty=returnEmpty;
+        this.returnEmpty = returnEmpty;
 
         unwindList = new ArrayList<>();
         elementsInput = 0;
@@ -58,10 +59,10 @@ public class Neo4jBlockingUnwindFn extends DoFn<KV<Integer, Row>, Row> {
     }
 
     @ProcessElement
-    public void processElement(ProcessContext context){
+    public void processElement(ProcessContext context) {
 
-        KV<Integer, Row> parameters=context.element();
-        LOG.info("Processing row from group/key: "+parameters.getKey());
+        KV<Integer, Row> parameters = context.element();
+        LOG.info("Processing row from group/key: " + parameters.getKey());
 
         if (parametersFunction != null) {
             // Every input element creates a new Map<String,Object> entry in unwindList
@@ -105,7 +106,7 @@ public class Neo4jBlockingUnwindFn extends DoFn<KV<Integer, Row>, Row> {
         // The changes to the database are automatically committed.
         //
         TransactionWork<Void> transactionWork =
-                transaction -> {
+                (Transaction transaction) -> {
                     Result result = transaction.run(cypher, parametersMap);
                     while (result.hasNext()) {
                         // This just consumes any output but the function basically has no output
@@ -143,7 +144,7 @@ public class Neo4jBlockingUnwindFn extends DoFn<KV<Integer, Row>, Row> {
         parametersMap
                 .keySet()
                 .forEach(
-                        key -> {
+                        (String key) -> {
                             if (parametersString.length() > 0) {
                                 parametersString.append(',');
                             }
@@ -160,4 +161,3 @@ public class Neo4jBlockingUnwindFn extends DoFn<KV<Integer, Row>, Row> {
 
 
 }
-

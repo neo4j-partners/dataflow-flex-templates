@@ -68,16 +68,15 @@ public class Neo4jRowWriterTransform extends PTransform<PCollection<Row>, PColle
         Row emptyRow = Row.nullRow(input.getSchema());
 
         Neo4jBlockingUnwindFn neo4jUnwindFn =
-                new Neo4jBlockingUnwindFn
-                        (
-                                neo4jConnection,
-                                emptyRow,
-                                unwindCypher,
-                                batchSize,
-                                false,
-                                "rows",
-                                getRowCastingFunction()
-                        );
+                new Neo4jBlockingUnwindFn(
+                        neo4jConnection,
+                        emptyRow,
+                        unwindCypher,
+                        batchSize,
+                        false,
+                        "rows",
+                        getRowCastingFunction()
+                );
 
         PCollection<Row> output = input
                 .apply("Create KV pairs", CreateKvTransform.of(parallelism))
@@ -88,7 +87,7 @@ public class Neo4jRowWriterTransform extends PTransform<PCollection<Row>, PColle
     }
 
     private SerializableFunction<Row, Map<String, Object>> getRowCastingFunction() {
-        return (row) -> {
+        return (Row row) -> {
             return DataCastingUtils.rowToNeo4jDataMap(row, target);
         };
     }

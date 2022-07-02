@@ -34,7 +34,7 @@ public class TextParserUtils {
                 CSVRecord csvRecord = csvParser.getRecords().get(0);
                 Iterator<String> it = csvRecord.iterator();
                 while (it.hasNext()) {
-                    textCols.add( it.next());
+                    textCols.add(it.next());
                 }
             } catch (IOException ioException) {
                 LOG.error("Error parsing line: " + line + ", exception: " + ioException.getMessage());
@@ -47,10 +47,13 @@ public class TextParserUtils {
     //Function useful for small in-memory datasets
     public static List<List<Object>> parseDelimitedLines(CSVFormat csvFormat, String[] lines) {
         List rows = new ArrayList<>();
-        for (String line: lines){
+        for (String line : lines) {
             rows.add(parseDelimitedLine(csvFormat, line));
         }
         return rows;
+    }
+
+    private TextParserUtils() {
     }
 
 }

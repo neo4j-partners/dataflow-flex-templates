@@ -18,14 +18,15 @@ public class CreateKvTransform
         extends PTransform<PCollection<Row>, PCollection<KV<Integer, Row>>> {
 
     private static final Logger LOG = LoggerFactory.getLogger(CreateKvTransform.class);
+    private static final Integer DEFAULT_PARALLELISM = 1;
+    private final Integer requestedKeys;
+
+    private CreateKvTransform(Integer requestedKeys) {
+        this.requestedKeys = requestedKeys;
+    }
 
     public static CreateKvTransform of(Integer requestedKeys) {
         return new CreateKvTransform(requestedKeys);
-    }
-    private static final Integer DEFAULT_PARALLELISM = 1;
-    private Integer requestedKeys;
-    private CreateKvTransform(Integer requestedKeys) {
-        this.requestedKeys = requestedKeys;
     }
 
     @Override
@@ -34,8 +35,9 @@ public class CreateKvTransform
                 .apply("Inject Keys", ParDo.of(new CreateKeysFn(this.requestedKeys)))
                 .setCoder(KvCoder.of(BigEndianIntegerCoder.of(), input.getCoder()));
     }
+
     private class CreateKeysFn extends DoFn<Row, KV<Integer, Row>> {
-        private Integer specifiedParallelism;
+        private final Integer specifiedParallelism;
         private Integer calculatedParallelism;
 
         CreateKeysFn(Integer specifiedParallelism) {
@@ -51,7 +53,7 @@ public class CreateKvTransform
                     calculatedParallelism = specifiedParallelism;
                 }
 
-                calculatedParallelism =  MoreObjects.firstNonNull(calculatedParallelism, DEFAULT_PARALLELISM);
+                calculatedParallelism = MoreObjects.firstNonNull(calculatedParallelism, DEFAULT_PARALLELISM);
 
                 LOG.info("Parallelism set to: {}", calculatedParallelism);
             }

@@ -11,23 +11,23 @@ import java.util.List;
 
 public class ListOfStringToRowFn extends DoFn<List<Object>, Row> {
 
-  private static final Logger LOG = LoggerFactory.getLogger(ListOfStringToRowFn.class);
+    private static final Logger LOG = LoggerFactory.getLogger(ListOfStringToRowFn.class);
 
-  private final Schema schema;
+    private final Schema schema;
 
-  public ListOfStringToRowFn(Schema sourceSchema) {
-    this.schema = sourceSchema;
-  }
+    public ListOfStringToRowFn(Schema sourceSchema) {
+        this.schema = sourceSchema;
+    }
 
-  @ProcessElement
-  public void processElement(ProcessContext processContext) {
+    @ProcessElement
+    public void processElement(ProcessContext processContext) {
 
-      List<Object> strCols = processContext.element();
-      if (this.schema.getFieldCount()!=strCols.size()){
-        LOG.error("Row field count mismatch, expecting: "+ this.schema.getFieldCount()+", row: "+ StringUtils.join(strCols.size(),","));
-      } else {
-        Row row = Row.withSchema(this.schema).addValues(strCols).build();
-        processContext.output(row);
-      }
-  }
+        List<Object> strCols = processContext.element();
+        if (strCols != null && this.schema.getFieldCount() != strCols.size()) {
+            LOG.error("Row field count mismatch, expecting: " + this.schema.getFieldCount() + ", row: " + StringUtils.join(strCols.size(), ","));
+        } else {
+            Row row = Row.withSchema(this.schema).addValues(strCols).build();
+            processContext.output(row);
+        }
+    }
 }

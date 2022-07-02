@@ -16,72 +16,73 @@ import java.util.Collections;
 public class InputRefactoring {
 
     final static Gson gson = new GsonBuilder().setPrettyPrinting().create();
-
+    private static final Logger LOG = LoggerFactory.getLogger(InputRefactoring.class);
     OptionsParams optionsParams;
 
-    private InputRefactoring(){}
-
-    public InputRefactoring(OptionsParams optionsParams){
-        this.optionsParams=optionsParams;
+    private InputRefactoring() {
     }
-    private static final Logger LOG = LoggerFactory.getLogger(InputRefactoring.class);
 
-    public void refactorJobSpec(JobSpecRequest jobSpec){
+    public InputRefactoring(OptionsParams optionsParams) {
+        this.optionsParams = optionsParams;
+    }
+
+    public void refactorJobSpec(JobSpecRequest jobSpec) {
 
         //Create or enrich targets from options
-        if (jobSpec.targets.size()==0){
-            if (jobSpec.options.size()>0) {
+        if (jobSpec.targets.size() == 0) {
+            if (jobSpec.options.size() > 0) {
                 LOG.info("Targets not found, synthesizing from options");
                 throw new RuntimeException("Not currently synthesizing targets from options.");
-            } else if (jobSpec.getAllFieldNames().size()==0) {
+            } else if (jobSpec.getAllFieldNames().size() == 0) {
                 LOG.info("Targets not found, synthesizing from source.  All properties will be indexed.");
                 throw new RuntimeException("Not currently auto-generating targets.");
             }
         }
 
         //replace URI and SQL with run-time options
-        for (Source source:jobSpec.getSourceList()){
+        for (Source source : jobSpec.getSourceList()) {
             rewriteSource(source);
         }
 
         //number and name targets
-        int targetNum=0;
-        for (Target target:jobSpec.targets){
+        int targetNum = 0;
+        for (Target target : jobSpec.targets) {
             targetNum++;
-            target.sequence=targetNum;
-            if (StringUtils.isEmpty(target.name)){
-                target.name = "Target "+targetNum;
+            target.sequence = targetNum;
+            if (StringUtils.isEmpty(target.name)) {
+                target.name = "Target " + targetNum;
             }
         }
 
     }
 
-    public void optimizeJobSpec(JobSpecRequest jobSpec){
+    public void optimizeJobSpec(JobSpecRequest jobSpec) {
 
         // NODES first then relationships
         // This does not actually change execution order, just numbering
         Collections.sort(jobSpec.targets);
 
     }
+
     private void rewriteSource(Source source) {
 
-        LOG.info("Options params: "+gson.toJson(optionsParams));
+        LOG.info("Options params: " + gson.toJson(optionsParams));
 
         //rewrite file URI
-        String dataFileUri=source.uri;
-        if (StringUtils.isNotEmpty(optionsParams.inputFilePattern)){
+        String dataFileUri = source.uri;
+        if (StringUtils.isNotEmpty(optionsParams.inputFilePattern)) {
             LOG.info("Overriding source uri with run-time option");
-            dataFileUri=optionsParams.inputFilePattern;
+            dataFileUri = optionsParams.inputFilePattern;
         }
-        source.uri= ModelUtils.replaceVariableTokens(dataFileUri,optionsParams.tokenMap);
+        source.uri = ModelUtils.replaceVariableTokens(dataFileUri, optionsParams.tokenMap);
 
         //rewrite SQL
-        String sql=source.query;
-        if (StringUtils.isNotEmpty(optionsParams.readQuery)){
+        String sql = source.query;
+        if (StringUtils.isNotEmpty(optionsParams.readQuery)) {
             LOG.info("Overriding sql with run-time option");
-            sql=optionsParams.readQuery;
+            sql = optionsParams.readQuery;
         }
-        source.query= ModelUtils.replaceVariableTokens(sql,optionsParams.tokenMap);
+        source.query = ModelUtils.replaceVariableTokens(sql, optionsParams.tokenMap);
 
     }
 

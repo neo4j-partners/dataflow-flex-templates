@@ -21,20 +21,10 @@ public class TimeInterval {
     }
 
     /**
-     * True if the given time stamp is inside the interval.
-     *
-     * @param instant a time stamp
-     * @return true if inside the interval
-     */
-    public boolean contains(Instant instant) {
-        return (start == null || start.compareTo(instant) <= 0) && (end == null || end.compareTo(instant) >= 0);
-    }
-
-    /**
      * Returns the interval between the given timestamps.
      *
      * @param start the beginning of the interval
-     * @param end the end of the interval
+     * @param end   the end of the interval
      * @return a new interval
      */
     public static TimeInterval between(Instant start, Instant end) {
@@ -42,20 +32,10 @@ public class TimeInterval {
     }
 
     /**
-     * Returns a new interval shifted backward in time by the given duration.
-     *
-     * @param duration a time duration
-     * @return the new shifted interval
-     */
-    public TimeInterval minus(Duration duration) {
-        return between(start.minus(duration), end.minus(duration));
-    }
-
-    /**
      * Returns a time interval that lasts this duration and is centered
      * around the given instant reference.
      *
-     * @param duration the duration
+     * @param duration  the duration
      * @param reference a instant
      * @return a new time interval
      */
@@ -68,7 +48,7 @@ public class TimeInterval {
      * Returns a time interval that lasts this duration and starts from the
      * given instant.
      *
-     * @param duration the duration
+     * @param duration  the duration
      * @param reference a instant
      * @return a new time interval
      */
@@ -80,12 +60,32 @@ public class TimeInterval {
      * Returns a time interval that lasts this duration and ends at the
      * given instant.
      *
-     * @param duration the duration
+     * @param duration  the duration
      * @param reference a instant
      * @return a new time interval
      */
     public static TimeInterval before(Duration duration, Instant reference) {
         return TimeInterval.between(reference.minus(duration), reference);
+    }
+
+    /**
+     * True if the given time stamp is inside the interval.
+     *
+     * @param instant a time stamp
+     * @return true if inside the interval
+     */
+    public boolean contains(Instant instant) {
+        return (start == null || start.compareTo(instant) <= 0) && (end == null || end.compareTo(instant) >= 0);
+    }
+
+    /**
+     * Returns a new interval shifted backward in time by the given duration.
+     *
+     * @param duration a time duration
+     * @return the new shifted interval
+     */
+    public TimeInterval minus(Duration duration) {
+        return between(start.minus(duration), end.minus(duration));
     }
 
     /**
@@ -108,7 +108,7 @@ public class TimeInterval {
 
     @Override
     public String toString() {
-        return String.valueOf(start) + " - " + String.valueOf(end);
+        return start + " - " + end;
     }
 
     /* (non-Javadoc)
@@ -128,24 +128,28 @@ public class TimeInterval {
      */
     @Override
     public boolean equals(Object obj) {
-        if (this == obj)
+        if (this == obj) {
             return true;
-        if (obj == null)
+        }
+        if (obj == null) {
             return false;
-        if (!(obj instanceof TimeInterval))
+        }
+        if (!(obj instanceof TimeInterval)) {
             return false;
+        }
         TimeInterval other = (TimeInterval) obj;
         if (end == null) {
-            if (other.end != null)
+            if (other.end != null) {
                 return false;
-        } else if (!end.equals(other.end))
+            }
+        } else if (!end.equals(other.end)) {
             return false;
+        }
         if (start == null) {
-            if (other.start != null)
-                return false;
-        } else if (!start.equals(other.start))
-            return false;
-        return true;
+            return other.start == null;
+        } else {
+            return start.equals(other.start);
+        }
     }
 
 

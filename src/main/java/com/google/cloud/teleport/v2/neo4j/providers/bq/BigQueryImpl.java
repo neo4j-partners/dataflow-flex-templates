@@ -43,7 +43,7 @@ public class BigQueryImpl implements IProvider {
         return true;
     }
 
-     @Override
+    @Override
     public List<String> validateJobSpec() {
         //no specific validations currently
 
@@ -52,17 +52,17 @@ public class BigQueryImpl implements IProvider {
 
     @Override
     public PTransform<PBegin, PCollection<Row>> querySourceBeamRows(SourceQuerySpec sourceQuerySpec) {
-        return new BqQueryToRow(optionsParams,getSourceQueryBeamSpec(sourceQuerySpec));
+        return new BqQueryToRow(optionsParams, getSourceQueryBeamSpec(sourceQuerySpec));
     }
 
     @Override
     public PTransform<PBegin, PCollection<Row>> queryTargetBeamRows(TargetQuerySpec targetQuerySpec) {
-        return new BqQueryToRow(optionsParams,getTargetQueryBeamSpec(targetQuerySpec));
+        return new BqQueryToRow(optionsParams, getTargetQueryBeamSpec(targetQuerySpec));
     }
 
     @Override
     public PTransform<PBegin, PCollection<Row>> queryMetadata(Source source) {
-        return new BqQueryToRow(optionsParams,getMetadataQueryBeamSpec(source));
+        return new BqQueryToRow(optionsParams, getMetadataQueryBeamSpec(source));
     }
 
     public BqQuerySpec getMetadataQueryBeamSpec(Source source) {
@@ -85,13 +85,13 @@ public class BigQueryImpl implements IProvider {
     public BqQuerySpec getSourceQueryBeamSpec(SourceQuerySpec sourceQuerySpec) {
         return BqQuerySpec.builder()
                 .castDescription("Cast to BeamRow " + sourceQuerySpec.source.name)
-                .readDescription("Read from BQ " +  sourceQuerySpec.source.name)
-                .SQL(getBaseQuery( sourceQuerySpec.source))
+                .readDescription("Read from BQ " + sourceQuerySpec.source.name)
+                .SQL(getBaseQuery(sourceQuerySpec.source))
                 .build();
     }
 
     public BqQuerySpec getTargetQueryBeamSpec(TargetQuerySpec targetQuerySpec) {
-        Set<String> sourceFieldSet = ModelUtils.getBeamFieldSet( targetQuerySpec.sourceBeamSchema);
+        Set<String> sourceFieldSet = ModelUtils.getBeamFieldSet(targetQuerySpec.sourceBeamSchema);
         String BASE_SQL = getBaseQuery(targetQuerySpec.source);
         String TARGET_SPECIFIC_SQL = ModelUtils.getTargetSql(sourceFieldSet,
                 targetQuerySpec.target,
@@ -112,9 +112,6 @@ public class BigQueryImpl implements IProvider {
         }
         return BASE_SQL;
     }
-
-
-
 
 
 }

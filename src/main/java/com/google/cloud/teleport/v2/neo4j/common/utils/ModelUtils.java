@@ -20,16 +20,15 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class ModelUtils {
-    private static final Logger LOG = LoggerFactory.getLogger(ModelUtils.class);
-    final static Gson gson = new GsonBuilder().setPrettyPrinting().create();
     final public static String DEFAULT_STAR_QUERY = "SELECT * FROM PCOLLECTION";
+    final public static String CYPHER_DELETE_ALL = "CREATE OR REPLACE DATABASE `neo4j`";
+    final public static long MAX_ROWS = 10000000000000l;
+    final static Gson gson = new GsonBuilder().setPrettyPrinting().create();
     final static String LEGAL_CHARS_REGEX = "[^a-zA-Z0-9_]";
     final static String LEGAL_CHARS_REGEX_SPACE = "[^a-zA-Z0-9_ ]";
     final static String ALPHA_CHARS_REGEX = "[^a-zA-Z]";
-    final public static String CYPHER_DELETE_ALL = "CREATE OR REPLACE DATABASE `neo4j`";
-    final public static long MAX_ROWS = 10000000000000l;
     final static Pattern variablePattern = Pattern.compile("(\\$([a-zA-Z0-9_]+))");
-
+    private static final Logger LOG = LoggerFactory.getLogger(ModelUtils.class);
 
     public static Target generateDefaultTarget(Source source) throws RuntimeException {
         if (source.sourceType == SourceType.text) {
@@ -45,18 +44,22 @@ public class ModelUtils {
     }
 
     public static String getRelationshipKeyField(Target target, FragmentType fragmentType) {
-        return getFirstField(target, fragmentType, List.of(RoleType.key));
+        return getFirstField(target, fragmentType, Arrays.asList(RoleType.key));
     }
 
     public static String getFirstField(Target target, FragmentType fragmentType, List<RoleType> roleTypes) {
         List<String> fields = getFields(fragmentType, roleTypes, target);
-        if (fields.size() > 0) return fields.get(0);
+        if (fields.size() > 0) {
+            return fields.get(0);
+        }
         return "";
     }
 
     public static String getFirstFieldOrConstant(Target target, FragmentType fragmentType, List<RoleType> roleTypes) {
         List<String> fieldsOrConstants = getFieldOrConstants(fragmentType, roleTypes, target);
-        if (fieldsOrConstants.size() > 0) return fieldsOrConstants.get(0);
+        if (fieldsOrConstants.size() > 0) {
+            return fieldsOrConstants.get(0);
+        }
         return "";
     }
 
@@ -211,14 +214,15 @@ public class ModelUtils {
         }
     }
 
-    public static boolean messagesContains(List<String> messages, String text){
-        for (String msg:messages){
-            if (msg.toUpperCase().contains(text.toUpperCase())){
+    public static boolean messagesContains(List<String> messages, String text) {
+        for (String msg : messages) {
+            if (msg.toUpperCase().contains(text.toUpperCase())) {
                 return true;
             }
         }
         return false;
     }
+
     public static String makeValidNeo4jIdentifier(String proposedIdString) {
         String finalIdString = proposedIdString.replaceAll(LEGAL_CHARS_REGEX, "_").trim();
         if (finalIdString.substring(0, 1).matches(ALPHA_CHARS_REGEX)) {
@@ -259,7 +263,7 @@ public class ModelUtils {
         List<String> labels = new ArrayList<>();
         for (Mapping m : target.mappings) {
             if (m.fragmentType == entityType) {
-                if (m.labels.size()>0) {
+                if (m.labels.size() > 0) {
                     labels.addAll(m.labels);
                 } else if (m.role == RoleType.label) {
                     if (StringUtils.isNotEmpty(m.constant)) {
@@ -279,7 +283,7 @@ public class ModelUtils {
         List<String> labels = new ArrayList<>();
         for (Mapping m : target.mappings) {
             if (m.fragmentType == entityType) {
-                if (m.labels.size()>0) {
+                if (m.labels.size() > 0) {
                     labels.addAll(m.labels);
                 } else if (m.role == RoleType.label) {
                     if (StringUtils.isNotEmpty(m.constant)) {
@@ -326,19 +330,21 @@ public class ModelUtils {
         //populate the replacements map ...
         StringBuilder builder = new StringBuilder();
         int i = 0;
-        LOG.info("Replacing variable tokens: "+text);
+        LOG.info("Replacing variable tokens: " + text);
         while (matcher.find()) {
             String replacement = replacements.get(matcher.group(1));
-            builder.append(text.substring(i, matcher.start()));
-            if (replacement == null)
+            builder.append(text, i, matcher.start());
+            if (replacement == null) {
                 builder.append(matcher.group(0));
-            else
+            }
+            else {
                 builder.append(replacement);
+            }
             i = matcher.end();
         }
-        builder.append(text.substring(i, text.length()));
-        String repacedText= builder.toString();
-        LOG.info("Before: "+text+", after: "+repacedText);
+        builder.append(text.substring(i));
+        String repacedText = builder.toString();
+        LOG.info("Before: " + text + ", after: " + repacedText);
         return repacedText;
     }
 
@@ -391,6 +397,9 @@ public class ModelUtils {
             }
         }
         return nodeKeyProperties;
+    }
+
+    private ModelUtils() {
     }
 
 }

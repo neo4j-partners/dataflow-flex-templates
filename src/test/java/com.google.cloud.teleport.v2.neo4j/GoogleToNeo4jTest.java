@@ -46,19 +46,20 @@ public class GoogleToNeo4jTest {
     final static Gson gson = new GsonBuilder().setPrettyPrinting().create();
 
     public transient TestPipeline pipeline = TestPipeline.create();
-    private transient PCollection<Row> textRows=null;
-    private static IProvider providerImpl=null;
-    private static ConnectionParams neo4jConnection=null;
-    private static JobSpecRequest jobSpec=null;
-    private static OptionsParams optionsParams=null;
+    private transient PCollection<Row> textRows;
+    private static IProvider providerImpl;
+    private static ConnectionParams neo4jConnection;
+    private static JobSpecRequest jobSpec;
+    private static OptionsParams optionsParams;
 
     private static final Logger LOG = LoggerFactory.getLogger(GoogleToNeo4jTest.class);
+
     //Exception examples:
     // https://github.com/GoogleCloudPlatform/DataflowTemplates/blob/main/v2/pubsub-binary-to-bigquery/src/test/java/com/google/cloud/teleport/v2/templates/PubsubProtoToBigQueryTest.java
 
     @Before
     public void setUp() throws InterruptedException, IOException {
-        if (jobSpec==null) {
+        if (jobSpec == null) {
             LOG.info("Initializing...");
             neo4jConnection = new ConnectionParams("gs://neo4j-dataflow/job-specs/testing/common/auradb-free-connection.json");
             jobSpec = new JobSpecRequest("gs://neo4j-dataflow/job-specs/testing/new/text-northwind-jobspec.json");
@@ -70,30 +71,31 @@ public class GoogleToNeo4jTest {
     }
 
     @Test
-    public void testValidateSourceType(){
-        Assert.assertTrue(providerImpl.getClass()== TextImpl.class);
+    public void testValidateSourceType() {
+        Assert.assertTrue(providerImpl.getClass() == TextImpl.class);
     }
+
     @Test
-    public void testValidJobSpec(){
+    public void testValidJobSpec() {
         List<String> sourceValidationMessages = providerImpl.validateJobSpec();
-        Assert.assertTrue(sourceValidationMessages.size()==0);
+        Assert.assertTrue(sourceValidationMessages.size() == 0);
     }
 
     @Test
-    public void testResolvedVariable(){
-        Assert.assertTrue(optionsParams.tokenMap.get("limit").equals("7"));
+    public void testResolvedVariable() {
+        Assert.assertTrue("7".equals(optionsParams.tokenMap.get("limit")));
     }
 
     @Test
-    public void testGetInvalidOrderQuery(){
-        Source source=this.jobSpec.getSourceList().get(0);
-        source.query="SELECT * FROM FOO ORDER BY X";
-        List<String> messages=InputValidator.validateJobSpec(this.jobSpec);
-        Assert.assertTrue(ModelUtils.messagesContains(messages,"SQL contains ORDER BY which is not supported"));
+    public void testGetInvalidOrderQuery() {
+        Source source = this.jobSpec.getSourceList().get(0);
+        source.query = "SELECT * FROM FOO ORDER BY X";
+        List<String> messages = InputValidator.validateJobSpec(this.jobSpec);
+        Assert.assertTrue(ModelUtils.messagesContains(messages, "SQL contains ORDER BY which is not supported"));
     }
 
     @Test
-    public void testCastDateTransform(){
+    public void testCastDateTransform() {
 
         Assert.assertTrue(true);
     }

@@ -1,8 +1,7 @@
 package com.google.cloud.teleport.v2.neo4j.common.model;
 
 import com.google.cloud.teleport.v2.neo4j.common.model.enums.TargetType;
-import com.google.cloud.teleport.v2.neo4j.common.utils.GsUtils;
-import net.minidev.json.annotate.JsonIgnore;
+import com.google.cloud.teleport.v2.neo4j.common.utils.FileSystemUtils;
 import org.apache.beam.repackaged.core.org.apache.commons.lang3.StringUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -16,18 +15,17 @@ public class JobSpecRequest implements Serializable {
 
     private static final Logger LOG = LoggerFactory.getLogger(JobSpecRequest.class);
 
-    @JsonIgnore
-    private static String DEFAULT_SOURCE_NAME="";
+    private final static String DEFAULT_SOURCE_NAME = "";
     //initialize defaults;
-    public Map<String,Source> sources=new HashMap<>();
+    public Map<String, Source> sources = new HashMap<>();
     public List<Target> targets = new ArrayList<>();
-    public Config config =new Config();
-    public Map<String,String> options= new HashMap<>();
+    public Config config = new Config();
+    public Map<String, String> options = new HashMap<>();
 
     public JobSpecRequest(final String jobSpecUri) {
         String jobSpecJsonStr = "{}";
         try {
-            jobSpecJsonStr = GsUtils.getPathContents(jobSpecUri);
+            jobSpecJsonStr = FileSystemUtils.getPathContents(jobSpecUri);
         } catch (final Exception e) {
             LOG.error(
                     "Unable to read {} neo4j job specification: ", jobSpecUri, e);
@@ -52,7 +50,7 @@ public class JobSpecRequest implements Serializable {
 
                 JSONArray sourceArray = jobSpecObj.getJSONArray("sources");
                 for (int i = 0; i < sourceArray.length(); i++) {
-                    final Source source = new Source( sourceArray.getJSONObject(i));
+                    final Source source = new Source(sourceArray.getJSONObject(i));
                     if (StringUtils.isNotEmpty(source.name)) {
                         sources.put(source.name, source);
                     } else {
@@ -68,7 +66,7 @@ public class JobSpecRequest implements Serializable {
             if (jobSpecObj.has("targets")) {
                 final JSONArray targetObjArray = jobSpecObj.getJSONArray("targets");
                 for (int i = 0; i < targetObjArray.length(); i++) {
-                    final Target targets = new Target( targetObjArray.getJSONObject(i));
+                    final Target targets = new Target(targetObjArray.getJSONObject(i));
                     this.targets.add(targets);
                 }
             }
@@ -78,9 +76,9 @@ public class JobSpecRequest implements Serializable {
                 for (int i = 0; i < optionsArray.length(); i++) {
                     JSONObject jsonObject = optionsArray.getJSONObject(i);
                     Iterator<String> keys = jsonObject.keys();
-                    while (keys.hasNext()){
-                        String key=keys.next();
-                        options.put(key,jsonObject.getString(key));
+                    while (keys.hasNext()) {
+                        String key = keys.next();
+                        options.put(key, jsonObject.getString(key));
                     }
                 }
             }
@@ -92,8 +90,8 @@ public class JobSpecRequest implements Serializable {
         }
     }
 
-    public List<Target> getActiveTargetsBySource(String sourceName){
-        List<Target> targets=new ArrayList<>();
+    public List<Target> getActiveTargetsBySource(String sourceName) {
+        List<Target> targets = new ArrayList<>();
         for (Target target : this.targets) {
             if (target.active && target.source.equals(sourceName)) {
                 targets.add(target);
@@ -102,45 +100,47 @@ public class JobSpecRequest implements Serializable {
         return targets;
     }
 
-    public List<Target> getActiveNodeTargetsBySource(String sourceName){
-        List<Target> targets=new ArrayList<>();
+    public List<Target> getActiveNodeTargetsBySource(String sourceName) {
+        List<Target> targets = new ArrayList<>();
         for (Target target : this.targets) {
-            if (target.active && target.type==TargetType.node && target.source.equals(sourceName)) {
+            if (target.active && target.type == TargetType.node && target.source.equals(sourceName)) {
                 targets.add(target);
             }
         }
         return targets;
     }
 
-        public List<Target> getActiveRelationshipTargetsBySource(String sourceName){
-            List<Target> targets=new ArrayList<>();
-            for (Target target : this.targets) {
-                if (target.active && target.type==TargetType.edge && target.source.equals(sourceName)) {
-                    targets.add(target);
-                }
+    public List<Target> getActiveRelationshipTargetsBySource(String sourceName) {
+        List<Target> targets = new ArrayList<>();
+        for (Target target : this.targets) {
+            if (target.active && target.type == TargetType.edge && target.source.equals(sourceName)) {
+                targets.add(target);
             }
-            return targets;
         }
+        return targets;
+    }
 
-        public Source getSourceByName(String name){
-            return
-            sources.get(name);
-        }
-        public Source getDefaultSource(){
-            return sources.get(DEFAULT_SOURCE_NAME);
-        }
+    public Source getSourceByName(String name) {
+        return
+                sources.get(name);
+    }
 
-    public List<Source> getSourceList(){
-        ArrayList<Source> sourceList=new ArrayList<>();
-        Iterator<String> sourceKeySet=sources.keySet().iterator();
-        while(sourceKeySet.hasNext()){
+    public Source getDefaultSource() {
+        return sources.get(DEFAULT_SOURCE_NAME);
+    }
+
+    public List<Source> getSourceList() {
+        ArrayList<Source> sourceList = new ArrayList<>();
+        Iterator<String> sourceKeySet = sources.keySet().iterator();
+        while (sourceKeySet.hasNext()) {
             sourceList.add(sources.get(sourceKeySet.next()));
         }
         return sourceList;
     }
-    public List<String> getAllFieldNames(){
-        ArrayList<String> fieldNameList=new ArrayList<>();
-        for (Target target:targets){
+
+    public List<String> getAllFieldNames() {
+        ArrayList<String> fieldNameList = new ArrayList<>();
+        for (Target target : targets) {
             fieldNameList.addAll(target.fieldNames);
         }
         return fieldNameList;

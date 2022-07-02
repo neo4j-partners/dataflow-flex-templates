@@ -1,6 +1,6 @@
 package com.google.cloud.teleport.v2.neo4j.common.model;
 
-import com.google.cloud.teleport.v2.neo4j.common.utils.GsUtils;
+import com.google.cloud.teleport.v2.neo4j.common.utils.FileSystemUtils;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,7 +13,7 @@ public class ConnectionParams implements Serializable {
 
     public String
             serverUrl,
-    database,
+            database,
             authType,
             username,
             password;
@@ -22,7 +22,7 @@ public class ConnectionParams implements Serializable {
 
         String neoConnectionJsonStr = "{}";
         try {
-            neoConnectionJsonStr = GsUtils.getPathContents(neoConnectionUri);
+            neoConnectionJsonStr = FileSystemUtils.getPathContents(neoConnectionUri);
         } catch (final Exception e) {
             LOG.error("Unable to read {} neo4j configuration: ", neoConnectionUri, e);
         }
@@ -35,7 +35,7 @@ public class ConnectionParams implements Serializable {
             } else {
                 authType = "basic";
             }
-            database = neoConnectionJson.has("database")?neoConnectionJson.getString("database"):"neo4j";
+            database = neoConnectionJson.has("database") ? neoConnectionJson.getString("database") : "neo4j";
             username = neoConnectionJson.getString("username");
             password = neoConnectionJson.getString("pwd");
 
@@ -46,4 +46,3 @@ public class ConnectionParams implements Serializable {
 
     }
 }
-

@@ -19,14 +19,15 @@ import java.util.List;
 public class TextImpl implements IProvider {
 
     private static final Logger LOG = LoggerFactory.getLogger(TextImpl.class);
-
-    public TextImpl(){}
-    private JobSpecRequest jobSpec;
     private OptionsParams optionsParams;
+
+    public TextImpl() {
+    }
+
     @Override
     public void configure(OptionsParams optionsParams, JobSpecRequest jobSpecRequest) {
-        this.optionsParams=optionsParams;
-        this.jobSpec=jobSpecRequest;
+        this.optionsParams = optionsParams;
+        this.jobSpec = jobSpecRequest;
     }
 
     @Override
@@ -43,20 +44,18 @@ public class TextImpl implements IProvider {
 
     @Override
     public PTransform<PBegin, PCollection<Row>> querySourceBeamRows(SourceQuerySpec sourceQuerySpec) {
-        return new TextSourceFileToRow(optionsParams,sourceQuerySpec);
+        return new TextSourceFileToRow(optionsParams, sourceQuerySpec);
     }
 
     @Override
     public PTransform<PBegin, PCollection<Row>> queryTargetBeamRows(TargetQuerySpec targetQuerySpec) {
-        return new TextTargetToRow(optionsParams,targetQuerySpec);
+        return new TextTargetToRow(optionsParams, targetQuerySpec);
     }
 
     @Override
     public PTransform<PBegin, PCollection<Row>> queryMetadata(Source source) {
-        return new TextSourceFileMetadataToRow(optionsParams,source);
+        return new TextSourceFileMetadataToRow(optionsParams, source);
     }
-
-
 
 
 }

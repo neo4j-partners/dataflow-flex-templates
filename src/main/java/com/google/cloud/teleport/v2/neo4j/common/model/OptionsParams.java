@@ -14,32 +14,34 @@ public class OptionsParams implements Serializable {
 
     private static final Logger LOG = LoggerFactory.getLogger(OptionsParams.class);
 
-    public String readQuery="";
-    public String inputFilePattern="";
-    public HashMap<String,String> tokenMap=new HashMap<>();
+    public String readQuery = "";
+    public String inputFilePattern = "";
+    public HashMap<String, String> tokenMap = new HashMap<>();
 
     //for testing
-    public OptionsParams(){}
+    public OptionsParams() {
+    }
+
     public OptionsParams(Neo4jFlexTemplateOptions pipelineOptions) {
 
         try {
 
-            if (StringUtils.isNotEmpty(pipelineOptions.getReadQuery())){
+            if (StringUtils.isNotEmpty(pipelineOptions.getReadQuery())) {
                 readQuery = pipelineOptions.getReadQuery();
             }
-            if (StringUtils.isNotEmpty(pipelineOptions.getInputFilePattern())){
+            if (StringUtils.isNotEmpty(pipelineOptions.getInputFilePattern())) {
                 inputFilePattern = pipelineOptions.getInputFilePattern();
             }
             overlayTokens(pipelineOptions.getOptionsJson());
 
         } catch (final Exception e) {
-            LOG.error("Error parsing pipeline options: "+e.getMessage(),e);
             throw new RuntimeException(e);
         }
 
     }
 
-    public void overlayTokens(String optionsJsonStr){
+
+    public void overlayTokens(String optionsJsonStr) {
         if (!StringUtils.isEmpty(optionsJsonStr)) {
             LOG.info("Pipeline options: " + optionsJsonStr);
             final JSONObject optionsJson = new JSONObject(optionsJsonStr);
@@ -47,9 +49,9 @@ public class OptionsParams implements Serializable {
             while (optionsKeys.hasNext()) {
                 String optionsKey = optionsKeys.next();
                 tokenMap.put(optionsKey, optionsJson.opt(optionsKey) + "");
-                if (optionsKey.equals("readQuery")) {
+                if ("readQuery".equals(optionsKey)) {
                     readQuery = optionsJson.getString("readQuery");
-                } else if (optionsKey.equals("inputFilePattern")) {
+                } else if ("inputFilePattern".equals(optionsKey)) {
                     inputFilePattern = optionsJson.getString("inputFilePattern");
                 }
                 LOG.info(optionsKey + ": " + optionsJson.opt(optionsKey));
@@ -57,4 +59,3 @@ public class OptionsParams implements Serializable {
         }
     }
 }
-

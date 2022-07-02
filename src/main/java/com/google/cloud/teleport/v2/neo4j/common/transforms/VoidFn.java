@@ -8,6 +8,7 @@ public class VoidFn extends DoFn<Row, Void> {
     @ProcessElement
     public void processElement(ProcessContext context) {
     }
+
     @FinishBundle
     public void finishBundle(FinishBundleContext context) {
         //context.output(VoidCoder.of(), BoundedWindow.TIMESTAMP_MIN_VALUE, GlobalWindow.INSTANCE);

@@ -3,7 +3,6 @@ package com.google.cloud.teleport.v2.neo4j.common.model;
 import com.google.cloud.teleport.v2.neo4j.common.model.enums.SourceType;
 import com.google.cloud.teleport.v2.neo4j.common.utils.BeamUtils;
 import com.google.cloud.teleport.v2.neo4j.common.utils.TextParserUtils;
-import net.minidev.json.annotate.JsonIgnore;
 import org.apache.beam.repackaged.core.org.apache.commons.lang3.StringUtils;
 import org.apache.beam.sdk.schemas.Schema;
 import org.apache.commons.csv.CSVFormat;
@@ -22,15 +21,15 @@ import java.util.regex.Pattern;
 public class Source implements Serializable {
     private static final Logger LOG = LoggerFactory.getLogger(Source.class);
 
-    @JsonIgnore
-    Pattern NEWLINE_PATTERN = Pattern.compile("\\R");
+
+    static Pattern NEWLINE_PATTERN = Pattern.compile("\\R");
 
     public SourceType sourceType = SourceType.text;
     public String name = "";
     public String uri = "";
-    public String delimiter = "";
+    public String delimiter = ",";
     //row separator
-    public String separator = null;
+    public String separator;
 
     public String query = "";
     public CSVFormat csvFormat = CSVFormat.DEFAULT;
@@ -45,23 +44,23 @@ public class Source implements Serializable {
 
         boolean isJson = false;
         String formatStr = sourceObj.has("format") ? sourceObj.getString("format").toUpperCase() : "DEFAULT";
-        if (formatStr.equals("EXCEL")) {
+        if ("EXCEL".equals(formatStr)) {
             csvFormat = CSVFormat.EXCEL;
-        } else if (formatStr.equals("MONGO")) {
+        } else if ("MONGO".equals(formatStr)) {
             csvFormat = CSVFormat.MONGODB_CSV;
-        } else if (formatStr.equals("INFORMIX")) {
+        } else if ("INFORMIX".equals(formatStr)) {
             csvFormat = CSVFormat.INFORMIX_UNLOAD_CSV;
-        } else if (formatStr.equals("POSTGRES")) {
+        } else if ("POSTGRES".equals(formatStr)) {
             csvFormat = CSVFormat.POSTGRESQL_CSV;
-        } else if (formatStr.equals("MYSQL")) {
+        } else if ("MYSQL".equals(formatStr)) {
             csvFormat = CSVFormat.MYSQL;
-        } else if (formatStr.equals("ORACLE")) {
+        } else if ("ORACLE".equals(formatStr)) {
             csvFormat = CSVFormat.ORACLE;
-        } else if (formatStr.equals("MONGO_TSV")) {
+        } else if ("MONGO_TSV".equals(formatStr)) {
             csvFormat = CSVFormat.MONGODB_TSV;
-        } else if (formatStr.equals("RFC4180")) {
+        } else if ("RFC4180".equals(formatStr)) {
             csvFormat = CSVFormat.RFC4180;
-        } else if (formatStr.equals("POSTGRESQL_CSV")) {
+        } else if ("POSTGRESQL_CSV".equals(formatStr)) {
             csvFormat = CSVFormat.POSTGRESQL_CSV;
         } else {
             csvFormat = CSVFormat.DEFAULT;
@@ -76,7 +75,7 @@ public class Source implements Serializable {
                 if (csvFormat == CSVFormat.DEFAULT) {
                     this.inline = jsonToListOfListsArray(sourceObj.getJSONArray("data"));
                 } else {
-                    String[] rows = jsonToListOfStringArray(sourceObj.getJSONArray("data"), csvFormat.getDelimiterString());
+                    String[] rows = jsonToListOfStringArray(sourceObj.getJSONArray("data"), delimiter);
                     this.inline = TextParserUtils.parseDelimitedLines(csvFormat, rows);
                 }
 
@@ -111,13 +110,10 @@ public class Source implements Serializable {
         }
     }
 
-    public Schema getTextFileSchema() {
-        return BeamUtils.textToBeamSchema(fieldNames);
-    }
-
     public static List<List<Object>> jsonToListOfListsArray(JSONArray lines) {
-        if (lines == null)
+        if (lines == null) {
             return new ArrayList<>();
+        }
 
         List<List<Object>> rows = new ArrayList<>();
         for (int i = 0; i < lines.length(); i++) {
@@ -132,21 +128,27 @@ public class Source implements Serializable {
     }
 
     public static String[] jsonToListOfStringArray(JSONArray lines, String delimiter) {
-        if (lines == null)
+        if (lines == null) {
             return new String[0];
+        }
 
         String[] rows = new String[lines.length()];
-        ;
         for (int i = 0; i < lines.length(); i++) {
             JSONArray rowArr = lines.getJSONArray(i);
             StringBuffer sb = new StringBuffer();
             for (int j = 0; j < rowArr.length(); j++) {
-                if (j > 0) sb.append(delimiter);
+                if (j > 0) {
+                    sb.append(delimiter);
+                }
                 sb.append(rowArr.optString(j));
             }
             rows[i] = sb.toString();
         }
         return rows;
+    }
+
+    public Schema getTextFileSchema() {
+        return BeamUtils.textToBeamSchema(fieldNames);
     }
 
 }

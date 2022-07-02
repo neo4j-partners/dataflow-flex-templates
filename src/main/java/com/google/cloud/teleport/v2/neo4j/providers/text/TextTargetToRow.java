@@ -19,14 +19,14 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Set;
 
-public class TextTargetToRow extends PTransform<PBegin, PCollection<Row>>{
+public class TextTargetToRow extends PTransform<PBegin, PCollection<Row>> {
     private static final Logger LOG = LoggerFactory.getLogger(TextTargetToRow.class);
     TargetQuerySpec targetQuerySpec;
     OptionsParams optionsParams;
 
-    public TextTargetToRow(OptionsParams optionsParams, TargetQuerySpec targetQuerySpec){
-       this.optionsParams=optionsParams;
-        this.targetQuerySpec =targetQuerySpec;
+    public TextTargetToRow(OptionsParams optionsParams, TargetQuerySpec targetQuerySpec) {
+        this.optionsParams = optionsParams;
+        this.targetQuerySpec = targetQuerySpec;
     }
 
     @Override
@@ -36,29 +36,30 @@ public class TextTargetToRow extends PTransform<PBegin, PCollection<Row>>{
         Schema sourceSchema = targetQuerySpec.nullableSourceRows.getSchema();
         final Set<String> sourceFieldSet = ModelUtils.getBeamFieldSet(sourceSchema);
 
-        Target target=targetQuerySpec.target;
+        Target target = targetQuerySpec.target;
         final Schema targetSchema = BeamUtils.toBeamSchema(target);
-        final DoFn<Row, Row> castToTargetRow = new CastExpandTargetRowFn(target,targetSchema);
+        final DoFn<Row, Row> castToTargetRow = new CastExpandTargetRowFn(target, targetSchema);
 
         // conditionally apply sql to rows..
         if (ModelUtils.targetHasTransforms(target)) {
             String SQL = getRewritten(ModelUtils.getTargetSql(sourceFieldSet, target, false));
-            LOG.info("Target schema: {}",targetSchema);
+            LOG.info("Target schema: {}", targetSchema);
             LOG.info("Executing SQL on PCOLLECTION: " + SQL);
             PCollection<Row> sqlDataRow = sourceBeamRows
                     .apply(target.sequence + ": SQLTransform " + target.name, SqlTransform.query(SQL));
-            LOG.info("Sql final schema: {}",sqlDataRow.getSchema());
+            LOG.info("Sql final schema: {}", sqlDataRow.getSchema());
             return sqlDataRow.apply(target.sequence + ": Cast " + target.name + " rows", ParDo.of(castToTargetRow))
                     .setRowSchema(targetSchema);
         } else {
-            LOG.info("Target schema: {}",targetSchema);
+            LOG.info("Target schema: {}", targetSchema);
             return sourceBeamRows
                     .apply(target.sequence + ": Cast " + target.name + " rows", ParDo.of(castToTargetRow))
                     .setRowSchema(targetSchema);
         }
     }
+
     private String getRewritten(String sql) {
-        return ModelUtils.replaceVariableTokens(sql,optionsParams.tokenMap);
+        return ModelUtils.replaceVariableTokens(sql, optionsParams.tokenMap);
     }
 
 

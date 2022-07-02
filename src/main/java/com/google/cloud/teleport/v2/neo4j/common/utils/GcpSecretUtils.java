@@ -13,7 +13,7 @@ public class GcpSecretUtils {
 
             return response.getPayload().getData().toStringUtf8();
         } catch (IOException e) {
-            throw new RuntimeException("Unable to read secret: "+secretName);
+            throw new RuntimeException("Unable to read secret: " + secretName);
         }
     }
 

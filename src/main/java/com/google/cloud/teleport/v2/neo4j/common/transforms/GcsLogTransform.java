@@ -35,8 +35,8 @@ public class GcsLogTransform extends PTransform<PCollection<Row>, POutput> {
     public POutput expand(PCollection<Row> input) {
 
         String auditFilePath = jobSpec.config.auditGsUri;
-        if (!StringUtils.endsWith(auditFilePath,"/")){
-            auditFilePath+="/";
+        if (!StringUtils.endsWith(auditFilePath, "/")) {
+            auditFilePath += "/";
         }
         //audit
         org.apache.avro.Schema targetAvroSchema = AvroUtils.toAvroSchema(input.getSchema());
@@ -50,9 +50,9 @@ public class GcsLogTransform extends PTransform<PCollection<Row>, POutput> {
             throw new UnsupportedOperationException(
                     "Output format is not implemented: " + jobSpec.config.avroType);
         }
-        LOG.info("Logging to "+auditFilePath+" with prefix: "+input.getPipeline().getOptions().getJobName());
+        LOG.info("Logging to " + auditFilePath + " with prefix: " + input.getPipeline().getOptions().getJobName());
         PCollection<GenericRecord> genericInput = input.apply(target.sequence + ": Log xform " + target.name,
-                        Convert.to(GenericRecord.class));
+                Convert.to(GenericRecord.class));
         return genericInput.apply(target.sequence + ": Log write " + target.name,
                 FileIO.<GenericRecord>write()
                         .via(sink)

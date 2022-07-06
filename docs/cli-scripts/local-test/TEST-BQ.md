@@ -12,7 +12,7 @@ Run the Apache Beam pipeline locally for development.
 * Set environment variables that will be used in the build process.
  * Set environment variables that will be used in the build process.
  ```sh
- export JAVA_HOME=`/usr/libexec/java_home -v 11`
+ export JAVA_HOME=`/usr/libexec/java_home -v 8`
  export PROJECT=neo4jbusinessdev
  export GS_WORKING_DIR=gs://neo4j-sandbox/dataflow-working
  export APP_NAME=gcpToNeo4j

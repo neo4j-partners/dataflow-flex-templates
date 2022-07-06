@@ -6,15 +6,14 @@ import com.google.cloud.teleport.v2.neo4j.common.model.job.JobSpecRequest;
 import com.google.cloud.teleport.v2.neo4j.common.model.job.OptionsParams;
 import com.google.cloud.teleport.v2.neo4j.common.model.job.Source;
 import com.google.cloud.teleport.v2.neo4j.providers.IProvider;
+import java.util.ArrayList;
+import java.util.List;
 import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.values.PBegin;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.Row;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.ArrayList;
-import java.util.List;
 /**
  * Provider implementation for reading and writing Text files.
  */

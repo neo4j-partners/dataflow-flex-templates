@@ -8,14 +8,13 @@ import com.google.cloud.teleport.v2.neo4j.common.model.job.Config;
 import com.google.cloud.teleport.v2.neo4j.common.model.job.Mapping;
 import com.google.cloud.teleport.v2.neo4j.common.model.job.Target;
 import com.google.cloud.teleport.v2.neo4j.common.utils.ModelUtils;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import org.apache.beam.repackaged.core.org.apache.commons.lang3.RandomStringUtils;
 import org.apache.beam.repackaged.core.org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 
 /**
  * Generates cypher based on model metadata.

@@ -8,6 +8,8 @@ import com.google.cloud.teleport.v2.neo4j.common.model.job.Config;
 import com.google.cloud.teleport.v2.neo4j.common.model.job.JobSpecRequest;
 import com.google.cloud.teleport.v2.neo4j.common.model.job.Target;
 import com.google.cloud.teleport.v2.neo4j.common.utils.DataCastingUtils;
+import java.util.List;
+import java.util.Map;
 import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.transforms.SerializableFunction;
@@ -15,9 +17,6 @@ import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.Row;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.List;
-import java.util.Map;
 
 /**
  * Neo4j write transformation.

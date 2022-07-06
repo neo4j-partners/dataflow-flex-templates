@@ -20,15 +20,14 @@ package com.google.cloud.teleport.v2.neo4j.common.database;
 
 import com.google.cloud.teleport.v2.neo4j.common.model.connection.ConnectionParams;
 import com.google.cloud.teleport.v2.neo4j.common.model.enums.AuthType;
-import org.apache.beam.repackaged.core.org.apache.commons.lang3.StringUtils;
-import org.neo4j.driver.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.Serializable;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Arrays;
+import org.apache.beam.repackaged.core.org.apache.commons.lang3.StringUtils;
+import org.neo4j.driver.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Neo4j connection helper object wraps Neo4j java APIs.

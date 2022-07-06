@@ -2,14 +2,13 @@ package com.google.cloud.teleport.v2.neo4j.common.model.job;
 
 import com.google.cloud.teleport.v2.neo4j.common.model.enums.TargetType;
 import com.google.cloud.teleport.v2.neo4j.common.utils.FileSystemUtils;
+import java.io.Serializable;
+import java.util.*;
 import org.apache.beam.repackaged.core.org.apache.commons.lang3.StringUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.Serializable;
-import java.util.*;
 
 /**
  * Job specification request object.

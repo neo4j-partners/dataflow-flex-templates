@@ -2,14 +2,13 @@ package com.google.cloud.teleport.v2.neo4j.common.model.job;
 
 import com.google.cloud.teleport.v2.neo4j.Neo4jFlexTemplateOptions;
 import com.google.cloud.teleport.v2.neo4j.common.model.enums.OptionKey;
+import java.io.Serializable;
+import java.util.HashMap;
+import java.util.Iterator;
 import org.apache.beam.repackaged.core.org.apache.commons.lang3.StringUtils;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.Serializable;
-import java.util.HashMap;
-import java.util.Iterator;
 
 /**
  * Runtime options object that coalesces well-known (readQuery, inputFilePattern) and arbitrary options.

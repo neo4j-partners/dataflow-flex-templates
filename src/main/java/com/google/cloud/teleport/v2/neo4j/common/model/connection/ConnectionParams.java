@@ -1,11 +1,10 @@
 package com.google.cloud.teleport.v2.neo4j.common.model.connection;
 
 import com.google.cloud.teleport.v2.neo4j.common.utils.FileSystemUtils;
+import java.io.Serializable;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.Serializable;
 
 /**
  * Helper object for connection params.

@@ -7,11 +7,10 @@ import com.google.cloud.teleport.v2.neo4j.common.model.job.Target;
 import com.google.cloud.teleport.v2.neo4j.common.utils.ModelUtils;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import java.util.Collections;
 import org.apache.beam.repackaged.core.org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.Collections;
 
 /**
  * Synthesizes and optimizes missing elements to model from inputs.

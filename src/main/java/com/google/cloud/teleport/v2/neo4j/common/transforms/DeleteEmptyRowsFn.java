@@ -1,9 +1,8 @@
 package com.google.cloud.teleport.v2.neo4j.common.transforms;
 
+import java.util.List;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.values.Row;
-
-import java.util.List;
 
 /**
  * Delete empty rows transformation.

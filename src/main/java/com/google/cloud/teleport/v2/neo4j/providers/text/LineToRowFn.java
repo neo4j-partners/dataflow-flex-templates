@@ -3,14 +3,13 @@ package com.google.cloud.teleport.v2.neo4j.providers.text;
 import com.google.cloud.teleport.v2.neo4j.common.model.enums.SourceType;
 import com.google.cloud.teleport.v2.neo4j.common.model.job.Source;
 import com.google.cloud.teleport.v2.neo4j.common.utils.TextParserUtils;
+import java.util.List;
 import org.apache.beam.sdk.schemas.Schema;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.values.Row;
 import org.apache.commons.csv.CSVFormat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.List;
 
 /**
  * Leverages CSV parser to turn delimited lines to PCollection rows.

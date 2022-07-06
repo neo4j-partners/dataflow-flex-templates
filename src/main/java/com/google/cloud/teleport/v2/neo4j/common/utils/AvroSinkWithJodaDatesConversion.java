@@ -1,5 +1,7 @@
 package com.google.cloud.teleport.v2.neo4j.common.utils;
 
+import java.io.IOException;
+import java.nio.channels.WritableByteChannel;
 import org.apache.avro.Conversion;
 import org.apache.avro.LogicalType;
 import org.apache.avro.LogicalTypes;
@@ -13,9 +15,6 @@ import org.apache.beam.sdk.io.AvroIO;
 import org.apache.beam.sdk.io.AvroIO.Sink;
 import org.apache.beam.sdk.io.FileIO;
 import org.joda.time.ReadableInstant;
-
-import java.io.IOException;
-import java.nio.channels.WritableByteChannel;
 
 /**
  * This sink sets the Avro logical type conversion {@link JodaDateTimeOrLongConversion} for the

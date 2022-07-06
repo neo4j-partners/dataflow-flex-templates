@@ -10,14 +10,13 @@ import com.google.cloud.teleport.v2.neo4j.common.model.enums.TargetType;
 import com.google.cloud.teleport.v2.neo4j.common.model.job.*;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.apache.beam.repackaged.core.org.apache.commons.lang3.StringUtils;
 import org.apache.beam.sdk.schemas.Schema;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
  * Utility functions for Beam rows and schema.

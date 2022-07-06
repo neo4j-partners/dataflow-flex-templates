@@ -1,6 +1,7 @@
 package com.google.cloud.teleport.v2.neo4j.common.transforms;
 
 import com.google.common.base.MoreObjects;
+import java.util.concurrent.ThreadLocalRandom;
 import org.apache.beam.sdk.coders.BigEndianIntegerCoder;
 import org.apache.beam.sdk.coders.KvCoder;
 import org.apache.beam.sdk.transforms.DoFn;
@@ -11,8 +12,6 @@ import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.Row;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Create KvTransform to control Beam parallelism.

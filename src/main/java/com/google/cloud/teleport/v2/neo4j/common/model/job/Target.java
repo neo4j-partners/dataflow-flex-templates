@@ -6,16 +6,15 @@ import com.google.cloud.teleport.v2.neo4j.common.model.enums.SaveMode;
 import com.google.cloud.teleport.v2.neo4j.common.model.enums.TargetType;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import org.json.JSONArray;
-import org.json.JSONObject;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.json.JSONArray;
+import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Target (node/edge) metadata.

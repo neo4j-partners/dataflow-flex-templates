@@ -7,15 +7,14 @@ import com.google.cloud.teleport.v2.neo4j.common.model.enums.RoleType;
 import com.google.cloud.teleport.v2.neo4j.common.utils.ModelUtils;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 import org.apache.beam.repackaged.core.org.apache.commons.lang3.StringUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
 
 /**
  * Helper object for parsing transposed field mappings (ie. strings, indexed, longs, etc.).

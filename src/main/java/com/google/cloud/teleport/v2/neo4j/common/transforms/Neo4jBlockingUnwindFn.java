@@ -1,6 +1,7 @@
 package com.google.cloud.teleport.v2.neo4j.common.transforms;
 
 import com.google.cloud.teleport.v2.neo4j.common.database.Neo4jConnection;
+import java.util.*;
 import org.apache.beam.sdk.metrics.Counter;
 import org.apache.beam.sdk.metrics.Metrics;
 import org.apache.beam.sdk.transforms.DoFn;
@@ -14,8 +15,6 @@ import org.neo4j.driver.TransactionConfig;
 import org.neo4j.driver.TransactionWork;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.*;
 
 /**
  * Write to Neo4j synchronously, called from inside @Neo4jRowWriterTransform.

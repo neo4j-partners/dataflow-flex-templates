@@ -3,15 +3,14 @@ package com.google.cloud.teleport.v2.neo4j.common.model.job;
 import com.google.cloud.teleport.v2.neo4j.common.model.enums.FragmentType;
 import com.google.cloud.teleport.v2.neo4j.common.model.enums.PropertyType;
 import com.google.cloud.teleport.v2.neo4j.common.model.enums.RoleType;
-import org.apache.beam.repackaged.core.org.apache.commons.lang3.StringUtils;
-import org.json.JSONObject;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import org.apache.beam.repackaged.core.org.apache.commons.lang3.StringUtils;
+import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Field to Neo4j property mapping.

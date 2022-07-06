@@ -1,12 +1,11 @@
 package com.google.cloud.teleport.v2.neo4j.common.utils;
 
-import org.apache.beam.sdk.io.FileSystems;
-
 import java.io.*;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import org.apache.beam.sdk.io.FileSystems;
 
 /**
  * Utilities for reading local and remote file resources.

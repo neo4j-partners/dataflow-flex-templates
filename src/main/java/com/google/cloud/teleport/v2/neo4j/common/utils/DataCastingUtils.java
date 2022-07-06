@@ -3,6 +3,13 @@ package com.google.cloud.teleport.v2.neo4j.common.utils;
 import com.google.cloud.teleport.v2.neo4j.common.model.enums.PropertyType;
 import com.google.cloud.teleport.v2.neo4j.common.model.job.Mapping;
 import com.google.cloud.teleport.v2.neo4j.common.model.job.Target;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.ObjectOutputStream;
+import java.text.SimpleDateFormat;
+import java.time.*;
+import java.util.*;
+import java.util.stream.Collectors;
 import org.apache.beam.repackaged.core.org.apache.commons.lang3.StringUtils;
 import org.apache.beam.sdk.schemas.Schema;
 import org.apache.beam.sdk.values.Row;
@@ -12,14 +19,6 @@ import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.ObjectOutputStream;
-import java.text.SimpleDateFormat;
-import java.time.*;
-import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * Utility functions for casting rows between and to Neo4j properties.

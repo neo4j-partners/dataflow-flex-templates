@@ -6,12 +6,11 @@ import com.google.cloud.teleport.v2.neo4j.common.model.helpers.TargetQuerySpec;
 import com.google.cloud.teleport.v2.neo4j.common.model.job.JobSpecRequest;
 import com.google.cloud.teleport.v2.neo4j.common.model.job.OptionsParams;
 import com.google.cloud.teleport.v2.neo4j.common.model.job.Source;
+import java.util.List;
 import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.values.PBegin;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.Row;
-
-import java.util.List;
 
 /**
  * Provider interface, implemented for every source.

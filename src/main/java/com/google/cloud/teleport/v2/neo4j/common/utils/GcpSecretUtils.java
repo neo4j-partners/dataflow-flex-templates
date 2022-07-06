@@ -2,7 +2,6 @@ package com.google.cloud.teleport.v2.neo4j.common.utils;
 
 import com.google.cloud.secretmanager.v1.AccessSecretVersionResponse;
 import com.google.cloud.secretmanager.v1.SecretManagerServiceClient;
-
 import java.io.IOException;
 
 /**

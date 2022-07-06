@@ -15,14 +15,19 @@
  */
 package com.google.cloud.teleport.v2.neo4j;
 
-import com.google.cloud.teleport.v2.neo4j.common.InputValidator;
-import com.google.cloud.teleport.v2.neo4j.common.model.*;
+import com.google.cloud.teleport.v2.neo4j.common.model.InputValidator;
+import com.google.cloud.teleport.v2.neo4j.common.model.connection.ConnectionParams;
+import com.google.cloud.teleport.v2.neo4j.common.model.job.JobSpecRequest;
+import com.google.cloud.teleport.v2.neo4j.common.model.job.OptionsParams;
+import com.google.cloud.teleport.v2.neo4j.common.model.job.Source;
 import com.google.cloud.teleport.v2.neo4j.common.utils.ModelUtils;
 import com.google.cloud.teleport.v2.neo4j.providers.IProvider;
 import com.google.cloud.teleport.v2.neo4j.providers.ProviderFactory;
 import com.google.cloud.teleport.v2.neo4j.providers.text.TextImpl;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import java.io.IOException;
+import java.util.List;
 import org.apache.beam.sdk.testing.TestPipeline;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.Row;
@@ -33,9 +38,6 @@ import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.IOException;
-import java.util.List;
 
 /**
  * Unit tests for {@link GcpToNeo4j}.

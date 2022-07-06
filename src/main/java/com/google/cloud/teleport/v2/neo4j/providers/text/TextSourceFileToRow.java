@@ -1,8 +1,8 @@
 package com.google.cloud.teleport.v2.neo4j.providers.text;
 
-import com.google.cloud.teleport.v2.neo4j.common.model.OptionsParams;
-import com.google.cloud.teleport.v2.neo4j.common.model.Source;
-import com.google.cloud.teleport.v2.neo4j.providers.SourceQuerySpec;
+import com.google.cloud.teleport.v2.neo4j.common.model.helpers.SourceQuerySpec;
+import com.google.cloud.teleport.v2.neo4j.common.model.job.OptionsParams;
+import com.google.cloud.teleport.v2.neo4j.common.model.job.Source;
 import org.apache.beam.repackaged.core.org.apache.commons.lang3.StringUtils;
 import org.apache.beam.sdk.io.TextIO;
 import org.apache.beam.sdk.schemas.Schema;
@@ -15,21 +15,24 @@ import org.apache.beam.sdk.values.Row;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class TextSourceFileToRow extends PTransform<PBegin, PCollection<Row>>{
+/**
+ * Transform that reads data from a source file.
+ */
+public class TextSourceFileToRow extends PTransform<PBegin, PCollection<Row>> {
     private static final Logger LOG = LoggerFactory.getLogger(TextSourceFileToRow.class);
     SourceQuerySpec sourceQuerySpec;
     OptionsParams optionsParams;
 
-    public TextSourceFileToRow(OptionsParams optionsParams, SourceQuerySpec sourceQuerySpec){
-       this.optionsParams=optionsParams;
-        this.sourceQuerySpec=sourceQuerySpec;
+    public TextSourceFileToRow(OptionsParams optionsParams, SourceQuerySpec sourceQuerySpec) {
+        this.optionsParams = optionsParams;
+        this.sourceQuerySpec = sourceQuerySpec;
     }
 
     @Override
     public PCollection<Row> expand(PBegin input) {
-        Source source=sourceQuerySpec.source;
+        Source source = sourceQuerySpec.source;
         Schema beamTextSchema = sourceQuerySpec.sourceSchema;
-        String dataFileUri= source.uri;
+        String dataFileUri = source.uri;
 
         if (StringUtils.isNotBlank(dataFileUri)) {
             LOG.info("Ingesting file: " + dataFileUri + ".");
@@ -47,7 +50,6 @@ public class TextSourceFileToRow extends PTransform<PBegin, PCollection<Row>>{
             throw new RuntimeException("Data not found.");
         }
     }
-
 
 
 }

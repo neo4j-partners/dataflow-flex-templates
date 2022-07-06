@@ -2,9 +2,11 @@ package com.google.cloud.teleport.v2.neo4j.common.utils;
 
 import com.google.cloud.secretmanager.v1.AccessSecretVersionResponse;
 import com.google.cloud.secretmanager.v1.SecretManagerServiceClient;
-
 import java.io.IOException;
 
+/**
+ * Utilities for property attribute decryption.
+ */
 public class GcpSecretUtils {
 
     private static String resolveSecret(String secretName) {
@@ -13,7 +15,7 @@ public class GcpSecretUtils {
 
             return response.getPayload().getData().toStringUtf8();
         } catch (IOException e) {
-            throw new RuntimeException("Unable to read secret: "+secretName);
+            throw new RuntimeException("Unable to read secret: " + secretName);
         }
     }
 

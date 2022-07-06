@@ -1,8 +1,8 @@
 package com.google.cloud.teleport.v2.neo4j.common.transforms;
 
-import com.google.cloud.teleport.v2.neo4j.common.model.JobSpecRequest;
-import com.google.cloud.teleport.v2.neo4j.common.model.Target;
 import com.google.cloud.teleport.v2.neo4j.common.model.enums.AvroType;
+import com.google.cloud.teleport.v2.neo4j.common.model.job.JobSpecRequest;
+import com.google.cloud.teleport.v2.neo4j.common.model.job.Target;
 import com.google.cloud.teleport.v2.neo4j.common.utils.AvroSinkWithJodaDatesConversion;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.beam.sdk.io.FileIO;
@@ -18,6 +18,9 @@ import org.apache.parquet.hadoop.metadata.CompressionCodecName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Log rows to parquet.
+ */
 public class GcsLogTransform extends PTransform<PCollection<Row>, POutput> {
 
     private static final Logger LOG = LoggerFactory.getLogger(GcsLogTransform.class);
@@ -35,8 +38,8 @@ public class GcsLogTransform extends PTransform<PCollection<Row>, POutput> {
     public POutput expand(PCollection<Row> input) {
 
         String auditFilePath = jobSpec.config.auditGsUri;
-        if (!StringUtils.endsWith(auditFilePath,"/")){
-            auditFilePath+="/";
+        if (!StringUtils.endsWith(auditFilePath, "/")) {
+            auditFilePath += "/";
         }
         //audit
         org.apache.avro.Schema targetAvroSchema = AvroUtils.toAvroSchema(input.getSchema());
@@ -50,9 +53,9 @@ public class GcsLogTransform extends PTransform<PCollection<Row>, POutput> {
             throw new UnsupportedOperationException(
                     "Output format is not implemented: " + jobSpec.config.avroType);
         }
-        LOG.info("Logging to "+auditFilePath+" with prefix: "+input.getPipeline().getOptions().getJobName());
+        LOG.info("Logging to " + auditFilePath + " with prefix: " + input.getPipeline().getOptions().getJobName());
         PCollection<GenericRecord> genericInput = input.apply(target.sequence + ": Log xform " + target.name,
-                        Convert.to(GenericRecord.class));
+                Convert.to(GenericRecord.class));
         return genericInput.apply(target.sequence + ": Log write " + target.name,
                 FileIO.<GenericRecord>write()
                         .via(sink)

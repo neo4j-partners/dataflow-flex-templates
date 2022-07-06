@@ -1,17 +1,19 @@
 package com.google.cloud.teleport.v2.neo4j.common.utils;
 
 import com.google.cloud.bigquery.LegacySQLTypeName;
-import com.google.cloud.teleport.v2.neo4j.common.model.Mapping;
-import com.google.cloud.teleport.v2.neo4j.common.model.Target;
 import com.google.cloud.teleport.v2.neo4j.common.model.enums.PropertyType;
+import com.google.cloud.teleport.v2.neo4j.common.model.job.Mapping;
+import com.google.cloud.teleport.v2.neo4j.common.model.job.Target;
+import java.util.ArrayList;
+import java.util.List;
 import org.apache.beam.repackaged.core.org.apache.commons.lang3.StringUtils;
 import org.apache.beam.sdk.schemas.Schema;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.List;
-
+/**
+ * Utilities for organizing Bean rows and schema.
+ */
 public class BeamUtils {
     private static final Logger LOG = LoggerFactory.getLogger(BeamUtils.class);
 
@@ -19,17 +21,17 @@ public class BeamUtils {
         return StringUtils.join(schema.getFields(), ",");
     }
 
-    public static Schema toBeamSchema(com.google.cloud.bigquery.Schema bqSchema){
+    public static Schema toBeamSchema(com.google.cloud.bigquery.Schema bqSchema) {
         List<Schema.Field> schemaFieldList = new ArrayList<>();
         for (int i = 0; i < bqSchema.getFields().size(); i++) {
-            com.google.cloud.bigquery.Field field=bqSchema.getFields().get(i);
-            Schema.Field schemaField= Schema.Field.nullable(field.getName(), bigQueryToBeamFieldType(field));
+            com.google.cloud.bigquery.Field field = bqSchema.getFields().get(i);
+            Schema.Field schemaField = Schema.Field.nullable(field.getName(), bigQueryToBeamFieldType(field));
             schemaFieldList.add(schemaField);
         }
         return new Schema(schemaFieldList);
     }
 
-    public static Schema.FieldType bigQueryToBeamFieldType(com.google.cloud.bigquery.Field field){
+    public static Schema.FieldType bigQueryToBeamFieldType(com.google.cloud.bigquery.Field field) {
 
         /*
         public static final LegacySQLTypeName BYTES;
@@ -45,7 +47,7 @@ public class BeamUtils {
         public static final LegacySQLTypeName DATETIME;
         public static final LegacySQLTypeName RECORD;
         */
-        LegacySQLTypeName legacySQLTypeName=field.getType();
+        LegacySQLTypeName legacySQLTypeName = field.getType();
         if (LegacySQLTypeName.STRING.equals(legacySQLTypeName)) {
             return Schema.FieldType.STRING;
         } else if (LegacySQLTypeName.TIMESTAMP.equals(legacySQLTypeName)) {
@@ -67,7 +69,6 @@ public class BeamUtils {
     }
 
 
-
     public static Schema toBeamSchema(Target target) {
 
         // map source column names to order
@@ -85,7 +86,7 @@ public class BeamUtils {
             }
 
             if (StringUtils.isEmpty(fieldName)) {
-                throw new RuntimeException("Could not find field name or constant in target: "+target.name);
+                throw new RuntimeException("Could not find field name or constant in target: " + target.name);
             }
             Schema.Field schemaField;
             if (mapping.type == PropertyType.Integer || mapping.type == PropertyType.Long) {
@@ -119,15 +120,15 @@ public class BeamUtils {
         return new Schema(fields);
     }
 
-    public static Schema textToBeamSchema(String[] fieldNames){
-            // map source column names to order
-            List<Schema.Field> fields = new ArrayList<>();
-            // Map these fields to a schema in a row
-            for (int i = 0; i < fieldNames.length; i++) {
-                String fieldName = fieldNames[i];
-                Schema.Field schemaField= Schema.Field.of(fieldName, Schema.FieldType.STRING);
-                fields.add(schemaField);
-            }
-            return new Schema(fields);
+    public static Schema textToBeamSchema(String[] fieldNames) {
+        // map source column names to order
+        List<Schema.Field> fields = new ArrayList<>();
+        // Map these fields to a schema in a row
+        for (int i = 0; i < fieldNames.length; i++) {
+            String fieldName = fieldNames[i];
+            Schema.Field schemaField = Schema.Field.of(fieldName, Schema.FieldType.STRING);
+            fields.add(schemaField);
+        }
+        return new Schema(fields);
     }
 }

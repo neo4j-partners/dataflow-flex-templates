@@ -1,6 +1,7 @@
 package com.google.cloud.teleport.v2.neo4j.common.transforms;
 
 import com.google.cloud.teleport.v2.neo4j.common.database.Neo4jConnection;
+import java.util.*;
 import org.apache.beam.sdk.metrics.Counter;
 import org.apache.beam.sdk.metrics.Metrics;
 import org.apache.beam.sdk.transforms.DoFn;
@@ -15,14 +16,14 @@ import org.neo4j.driver.TransactionWork;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
-
+/**
+ * Write to Neo4j synchronously, called from inside @Neo4jRowWriterTransform.
+ */
 public class Neo4jBlockingUnwindFn extends DoFn<KV<Integer, Row>, Row> {
 
-    private final Counter numRecords = Metrics.counter(Neo4jBlockingUnwindFn.class, "norecords");
-
     private static final Logger LOG = LoggerFactory.getLogger(Neo4jBlockingUnwindFn.class);
-
+    private final Counter numRecords = Metrics.counter(Neo4jBlockingUnwindFn.class, "norecords");
+    protected TransactionConfig transactionConfig = TransactionConfig.empty();
     private Row returnEmpty;
     private String cypher;
     private SerializableFunction<Row, Map<String, Object>> parametersFunction = null;
@@ -32,10 +33,11 @@ public class Neo4jBlockingUnwindFn extends DoFn<KV<Integer, Row>, Row> {
     private long elementsInput;
     private boolean loggingDone;
     private List<Map<String, Object>> unwindList;
-    protected TransactionConfig transactionConfig = TransactionConfig.empty();
     private Neo4jConnection neo4jConnection;
 
-    private Neo4jBlockingUnwindFn(){}
+    private Neo4jBlockingUnwindFn() {
+    }
+
     public Neo4jBlockingUnwindFn(
             Neo4jConnection neo4jConnection,
             Row returnEmpty,
@@ -50,7 +52,7 @@ public class Neo4jBlockingUnwindFn extends DoFn<KV<Integer, Row>, Row> {
         this.logCypher = logCypher;
         this.batchSize = batchSize;
         this.unwindMapName = unwindMapName;
-        this.returnEmpty=returnEmpty;
+        this.returnEmpty = returnEmpty;
 
         unwindList = new ArrayList<>();
         elementsInput = 0;
@@ -58,10 +60,10 @@ public class Neo4jBlockingUnwindFn extends DoFn<KV<Integer, Row>, Row> {
     }
 
     @ProcessElement
-    public void processElement(ProcessContext context){
+    public void processElement(ProcessContext context) {
 
-        KV<Integer, Row> parameters=context.element();
-        LOG.info("Processing row from group/key: "+parameters.getKey());
+        KV<Integer, Row> parameters = context.element();
+        LOG.info("Processing row from group/key: " + parameters.getKey());
 
         if (parametersFunction != null) {
             // Every input element creates a new Map<String,Object> entry in unwindList

@@ -2,12 +2,14 @@ package com.google.cloud.teleport.v2.neo4j.common.transforms;
 
 import com.google.cloud.teleport.v2.neo4j.common.database.CypherGenerator;
 import com.google.cloud.teleport.v2.neo4j.common.database.Neo4jConnection;
-import com.google.cloud.teleport.v2.neo4j.common.model.Config;
-import com.google.cloud.teleport.v2.neo4j.common.model.ConnectionParams;
-import com.google.cloud.teleport.v2.neo4j.common.model.JobSpecRequest;
-import com.google.cloud.teleport.v2.neo4j.common.model.Target;
+import com.google.cloud.teleport.v2.neo4j.common.model.connection.ConnectionParams;
 import com.google.cloud.teleport.v2.neo4j.common.model.enums.TargetType;
+import com.google.cloud.teleport.v2.neo4j.common.model.job.Config;
+import com.google.cloud.teleport.v2.neo4j.common.model.job.JobSpecRequest;
+import com.google.cloud.teleport.v2.neo4j.common.model.job.Target;
 import com.google.cloud.teleport.v2.neo4j.common.utils.DataCastingUtils;
+import java.util.List;
+import java.util.Map;
 import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.transforms.SerializableFunction;
@@ -16,9 +18,9 @@ import org.apache.beam.sdk.values.Row;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.List;
-import java.util.Map;
-
+/**
+ * Neo4j write transformation.
+ */
 public class Neo4jRowWriterTransform extends PTransform<PCollection<Row>, PCollection<Row>> {
     private static final Logger LOG = LoggerFactory.getLogger(Neo4jRowWriterTransform.class);
     JobSpecRequest jobSpec;

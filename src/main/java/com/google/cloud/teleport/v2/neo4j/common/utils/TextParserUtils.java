@@ -1,5 +1,10 @@
 package com.google.cloud.teleport.v2.neo4j.common.utils;
 
+import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 import org.apache.beam.repackaged.core.org.apache.commons.lang3.StringUtils;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
@@ -9,12 +14,9 @@ import org.joda.time.format.DateTimeFormatter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-
+/**
+ * Utils for parsing text files.
+ */
 public class TextParserUtils {
     private static final Logger LOG = LoggerFactory.getLogger(TextParserUtils.class);
     private static final DateTimeFormatter jsDateTimeFormatter = DateTimeFormat.forPattern("YYYY-MM-DD HH:MM:SSZ");
@@ -34,7 +36,7 @@ public class TextParserUtils {
                 CSVRecord csvRecord = csvParser.getRecords().get(0);
                 Iterator<String> it = csvRecord.iterator();
                 while (it.hasNext()) {
-                    textCols.add( it.next());
+                    textCols.add(it.next());
                 }
             } catch (IOException ioException) {
                 LOG.error("Error parsing line: " + line + ", exception: " + ioException.getMessage());
@@ -47,7 +49,7 @@ public class TextParserUtils {
     //Function useful for small in-memory datasets
     public static List<List<Object>> parseDelimitedLines(CSVFormat csvFormat, String[] lines) {
         List rows = new ArrayList<>();
-        for (String line: lines){
+        for (String line : lines) {
             rows.add(parseDelimitedLine(csvFormat, line));
         }
         return rows;

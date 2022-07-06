@@ -14,6 +14,9 @@ import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.ThreadLocalRandom;
 
+/**
+ * Create KvTransform to control Beam parallelism.
+ */
 public class CreateKvTransform
         extends PTransform<PCollection<Row>, PCollection<KV<Integer, Row>>> {
 

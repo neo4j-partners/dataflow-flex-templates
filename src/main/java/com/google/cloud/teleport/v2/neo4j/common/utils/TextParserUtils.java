@@ -15,6 +15,9 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+/**
+ * Utils for parsing text files.
+ */
 public class TextParserUtils {
     private static final Logger LOG = LoggerFactory.getLogger(TextParserUtils.class);
     private static final DateTimeFormatter jsDateTimeFormatter = DateTimeFormat.forPattern("YYYY-MM-DD HH:MM:SSZ");
@@ -51,9 +54,6 @@ public class TextParserUtils {
             rows.add(parseDelimitedLine(csvFormat, line));
         }
         return rows;
-    }
-
-    private TextParserUtils() {
     }
 
 }

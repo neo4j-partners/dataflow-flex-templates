@@ -1,4 +1,4 @@
-package com.google.cloud.teleport.v2.neo4j.common.model;
+package com.google.cloud.teleport.v2.neo4j.common.model.job;
 
 import com.google.cloud.teleport.v2.neo4j.common.model.enums.FragmentType;
 import com.google.cloud.teleport.v2.neo4j.common.model.enums.MappingType;
@@ -17,9 +17,12 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+/**
+ * Helper object for parsing transposed field mappings (ie. strings, indexed, longs, etc.).
+ */
 public class MappingTransposed {
 
-    final static Gson gson = new GsonBuilder().setPrettyPrinting().create();
+    private static final Gson gson = new GsonBuilder().setPrettyPrinting().create();
     private static final Logger LOG = LoggerFactory.getLogger(MappingTransposed.class);
 
     public static List<Mapping> parseMappings(MappingType mappingType, final JSONObject mappingsObject) {

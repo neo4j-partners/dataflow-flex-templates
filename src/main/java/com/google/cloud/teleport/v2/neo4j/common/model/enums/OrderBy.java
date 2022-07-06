@@ -1,6 +1,9 @@
 package com.google.cloud.teleport.v2.neo4j.common.model.enums;
 
-public enum OrderByFun {
+/**
+ * Order by command for sorting functions.
+ */
+public enum OrderBy {
     ASC,
     DESC
 }

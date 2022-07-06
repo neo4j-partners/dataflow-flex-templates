@@ -1,12 +1,12 @@
-/*
+/**
  * Copyright (C) 2021 Google LLC
- *
+ * <p>
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy of
  * the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
  * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
@@ -15,24 +15,28 @@
  */
 package com.google.cloud.teleport.v2.neo4j;
 
-import com.google.cloud.teleport.v2.neo4j.common.InputRefactoring;
-import com.google.cloud.teleport.v2.neo4j.common.InputValidator;
 import com.google.cloud.teleport.v2.neo4j.common.database.Neo4jConnection;
-import com.google.cloud.teleport.v2.neo4j.common.model.*;
-import com.google.cloud.teleport.v2.neo4j.common.options.Neo4jFlexTemplateOptions;
+import com.google.cloud.teleport.v2.neo4j.common.model.InputRefactoring;
+import com.google.cloud.teleport.v2.neo4j.common.model.InputValidator;
+import com.google.cloud.teleport.v2.neo4j.common.model.connection.ConnectionParams;
+import com.google.cloud.teleport.v2.neo4j.common.model.helpers.SourceQuerySpec;
+import com.google.cloud.teleport.v2.neo4j.common.model.helpers.TargetQuerySpec;
+import com.google.cloud.teleport.v2.neo4j.common.model.job.JobSpecRequest;
+import com.google.cloud.teleport.v2.neo4j.common.model.job.OptionsParams;
+import com.google.cloud.teleport.v2.neo4j.common.model.job.Source;
+import com.google.cloud.teleport.v2.neo4j.common.model.job.Target;
 import com.google.cloud.teleport.v2.neo4j.common.transforms.GcsLogTransform;
 import com.google.cloud.teleport.v2.neo4j.common.transforms.Neo4jRowWriterTransform;
 import com.google.cloud.teleport.v2.neo4j.common.utils.BeamBlock;
 import com.google.cloud.teleport.v2.neo4j.common.utils.ModelUtils;
 import com.google.cloud.teleport.v2.neo4j.providers.IProvider;
 import com.google.cloud.teleport.v2.neo4j.providers.ProviderFactory;
-import com.google.cloud.teleport.v2.neo4j.providers.SourceQuerySpec;
-import com.google.cloud.teleport.v2.neo4j.providers.TargetQuerySpec;
 import org.apache.beam.repackaged.core.org.apache.commons.lang3.StringUtils;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.io.FileSystems;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
 import org.apache.beam.sdk.schemas.Schema;
+import org.apache.beam.sdk.transforms.Wait;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.Row;
 import org.slf4j.Logger;
@@ -52,6 +56,11 @@ public class GcpToNeo4j {
     JobSpecRequest jobSpec;
     Pipeline pipeline;
 
+    /**
+     * Main class for template.  Initializes job using run-time on pipelineOptions.
+     *
+     * @pipelineOptions framework supplied arguments
+     */
     public GcpToNeo4j(final Neo4jFlexTemplateOptions pipelineOptions) {
         ////////////////////////////
         // We need to initialize pipeline in order to create context for Gs and Bq file system
@@ -104,7 +113,7 @@ public class GcpToNeo4j {
     }
 
     /**
-     * Runs a pipeline which reads data from BigQuery and writes it to Bigtable.
+     * Runs a pipeline which reads data from various sources and writes it to Neo4j.
      *
      * @param args arguments to the pipeline
      */
@@ -194,22 +203,17 @@ public class GcpToNeo4j {
                 } else {
                     preInsertBeamRows = nullableSourceBeamRows;
                 }
-                PCollection<Row> unblockedBeamRows = blockingQueue.release(preInsertBeamRows, target.sequence + ": " + target.name);
                 Neo4jRowWriterTransform targetWriterTransform = new Neo4jRowWriterTransform(jobSpec, neo4jConnection, target);
-                PCollection<Row> emptyReturn = unblockedBeamRows.apply(target.sequence + ": Writing Neo4j " + target.name, targetWriterTransform);
+                PCollection<Row> emptyReturn = preInsertBeamRows
+                        .apply(target.sequence + ": Unblocking " + target.name,Wait.on(blockingQueue.waitOnCollection(source.name+" nodes"))).setCoder(preInsertBeamRows.getCoder())
+                        .apply(target.sequence + ": Writing Neo4j " + target.name, targetWriterTransform);
                 if (!StringUtils.isEmpty(jobSpec.config.auditGsUri)) {
                     GcsLogTransform logTransform = new GcsLogTransform(jobSpec, target);
-                    unblockedBeamRows.apply(target.sequence + ": Logging " + target.name, logTransform);
+                    preInsertBeamRows.apply(target.sequence + ": Logging " + target.name, logTransform);
                 }
                 //serialize relationships
                 blockingQueue.addEmptyBlockingCollection(emptyReturn);
             }
-
-
-            ////////////////////////////
-            // Write neo4j
-            LOG.info("Found " + jobSpec.targets.size() + " candidate targets");
-
         }
 
         // For a Dataflow Flex Template, do NOT waitUntilFinish().

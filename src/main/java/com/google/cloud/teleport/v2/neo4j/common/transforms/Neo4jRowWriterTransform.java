@@ -2,11 +2,11 @@ package com.google.cloud.teleport.v2.neo4j.common.transforms;
 
 import com.google.cloud.teleport.v2.neo4j.common.database.CypherGenerator;
 import com.google.cloud.teleport.v2.neo4j.common.database.Neo4jConnection;
-import com.google.cloud.teleport.v2.neo4j.common.model.Config;
-import com.google.cloud.teleport.v2.neo4j.common.model.ConnectionParams;
-import com.google.cloud.teleport.v2.neo4j.common.model.JobSpecRequest;
-import com.google.cloud.teleport.v2.neo4j.common.model.Target;
+import com.google.cloud.teleport.v2.neo4j.common.model.connection.ConnectionParams;
 import com.google.cloud.teleport.v2.neo4j.common.model.enums.TargetType;
+import com.google.cloud.teleport.v2.neo4j.common.model.job.Config;
+import com.google.cloud.teleport.v2.neo4j.common.model.job.JobSpecRequest;
+import com.google.cloud.teleport.v2.neo4j.common.model.job.Target;
 import com.google.cloud.teleport.v2.neo4j.common.utils.DataCastingUtils;
 import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.transforms.ParDo;
@@ -19,6 +19,9 @@ import org.slf4j.LoggerFactory;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Neo4j write transformation.
+ */
 public class Neo4jRowWriterTransform extends PTransform<PCollection<Row>, PCollection<Row>> {
     private static final Logger LOG = LoggerFactory.getLogger(Neo4jRowWriterTransform.class);
     JobSpecRequest jobSpec;
@@ -68,15 +71,16 @@ public class Neo4jRowWriterTransform extends PTransform<PCollection<Row>, PColle
         Row emptyRow = Row.nullRow(input.getSchema());
 
         Neo4jBlockingUnwindFn neo4jUnwindFn =
-                new Neo4jBlockingUnwindFn(
-                        neo4jConnection,
-                        emptyRow,
-                        unwindCypher,
-                        batchSize,
-                        false,
-                        "rows",
-                        getRowCastingFunction()
-                );
+                new Neo4jBlockingUnwindFn
+                        (
+                                neo4jConnection,
+                                emptyRow,
+                                unwindCypher,
+                                batchSize,
+                                false,
+                                "rows",
+                                getRowCastingFunction()
+                        );
 
         PCollection<Row> output = input
                 .apply("Create KV pairs", CreateKvTransform.of(parallelism))
@@ -87,7 +91,7 @@ public class Neo4jRowWriterTransform extends PTransform<PCollection<Row>, PColle
     }
 
     private SerializableFunction<Row, Map<String, Object>> getRowCastingFunction() {
-        return (Row row) -> {
+        return (row) -> {
             return DataCastingUtils.rowToNeo4jDataMap(row, target);
         };
     }

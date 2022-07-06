@@ -1,4 +1,4 @@
-package com.google.cloud.teleport.v2.neo4j.common.model;
+package com.google.cloud.teleport.v2.neo4j.common.model.job;
 
 
 import com.google.cloud.teleport.v2.neo4j.common.model.enums.MappingType;
@@ -17,22 +17,25 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Target (node/edge) metadata.
+ */
 public class Target implements Serializable, Comparable {
 
-    final static Gson gson = new GsonBuilder().setPrettyPrinting().create();
+    private static final Gson gson = new GsonBuilder().setPrettyPrinting().create();
     private static final Logger LOG = LoggerFactory.getLogger(Target.class);
     public String source = "";
     public String name = "";
     public boolean active = true;
     public TargetType type;
-    public boolean autoMap;
+    public boolean autoMap = false;
     public Transform transform = new Transform();
     public List<Mapping> mappings = new ArrayList<>();
     public SaveMode saveMode = SaveMode.append;
     public Map<String, Mapping> mappingByFieldMap = new HashMap();
     public List<String> fieldNames = new ArrayList<>();
 
-    public int sequence;
+    public int sequence = 0;
 
     public Target() {
     }

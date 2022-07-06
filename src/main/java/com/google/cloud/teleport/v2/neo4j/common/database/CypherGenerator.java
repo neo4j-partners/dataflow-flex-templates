@@ -1,12 +1,12 @@
 package com.google.cloud.teleport.v2.neo4j.common.database;
 
-import com.google.cloud.teleport.v2.neo4j.common.model.Config;
-import com.google.cloud.teleport.v2.neo4j.common.model.Mapping;
-import com.google.cloud.teleport.v2.neo4j.common.model.Target;
 import com.google.cloud.teleport.v2.neo4j.common.model.enums.FragmentType;
 import com.google.cloud.teleport.v2.neo4j.common.model.enums.RoleType;
 import com.google.cloud.teleport.v2.neo4j.common.model.enums.SaveMode;
 import com.google.cloud.teleport.v2.neo4j.common.model.enums.TargetType;
+import com.google.cloud.teleport.v2.neo4j.common.model.job.Config;
+import com.google.cloud.teleport.v2.neo4j.common.model.job.Mapping;
+import com.google.cloud.teleport.v2.neo4j.common.model.job.Target;
 import com.google.cloud.teleport.v2.neo4j.common.utils.ModelUtils;
 import org.apache.beam.repackaged.core.org.apache.commons.lang3.RandomStringUtils;
 import org.apache.beam.repackaged.core.org.apache.commons.lang3.StringUtils;
@@ -17,11 +17,14 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import static com.google.cloud.teleport.v2.neo4j.common.utils.ModelUtils.getStaticOrDynamicRelationshipType;
-
+/**
+ * Generates cypher based on model metadata.
+ * TODO: Needs to be refactored to use DSL
+ */
 public class CypherGenerator {
-    final static String CONST_ROW_VARIABLE_NAME = "rows";
+
     private static final Logger LOG = LoggerFactory.getLogger(CypherGenerator.class);
+    private static final String CONST_ROW_VARIABLE_NAME = "rows";
 
     public static String getUnwindCreateCypher(Target target) {
         StringBuffer sb = new StringBuffer();
@@ -56,13 +59,6 @@ public class CypherGenerator {
 
             // NODE TYPE
         } else if (target.type == TargetType.node) {
-
-            /*
-            SaveMode.ErrorIfExists builds a CREATE query.
-            SaveMode.Overwrite builds a MERGE query.
-            For SaveMode.Overwrite mode, you need to have unique constraints on the keys.
-             */
-
 
             // Verb
             if (target.saveMode == SaveMode.merge) { // merge
@@ -164,13 +160,10 @@ public class CypherGenerator {
 
     public static String getRelationshipTypePropertiesListFragment(String prefix, boolean onlyIndexedProperties, Target target) {
         StringBuffer sb = new StringBuffer();
-        List<String> relType = getStaticOrDynamicRelationshipType(CONST_ROW_VARIABLE_NAME, target);
+        List<String> relType = ModelUtils.getStaticOrDynamicRelationshipType(CONST_ROW_VARIABLE_NAME, target);
         sb.append(prefix + ":" + StringUtils.join(relType, ":"));
         sb.append(" " + getPropertiesListCypherFragment(FragmentType.rel, onlyIndexedProperties, Arrays.asList(RoleType.key, RoleType.property), target));
         return sb.toString();
-    }
-
-    private CypherGenerator() {
     }
 
 }

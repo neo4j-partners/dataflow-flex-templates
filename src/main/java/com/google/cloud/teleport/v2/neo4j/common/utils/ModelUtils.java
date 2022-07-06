@@ -3,11 +3,11 @@ package com.google.cloud.teleport.v2.neo4j.common.utils;
 
 import com.google.cloud.bigquery.Field;
 import com.google.cloud.bigquery.FieldList;
-import com.google.cloud.teleport.v2.neo4j.common.model.*;
 import com.google.cloud.teleport.v2.neo4j.common.model.enums.FragmentType;
 import com.google.cloud.teleport.v2.neo4j.common.model.enums.RoleType;
 import com.google.cloud.teleport.v2.neo4j.common.model.enums.SourceType;
 import com.google.cloud.teleport.v2.neo4j.common.model.enums.TargetType;
+import com.google.cloud.teleport.v2.neo4j.common.model.job.*;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import org.apache.beam.repackaged.core.org.apache.commons.lang3.StringUtils;
@@ -19,18 +19,19 @@ import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+/**
+ * Utility functions for Beam rows and schema.
+ */
 public class ModelUtils {
-    final public static String DEFAULT_STAR_QUERY = "SELECT * FROM PCOLLECTION";
-    final public static String CYPHER_DELETE_ALL = "CREATE OR REPLACE DATABASE `neo4j`";
-    final public static long MAX_ROWS = 10000000000000l;
-    final static Gson gson = new GsonBuilder().setPrettyPrinting().create();
-    final static String LEGAL_CHARS_REGEX = "[^a-zA-Z0-9_]";
-    final static String LEGAL_CHARS_REGEX_SPACE = "[^a-zA-Z0-9_ ]";
-    final static String ALPHA_CHARS_REGEX = "[^a-zA-Z]";
-    final static Pattern variablePattern = Pattern.compile("(\\$([a-zA-Z0-9_]+))");
+    public static final String DEFAULT_STAR_QUERY = "SELECT * FROM PCOLLECTION";
+    private static final Gson gson = new GsonBuilder().setPrettyPrinting().create();
+    private static final String allowedCharactersRegex = "[^a-zA-Z0-9_]";
+    private static final String allowedCharactersRegexSpace = "[^a-zA-Z0-9_ ]";
+    private static final String alphaCharsRegex = "[^a-zA-Z]";
+    private static final Pattern variablePattern = Pattern.compile("(\\$([a-zA-Z0-9_]+))");
     private static final Logger LOG = LoggerFactory.getLogger(ModelUtils.class);
 
-    public static Target generateDefaultTarget(Source source) throws RuntimeException {
+    public static Target generateDefaultTarget(Source source)  {
         if (source.sourceType == SourceType.text) {
             Target target = new Target();
 
@@ -38,7 +39,7 @@ public class ModelUtils {
 
             return target;
         } else {
-            LOG.info("Unhandled source type.");
+            LOG.error("Unhandled source type: "+source.sourceType);
             throw new RuntimeException("Unhandled source type: " + source.sourceType);
         }
     }
@@ -224,15 +225,15 @@ public class ModelUtils {
     }
 
     public static String makeValidNeo4jIdentifier(String proposedIdString) {
-        String finalIdString = proposedIdString.replaceAll(LEGAL_CHARS_REGEX, "_").trim();
-        if (finalIdString.substring(0, 1).matches(ALPHA_CHARS_REGEX)) {
+        String finalIdString = proposedIdString.replaceAll(allowedCharactersRegex, "_").trim();
+        if (finalIdString.substring(0, 1).matches(alphaCharsRegex)) {
             finalIdString = "N" + finalIdString;
         }
         return finalIdString;
     }
 
     public static String makeValidNeo4jRelationshipIdentifier(String proposedIdString) {
-        String finalRelationshipIdString = proposedIdString.replaceAll(LEGAL_CHARS_REGEX, "_").toUpperCase().trim();
+        String finalRelationshipIdString = proposedIdString.replaceAll(allowedCharactersRegex, "_").toUpperCase().trim();
         return finalRelationshipIdString;
     }
 
@@ -336,8 +337,7 @@ public class ModelUtils {
             builder.append(text, i, matcher.start());
             if (replacement == null) {
                 builder.append(matcher.group(0));
-            }
-            else {
+            } else {
                 builder.append(replacement);
             }
             i = matcher.end();
@@ -397,9 +397,6 @@ public class ModelUtils {
             }
         }
         return nodeKeyProperties;
-    }
-
-    private ModelUtils() {
     }
 
 }

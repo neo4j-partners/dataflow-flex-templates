@@ -1,9 +1,9 @@
-package com.google.cloud.teleport.v2.neo4j.common;
+package com.google.cloud.teleport.v2.neo4j.common.model;
 
-import com.google.cloud.teleport.v2.neo4j.common.model.JobSpecRequest;
-import com.google.cloud.teleport.v2.neo4j.common.model.OptionsParams;
-import com.google.cloud.teleport.v2.neo4j.common.model.Source;
-import com.google.cloud.teleport.v2.neo4j.common.model.Target;
+import com.google.cloud.teleport.v2.neo4j.common.model.job.JobSpecRequest;
+import com.google.cloud.teleport.v2.neo4j.common.model.job.OptionsParams;
+import com.google.cloud.teleport.v2.neo4j.common.model.job.Source;
+import com.google.cloud.teleport.v2.neo4j.common.model.job.Target;
 import com.google.cloud.teleport.v2.neo4j.common.utils.ModelUtils;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -13,15 +13,23 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Collections;
 
+/**
+ * Synthesizes and optimizes missing elements to model from inputs.
+ */
 public class InputRefactoring {
 
-    final static Gson gson = new GsonBuilder().setPrettyPrinting().create();
+    private static final Gson gson = new GsonBuilder().setPrettyPrinting().create();
     private static final Logger LOG = LoggerFactory.getLogger(InputRefactoring.class);
     OptionsParams optionsParams;
 
     private InputRefactoring() {
     }
 
+    /**
+     * Constructor uses template input options.
+     *
+     * @param optionsParams
+     */
     public InputRefactoring(OptionsParams optionsParams) {
         this.optionsParams = optionsParams;
     }

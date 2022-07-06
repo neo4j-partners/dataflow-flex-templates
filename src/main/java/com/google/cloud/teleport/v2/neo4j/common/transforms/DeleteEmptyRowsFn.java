@@ -5,6 +5,9 @@ import org.apache.beam.sdk.values.Row;
 
 import java.util.List;
 
+/**
+ * Delete empty rows transformation.
+ */
 public class DeleteEmptyRowsFn extends DoFn<Row, Row> {
 
     @ProcessElement
@@ -26,3 +29,4 @@ public class DeleteEmptyRowsFn extends DoFn<Row, Row> {
         return true;
     }
 }
+

@@ -1,6 +1,7 @@
-package com.google.cloud.teleport.v2.neo4j.common.model;
+package com.google.cloud.teleport.v2.neo4j.common.model.job;
 
-import com.google.cloud.teleport.v2.neo4j.common.options.Neo4jFlexTemplateOptions;
+import com.google.cloud.teleport.v2.neo4j.Neo4jFlexTemplateOptions;
+import com.google.cloud.teleport.v2.neo4j.common.model.enums.OptionKey;
 import org.apache.beam.repackaged.core.org.apache.commons.lang3.StringUtils;
 import org.json.JSONObject;
 import org.slf4j.Logger;
@@ -9,6 +10,10 @@ import org.slf4j.LoggerFactory;
 import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Iterator;
+
+/**
+ * Runtime options object that coalesces well-known (readQuery, inputFilePattern) and arbitrary options.
+ */
 
 public class OptionsParams implements Serializable {
 
@@ -49,13 +54,22 @@ public class OptionsParams implements Serializable {
             while (optionsKeys.hasNext()) {
                 String optionsKey = optionsKeys.next();
                 tokenMap.put(optionsKey, optionsJson.opt(optionsKey) + "");
-                if ("readQuery".equals(optionsKey)) {
+                if (optionsKey.equals("readQuery")) {
                     readQuery = optionsJson.getString("readQuery");
-                } else if ("inputFilePattern".equals(optionsKey)) {
+                } else if (optionsKey.equals("inputFilePattern")) {
                     inputFilePattern = optionsJson.getString("inputFilePattern");
                 }
                 LOG.info(optionsKey + ": " + optionsJson.opt(optionsKey));
             }
         }
     }
+    /**
+     * Inner class for modelling structured options.
+     */
+    protected class Option {
+        OptionKey optionKey;
+        String optionValue;
+    }
+
 }
+

@@ -5,6 +5,9 @@ import com.google.cloud.secretmanager.v1.SecretManagerServiceClient;
 
 import java.io.IOException;
 
+/**
+ * Utilities for property attribute decryption.
+ */
 public class GcpSecretUtils {
 
     private static String resolveSecret(String secretName) {

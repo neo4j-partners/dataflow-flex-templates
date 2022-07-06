@@ -1,4 +1,4 @@
-package com.google.cloud.teleport.v2.neo4j.common.model;
+package com.google.cloud.teleport.v2.neo4j.common.model.connection;
 
 import com.google.cloud.teleport.v2.neo4j.common.utils.FileSystemUtils;
 import org.json.JSONObject;
@@ -7,6 +7,9 @@ import org.slf4j.LoggerFactory;
 
 import java.io.Serializable;
 
+/**
+ * Helper object for connection params.
+ */
 public class ConnectionParams implements Serializable {
 
     private static final Logger LOG = LoggerFactory.getLogger(ConnectionParams.class);
@@ -46,3 +49,4 @@ public class ConnectionParams implements Serializable {
 
     }
 }
+

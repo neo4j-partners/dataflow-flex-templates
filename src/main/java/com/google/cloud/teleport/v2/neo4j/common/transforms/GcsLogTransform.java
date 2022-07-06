@@ -1,8 +1,8 @@
 package com.google.cloud.teleport.v2.neo4j.common.transforms;
 
-import com.google.cloud.teleport.v2.neo4j.common.model.JobSpecRequest;
-import com.google.cloud.teleport.v2.neo4j.common.model.Target;
 import com.google.cloud.teleport.v2.neo4j.common.model.enums.AvroType;
+import com.google.cloud.teleport.v2.neo4j.common.model.job.JobSpecRequest;
+import com.google.cloud.teleport.v2.neo4j.common.model.job.Target;
 import com.google.cloud.teleport.v2.neo4j.common.utils.AvroSinkWithJodaDatesConversion;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.beam.sdk.io.FileIO;
@@ -18,6 +18,9 @@ import org.apache.parquet.hadoop.metadata.CompressionCodecName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Log rows to parquet.
+ */
 public class GcsLogTransform extends PTransform<PCollection<Row>, POutput> {
 
     private static final Logger LOG = LoggerFactory.getLogger(GcsLogTransform.class);

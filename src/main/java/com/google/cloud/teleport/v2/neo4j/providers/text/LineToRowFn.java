@@ -1,7 +1,7 @@
 package com.google.cloud.teleport.v2.neo4j.providers.text;
 
-import com.google.cloud.teleport.v2.neo4j.common.model.Source;
 import com.google.cloud.teleport.v2.neo4j.common.model.enums.SourceType;
+import com.google.cloud.teleport.v2.neo4j.common.model.job.Source;
 import com.google.cloud.teleport.v2.neo4j.common.utils.TextParserUtils;
 import org.apache.beam.sdk.schemas.Schema;
 import org.apache.beam.sdk.transforms.DoFn;
@@ -12,6 +12,9 @@ import org.slf4j.LoggerFactory;
 
 import java.util.List;
 
+/**
+ * Leverages CSV parser to turn delimited lines to PCollection rows.
+ */
 public class LineToRowFn extends DoFn<String, Row> {
 
     private static final Logger LOG = LoggerFactory.getLogger(LineToRowFn.class);

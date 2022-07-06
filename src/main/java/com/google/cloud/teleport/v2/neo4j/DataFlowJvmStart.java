@@ -11,7 +11,7 @@ import java.security.Security;
 /**
  * This class will be picked up and used at the very start of a DataFlow JVM. As such it allows us
  * to disable certain security algorithms so that secure connections automatically pick up the right
- * one. This is an issue for secure Kafka and Neo4j Aura connections (neo4j+s:// protocol)
+ * one. This is an issue for secure Kafka and Neo4j Aura connections (neo4j+s:// protocol).
  */
 @AutoService(value = JvmInitializer.class)
 public class DataFlowJvmStart implements JvmInitializer {
@@ -24,7 +24,6 @@ public class DataFlowJvmStart implements JvmInitializer {
         Security.setProperty(
                 "jdk.tls.disabledAlgorithms",
                 "SSLv3, RC4, DES, MD5withRSA, DH keySize < 1024, EC keySize < 224, 3DES_EDE_CBC, anon, NULL");
-
     }
 
     @Override

@@ -1,4 +1,4 @@
-package com.google.cloud.teleport.v2.neo4j.common.model;
+package com.google.cloud.teleport.v2.neo4j.common.model.job;
 
 import com.google.cloud.teleport.v2.neo4j.common.model.enums.FragmentType;
 import com.google.cloud.teleport.v2.neo4j.common.model.enums.PropertyType;
@@ -13,6 +13,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+/**
+ * Field to Neo4j property mapping.
+ */
 public class Mapping implements Serializable {
     private static final Logger LOG = LoggerFactory.getLogger(Mapping.class);
     public String constant;
@@ -23,8 +26,8 @@ public class Mapping implements Serializable {
     public String field = "";
     public String description = "";
     public String defaultValue = "";
-    public boolean mandatory;
-    public boolean unique;
+    public boolean mandatory = false;
+    public boolean unique = false;
     public boolean indexed = true;
     public FragmentType fragmentType = FragmentType.node;
 

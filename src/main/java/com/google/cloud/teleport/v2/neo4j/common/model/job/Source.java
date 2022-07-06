@@ -1,4 +1,4 @@
-package com.google.cloud.teleport.v2.neo4j.common.model;
+package com.google.cloud.teleport.v2.neo4j.common.model.job;
 
 import com.google.cloud.teleport.v2.neo4j.common.model.enums.SourceType;
 import com.google.cloud.teleport.v2.neo4j.common.utils.BeamUtils;
@@ -18,18 +18,18 @@ import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
 
+/**
+ * Source query metdata.
+ */
 public class Source implements Serializable {
+    static final Pattern NEWLINE_PATTERN = Pattern.compile("\\R");
     private static final Logger LOG = LoggerFactory.getLogger(Source.class);
-
-
-    static Pattern NEWLINE_PATTERN = Pattern.compile("\\R");
-
     public SourceType sourceType = SourceType.text;
     public String name = "";
     public String uri = "";
     public String delimiter = ",";
     //row separator
-    public String separator;
+    public String separator = null;
 
     public String query = "";
     public CSVFormat csvFormat = CSVFormat.DEFAULT;
@@ -44,23 +44,23 @@ public class Source implements Serializable {
 
         boolean isJson = false;
         String formatStr = sourceObj.has("format") ? sourceObj.getString("format").toUpperCase() : "DEFAULT";
-        if ("EXCEL".equals(formatStr)) {
+        if (formatStr.equals("EXCEL")) {
             csvFormat = CSVFormat.EXCEL;
-        } else if ("MONGO".equals(formatStr)) {
+        } else if (formatStr.equals("MONGO")) {
             csvFormat = CSVFormat.MONGODB_CSV;
-        } else if ("INFORMIX".equals(formatStr)) {
+        } else if (formatStr.equals("INFORMIX")) {
             csvFormat = CSVFormat.INFORMIX_UNLOAD_CSV;
-        } else if ("POSTGRES".equals(formatStr)) {
+        } else if (formatStr.equals("POSTGRES")) {
             csvFormat = CSVFormat.POSTGRESQL_CSV;
-        } else if ("MYSQL".equals(formatStr)) {
+        } else if (formatStr.equals("MYSQL")) {
             csvFormat = CSVFormat.MYSQL;
-        } else if ("ORACLE".equals(formatStr)) {
+        } else if (formatStr.equals("ORACLE")) {
             csvFormat = CSVFormat.ORACLE;
-        } else if ("MONGO_TSV".equals(formatStr)) {
+        } else if (formatStr.equals("MONGO_TSV")) {
             csvFormat = CSVFormat.MONGODB_TSV;
-        } else if ("RFC4180".equals(formatStr)) {
+        } else if (formatStr.equals("RFC4180")) {
             csvFormat = CSVFormat.RFC4180;
-        } else if ("POSTGRESQL_CSV".equals(formatStr)) {
+        } else if (formatStr.equals("POSTGRESQL_CSV")) {
             csvFormat = CSVFormat.POSTGRESQL_CSV;
         } else {
             csvFormat = CSVFormat.DEFAULT;

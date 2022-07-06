@@ -1,15 +1,18 @@
-package com.google.cloud.teleport.v2.neo4j.common.model;
+package com.google.cloud.teleport.v2.neo4j.common.model.job;
 
 import com.google.cloud.teleport.v2.neo4j.common.model.enums.AvroType;
 import org.json.JSONObject;
 
 import java.io.Serializable;
+/**
+ * Global configuration options.
+ */
 
 public class Config implements Serializable {
     public Boolean resetDb = false;
     public Boolean indexAllProperties = false;
 
-    public String auditGsUri;
+    public String auditGsUri = null;
     public AvroType avroType = AvroType.parquet;
 
     public Integer nodeParallelism = 5;

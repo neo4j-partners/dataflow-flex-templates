@@ -1,6 +1,6 @@
 package com.google.cloud.teleport.v2.neo4j.common.database;
 
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -8,9 +8,9 @@ package com.google.cloud.teleport.v2.neo4j.common.database;
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,9 +18,8 @@ package com.google.cloud.teleport.v2.neo4j.common.database;
  * limitations under the License.
  */
 
-import com.google.cloud.teleport.v2.neo4j.common.model.ConnectionParams;
+import com.google.cloud.teleport.v2.neo4j.common.model.connection.ConnectionParams;
 import com.google.cloud.teleport.v2.neo4j.common.model.enums.AuthType;
-import com.google.cloud.teleport.v2.neo4j.common.utils.ModelUtils;
 import org.apache.beam.repackaged.core.org.apache.commons.lang3.StringUtils;
 import org.neo4j.driver.*;
 import org.slf4j.Logger;
@@ -31,16 +30,23 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Arrays;
 
+/**
+ * Neo4j connection helper object wraps Neo4j java APIs.
+ */
 public class Neo4jConnection implements Serializable {
 
     private static final Logger LOG = LoggerFactory.getLogger(Neo4jConnection.class);
     private final String username;
     private final String password;
-    public String serverUrl;
-    public String database;
+    public String serverUrl = null;
+    public String database = null;
     public AuthType authType = AuthType.BASIC;
-    Driver driver;
+    Driver driver = null;
 
+    /**
+     * Constructor.
+     * @param connectionParams
+     */
     public Neo4jConnection(ConnectionParams connectionParams) {
         this.username = connectionParams.username;
         this.password = connectionParams.password;
@@ -55,6 +61,13 @@ public class Neo4jConnection implements Serializable {
         this.serverUrl = getUrl(hostName, port);
     }
 
+    /**
+     * Constructor.
+     * @param serverUrl
+     * @param database
+     * @param username
+     * @param password
+     */
     public Neo4jConnection(String serverUrl, String database, String username, String password) {
         this.username = username;
         this.password = password;
@@ -62,10 +75,13 @@ public class Neo4jConnection implements Serializable {
         this.serverUrl = serverUrl;
     }
 
-    private final String getUrl(String hostName, int port) {
+    private String getUrl(String hostName, int port) {
         return "neo4j+s://" + hostName + ":" + port;
     }
 
+    /**
+     * Helper method to get the Neo4j driver.
+     */
     public Driver getDriver() throws URISyntaxException {
         if (this.authType != AuthType.BASIC) {
             LOG.error("Unsupported authType: " + this.authType);
@@ -82,6 +98,9 @@ public class Neo4jConnection implements Serializable {
         }
     }
 
+    /**
+     * Helper method to get the Neo4j session.
+     */
     public Session getSession() throws URISyntaxException {
         if (driver == null) {
             this.driver = getDriver();
@@ -93,24 +112,36 @@ public class Neo4jConnection implements Serializable {
         return driver.session(builder.build());
     }
 
-
+    /**
+     * Execute cypher.
+     * @param cypher statement
+     */
     public void executeCypher(String cypher) throws Exception {
         try (Session session = getSession()) {
             session.run(cypher);
         }
     }
 
+    /**
+     * Write transaction.
+     * @param transactionWork
+     * @param transactionConfig
+     */
     public void writeTransaction(TransactionWork<Void> transactionWork, TransactionConfig transactionConfig) throws Exception {
         try (Session session = getSession()) {
             session.writeTransaction(transactionWork, transactionConfig);
         }
     }
 
+    /**
+     * Completely delete "neo4j" or named database.
+     */
     public void resetDatabase() {
         // Direct connect utility...
         LOG.info("Resetting database");
+        String deleteCypher = "CREATE OR REPLACE DATABASE `neo4j`";
         try {
-            String deleteCypher = ModelUtils.CYPHER_DELETE_ALL;
+
             if (!StringUtils.isEmpty(database)) {
                 StringUtils.replace(deleteCypher, "neo4j", database);
             }
@@ -118,7 +149,7 @@ public class Neo4jConnection implements Serializable {
             executeCypher(deleteCypher);
 
         } catch (Exception e) {
-            LOG.error("Error executing cypher: " + ModelUtils.CYPHER_DELETE_ALL + ", " + e.getMessage());
+            LOG.error("Error executing cypher: " + deleteCypher + ", " + e.getMessage());
         }
     }
 

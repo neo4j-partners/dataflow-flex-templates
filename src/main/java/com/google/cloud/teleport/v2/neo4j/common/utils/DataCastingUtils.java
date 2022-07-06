@@ -1,8 +1,8 @@
 package com.google.cloud.teleport.v2.neo4j.common.utils;
 
-import com.google.cloud.teleport.v2.neo4j.common.model.Mapping;
-import com.google.cloud.teleport.v2.neo4j.common.model.Target;
 import com.google.cloud.teleport.v2.neo4j.common.model.enums.PropertyType;
+import com.google.cloud.teleport.v2.neo4j.common.model.job.Mapping;
+import com.google.cloud.teleport.v2.neo4j.common.model.job.Target;
 import org.apache.beam.repackaged.core.org.apache.commons.lang3.StringUtils;
 import org.apache.beam.sdk.schemas.Schema;
 import org.apache.beam.sdk.values.Row;
@@ -21,25 +21,28 @@ import java.time.*;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ * Utility functions for casting rows between and to Neo4j properties.
+ */
 public class DataCastingUtils {
 
     /*
-    Cypher type/Java type
-    =========================
-    String/String
-    Integer/Long
-    Float/Double
-    Boolean/Boolean
-    Point/org.neo4j.graphdb.spatial.Point
-    Date/java.time.LocalDate
-    Time/java.time.OffsetTime
-    LocalTime/java.time.LocalTime
-    DateTime/java.time.ZonedDateTime
-    LocalDateTime/java.time.LocalDateTime
-    Duration/java.time.temporal.TemporalAmount
-    Node/org.neo4j.graphdb.Node
-    Relationship/org.neo4j.graphdb.Relationship
-    Path/org.neo4j.graphdb.Path
+     * Cypher type/Java type
+     * =========================
+     * String/String
+     * Integer/Long
+     * Float/Double
+     * Boolean/Boolean
+     * Point/org.neo4j.graphdb.spatial.Point
+     * Date/java.time.LocalDate
+     * Time/java.time.OffsetTime
+     * LocalTime/java.time.LocalTime
+     * DateTime/java.time.ZonedDateTime
+     * LocalDateTime/java.time.LocalDateTime
+     * Duration/java.time.temporal.TemporalAmount
+     * Node/org.neo4j.graphdb.Node
+     * Relationship/org.neo4j.graphdb.Relationship
+     * Path/org.neo4j.graphdb.Path
      */
     private static final Logger LOG = LoggerFactory.getLogger(DataCastingUtils.class);
 
@@ -158,7 +161,7 @@ public class DataCastingUtils {
                     //SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
                     SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
                     sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
-                    Date parsedDate = sdf.parse(row.getValue(fieldName));
+                    java.util.Date parsedDate = sdf.parse(row.getValue(fieldName));
                     ZonedDateTime zdt = ZonedDateTime.from(parsedDate.toInstant());
                     map.put(fieldName, zdt);
                 } else if (type.getTypeName().isDateType()) {
@@ -294,12 +297,9 @@ public class DataCastingUtils {
         }
         String val = null;
         if (o instanceof String) {
-            val = (String) o;
+            val = ((String) o);
         }
         return val;
-    }
-
-    private DataCastingUtils() {
     }
 
 }

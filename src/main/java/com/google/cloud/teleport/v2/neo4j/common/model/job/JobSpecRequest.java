@@ -1,4 +1,4 @@
-package com.google.cloud.teleport.v2.neo4j.common.model;
+package com.google.cloud.teleport.v2.neo4j.common.model.job;
 
 import com.google.cloud.teleport.v2.neo4j.common.model.enums.TargetType;
 import com.google.cloud.teleport.v2.neo4j.common.utils.FileSystemUtils;
@@ -11,11 +11,14 @@ import org.slf4j.LoggerFactory;
 import java.io.Serializable;
 import java.util.*;
 
+/**
+ * Job specification request object.
+ */
 public class JobSpecRequest implements Serializable {
 
     private static final Logger LOG = LoggerFactory.getLogger(JobSpecRequest.class);
 
-    private final static String DEFAULT_SOURCE_NAME = "";
+    private static final String DEFAULT_SOURCE_NAME = "";
     //initialize defaults;
     public Map<String, Source> sources = new HashMap<>();
     public List<Target> targets = new ArrayList<>();

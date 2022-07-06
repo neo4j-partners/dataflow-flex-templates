@@ -1,12 +1,13 @@
-package com.google.cloud.teleport.v2.neo4j.common;
+package com.google.cloud.teleport.v2.neo4j.common.model;
 
-import avro.shaded.com.google.common.collect.Sets;
-import com.google.cloud.teleport.v2.neo4j.common.model.*;
+import com.google.cloud.teleport.v2.neo4j.Neo4jFlexTemplateOptions;
+import com.google.cloud.teleport.v2.neo4j.common.model.connection.ConnectionParams;
 import com.google.cloud.teleport.v2.neo4j.common.model.enums.FragmentType;
 import com.google.cloud.teleport.v2.neo4j.common.model.enums.RoleType;
 import com.google.cloud.teleport.v2.neo4j.common.model.enums.TargetType;
-import com.google.cloud.teleport.v2.neo4j.common.options.Neo4jFlexTemplateOptions;
+import com.google.cloud.teleport.v2.neo4j.common.model.job.*;
 import com.google.cloud.teleport.v2.neo4j.common.utils.ModelUtils;
+import com.google.common.collect.Sets;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import org.apache.beam.repackaged.core.org.apache.commons.lang3.StringUtils;
@@ -17,9 +18,12 @@ import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+/**
+ * A helper class to validate DataFlow run-time inputs.
+ */
 public class InputValidator {
 
-    final static Set<String> validOptions = Sets.newHashSet(
+    private static final Set<String> validOptions = Sets.newHashSet(
             "relationship",
             "relationship.save.strategy",
             "relationship.source.labels",
@@ -30,9 +34,9 @@ public class InputValidator {
             "relationship.target.node.properties",
             "relationship.target.save.mode");
 
-    final static Pattern ORDER_BY_PATTERN = Pattern.compile(".*ORDER\\sBY.*");
-    final static Gson gson = new GsonBuilder().setPrettyPrinting().create();
-    private static final Logger LOG = LoggerFactory.getLogger(InputValidator.class);
+     private static final Pattern ORDER_BY_PATTERN = Pattern.compile(".*ORDER\\sBY.*");
+     private static final Gson gson = new GsonBuilder().setPrettyPrinting().create();
+     private static final Logger LOG = LoggerFactory.getLogger(InputValidator.class);
 
     public static List<String> validateNeo4jPipelineOptions(Neo4jFlexTemplateOptions pipelineOptions) {
 
@@ -183,9 +187,6 @@ public class InputValidator {
             }
         }
         return false;
-    }
-
-    private InputValidator() {
     }
 
 

@@ -1,11 +1,11 @@
 package com.google.cloud.teleport.v2.neo4j.providers.text;
 
-import com.google.cloud.teleport.v2.neo4j.common.model.JobSpecRequest;
-import com.google.cloud.teleport.v2.neo4j.common.model.OptionsParams;
-import com.google.cloud.teleport.v2.neo4j.common.model.Source;
+import com.google.cloud.teleport.v2.neo4j.common.model.helpers.SourceQuerySpec;
+import com.google.cloud.teleport.v2.neo4j.common.model.helpers.TargetQuerySpec;
+import com.google.cloud.teleport.v2.neo4j.common.model.job.JobSpecRequest;
+import com.google.cloud.teleport.v2.neo4j.common.model.job.OptionsParams;
+import com.google.cloud.teleport.v2.neo4j.common.model.job.Source;
 import com.google.cloud.teleport.v2.neo4j.providers.IProvider;
-import com.google.cloud.teleport.v2.neo4j.providers.SourceQuerySpec;
-import com.google.cloud.teleport.v2.neo4j.providers.TargetQuerySpec;
 import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.values.PBegin;
 import org.apache.beam.sdk.values.PCollection;
@@ -15,10 +15,13 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
-
+/**
+ * Provider implementation for reading and writing Text files.
+ */
 public class TextImpl implements IProvider {
 
     private static final Logger LOG = LoggerFactory.getLogger(TextImpl.class);
+    private JobSpecRequest jobSpec;
     private OptionsParams optionsParams;
 
     public TextImpl() {

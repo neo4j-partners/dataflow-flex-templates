@@ -1,9 +1,9 @@
 package com.google.cloud.teleport.v2.neo4j.common.utils;
 
 import com.google.cloud.bigquery.LegacySQLTypeName;
-import com.google.cloud.teleport.v2.neo4j.common.model.Mapping;
-import com.google.cloud.teleport.v2.neo4j.common.model.Target;
 import com.google.cloud.teleport.v2.neo4j.common.model.enums.PropertyType;
+import com.google.cloud.teleport.v2.neo4j.common.model.job.Mapping;
+import com.google.cloud.teleport.v2.neo4j.common.model.job.Target;
 import org.apache.beam.repackaged.core.org.apache.commons.lang3.StringUtils;
 import org.apache.beam.sdk.schemas.Schema;
 import org.slf4j.Logger;
@@ -12,6 +12,9 @@ import org.slf4j.LoggerFactory;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Utilities for organizing Bean rows and schema.
+ */
 public class BeamUtils {
     private static final Logger LOG = LoggerFactory.getLogger(BeamUtils.class);
 
@@ -128,8 +131,5 @@ public class BeamUtils {
             fields.add(schemaField);
         }
         return new Schema(fields);
-    }
-
-    private BeamUtils() {
     }
 }

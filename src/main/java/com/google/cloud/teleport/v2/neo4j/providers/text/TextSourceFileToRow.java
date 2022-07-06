@@ -1,8 +1,8 @@
 package com.google.cloud.teleport.v2.neo4j.providers.text;
 
-import com.google.cloud.teleport.v2.neo4j.common.model.OptionsParams;
-import com.google.cloud.teleport.v2.neo4j.common.model.Source;
-import com.google.cloud.teleport.v2.neo4j.providers.SourceQuerySpec;
+import com.google.cloud.teleport.v2.neo4j.common.model.helpers.SourceQuerySpec;
+import com.google.cloud.teleport.v2.neo4j.common.model.job.OptionsParams;
+import com.google.cloud.teleport.v2.neo4j.common.model.job.Source;
 import org.apache.beam.repackaged.core.org.apache.commons.lang3.StringUtils;
 import org.apache.beam.sdk.io.TextIO;
 import org.apache.beam.sdk.schemas.Schema;
@@ -15,6 +15,9 @@ import org.apache.beam.sdk.values.Row;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Transform that reads data from a source file.
+ */
 public class TextSourceFileToRow extends PTransform<PBegin, PCollection<Row>> {
     private static final Logger LOG = LoggerFactory.getLogger(TextSourceFileToRow.class);
     SourceQuerySpec sourceQuerySpec;

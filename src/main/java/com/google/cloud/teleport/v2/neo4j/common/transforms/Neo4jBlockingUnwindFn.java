@@ -10,7 +10,6 @@ import org.apache.beam.sdk.transforms.windowing.GlobalWindow;
 import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.Row;
 import org.neo4j.driver.Result;
-import org.neo4j.driver.Transaction;
 import org.neo4j.driver.TransactionConfig;
 import org.neo4j.driver.TransactionWork;
 import org.slf4j.Logger;
@@ -18,6 +17,9 @@ import org.slf4j.LoggerFactory;
 
 import java.util.*;
 
+/**
+ * Write to Neo4j synchronously, called from inside @Neo4jRowWriterTransform.
+ */
 public class Neo4jBlockingUnwindFn extends DoFn<KV<Integer, Row>, Row> {
 
     private static final Logger LOG = LoggerFactory.getLogger(Neo4jBlockingUnwindFn.class);
@@ -25,7 +27,7 @@ public class Neo4jBlockingUnwindFn extends DoFn<KV<Integer, Row>, Row> {
     protected TransactionConfig transactionConfig = TransactionConfig.empty();
     private Row returnEmpty;
     private String cypher;
-    private SerializableFunction<Row, Map<String, Object>> parametersFunction;
+    private SerializableFunction<Row, Map<String, Object>> parametersFunction = null;
     private boolean logCypher;
     private long batchSize;
     private String unwindMapName;
@@ -106,7 +108,7 @@ public class Neo4jBlockingUnwindFn extends DoFn<KV<Integer, Row>, Row> {
         // The changes to the database are automatically committed.
         //
         TransactionWork<Void> transactionWork =
-                (Transaction transaction) -> {
+                transaction -> {
                     Result result = transaction.run(cypher, parametersMap);
                     while (result.hasNext()) {
                         // This just consumes any output but the function basically has no output
@@ -144,7 +146,7 @@ public class Neo4jBlockingUnwindFn extends DoFn<KV<Integer, Row>, Row> {
         parametersMap
                 .keySet()
                 .forEach(
-                        (String key) -> {
+                        key -> {
                             if (parametersString.length() > 0) {
                                 parametersString.append(',');
                             }
@@ -161,3 +163,4 @@ public class Neo4jBlockingUnwindFn extends DoFn<KV<Integer, Row>, Row> {
 
 
 }
+

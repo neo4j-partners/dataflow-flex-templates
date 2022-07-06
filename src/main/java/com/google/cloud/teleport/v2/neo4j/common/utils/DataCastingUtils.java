@@ -160,7 +160,7 @@ public class DataCastingUtils {
                     //SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
                     SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
                     sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
-                    java.util.Date parsedDate = sdf.parse(row.getValue(fieldName));
+                    Date parsedDate = sdf.parse(row.getValue(fieldName));
                     ZonedDateTime zdt = ZonedDateTime.from(parsedDate.toInstant());
                     map.put(fieldName, zdt);
                 } else if (type.getTypeName().isDateType()) {

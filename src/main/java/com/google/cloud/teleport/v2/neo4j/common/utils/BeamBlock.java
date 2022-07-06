@@ -9,12 +9,9 @@ import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.PCollectionList;
 import org.apache.beam.sdk.values.Row;
 
-/*
-BeamBlock blockingQueue = BeamBlock.create("Serial");
-blockingQueue.addEmptyBlockingCollection(emptyReturn);
-
+/**
+ * Utility function to queue PCollections, flatten and return empty queue on demand.
  */
-
 public class BeamBlock {
 
     //registry of blocks
@@ -60,7 +57,7 @@ public class BeamBlock {
         for (List<PCollection<Row>> chainedQueue : chainedQueues) {
             allQueues.addAll(chainedQueue);
         }
-        PCollection<Row> combinedQueue = PCollectionList.of(allQueues).apply(description + " Queueing", Flatten.pCollections());
+        PCollection<Row> combinedQueue = PCollectionList.of(allQueues).apply(" Queueing "+description, Flatten.pCollections());
         return combinedQueue;
     }
 

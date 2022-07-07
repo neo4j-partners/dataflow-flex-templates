@@ -1,19 +1,16 @@
 package com.google.cloud.teleport.v2.neo4j.common.model.job;
 
+import com.google.cloud.teleport.v2.neo4j.common.model.enums.ActionExecuteAfter;
 import com.google.cloud.teleport.v2.neo4j.common.model.enums.SourceType;
 import com.google.cloud.teleport.v2.neo4j.common.utils.BeamUtils;
-import com.google.cloud.teleport.v2.neo4j.common.utils.TextParserUtils;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.regex.Pattern;
-import org.apache.beam.repackaged.core.org.apache.commons.lang3.StringUtils;
 import org.apache.beam.sdk.schemas.Schema;
 import org.apache.commons.csv.CSVFormat;
 import org.json.JSONArray;
-import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,7 +18,7 @@ import org.slf4j.LoggerFactory;
  * Source query metdata.
  */
 public class Source implements Serializable {
-    static final Pattern NEWLINE_PATTERN = Pattern.compile("\\R");
+
     private static final Logger LOG = LoggerFactory.getLogger(Source.class);
     public SourceType sourceType = SourceType.text;
     public String name = "";
@@ -36,78 +33,8 @@ public class Source implements Serializable {
     public Map<String, Integer> fieldPosByName = new HashMap();
     public List<List<Object>> inline = new ArrayList<>();
 
-    public Source(final JSONObject sourceObj) {
-        this.name = sourceObj.getString("name");
-        //TODO: avro, parquet, etc.
-        this.sourceType = sourceObj.has("type") ? SourceType.valueOf(sourceObj.getString("type")) : SourceType.text;
-
-        boolean isJson = false;
-        String formatStr = sourceObj.has("format") ? sourceObj.getString("format").toUpperCase() : "DEFAULT";
-        if (formatStr.equals("EXCEL")) {
-            csvFormat = CSVFormat.EXCEL;
-        } else if (formatStr.equals("MONGO")) {
-            csvFormat = CSVFormat.MONGODB_CSV;
-        } else if (formatStr.equals("INFORMIX")) {
-            csvFormat = CSVFormat.INFORMIX_UNLOAD_CSV;
-        } else if (formatStr.equals("POSTGRES")) {
-            csvFormat = CSVFormat.POSTGRESQL_CSV;
-        } else if (formatStr.equals("MYSQL")) {
-            csvFormat = CSVFormat.MYSQL;
-        } else if (formatStr.equals("ORACLE")) {
-            csvFormat = CSVFormat.ORACLE;
-        } else if (formatStr.equals("MONGO_TSV")) {
-            csvFormat = CSVFormat.MONGODB_TSV;
-        } else if (formatStr.equals("RFC4180")) {
-            csvFormat = CSVFormat.RFC4180;
-        } else if (formatStr.equals("POSTGRESQL_CSV")) {
-            csvFormat = CSVFormat.POSTGRESQL_CSV;
-        } else {
-            csvFormat = CSVFormat.DEFAULT;
-        }
-
-        delimiter = sourceObj.has("delimiter") ? sourceObj.getString("delimiter") : delimiter;
-        separator = sourceObj.has("separator") ? sourceObj.getString("separator") : separator;
-        //handle inline data
-        if (sourceObj.has("data")) {
-            if (sourceObj.get("data") instanceof JSONArray) {
-
-                if (csvFormat == CSVFormat.DEFAULT) {
-                    this.inline = jsonToListOfListsArray(sourceObj.getJSONArray("data"));
-                } else {
-                    String[] rows = jsonToListOfStringArray(sourceObj.getJSONArray("data"), delimiter);
-                    this.inline = TextParserUtils.parseDelimitedLines(csvFormat, rows);
-                }
-
-            } else {
-                String csv = sourceObj.getString("data");
-                String[] rows;
-                if (separator != null && csv.contains(separator)) {
-                    rows = StringUtils.split(csv, separator);
-                    // we may have more luck with varieties of newline
-                } else {
-                    rows = NEWLINE_PATTERN.split(csv);
-                }
-                if (rows.length < 2) {
-                    String errMsg = "Cold not parse inline data.  Check separator: " + separator;
-                    LOG.error(errMsg);
-                    throw new RuntimeException(errMsg);
-                }
-                this.inline = TextParserUtils.parseDelimitedLines(csvFormat, rows);
-            }
-        }
-        query = sourceObj.has("query") ? sourceObj.getString("query") : "";
-        uri = sourceObj.has("uri") ? sourceObj.getString("uri") : "";
-        final String colNamesStr = sourceObj.has("ordered_field_names") ? sourceObj.getString("ordered_field_names") : "";
-        if (StringUtils.isNotEmpty(colNamesStr)) {
-            fieldNames = StringUtils.split(colNamesStr, ",");
-            for (int i = 0; i < fieldNames.length; i++) {
-                fieldPosByName.put(fieldNames[i], (i + 1));
-            }
-        }
-        if (StringUtils.isNotEmpty(delimiter)) {
-            csvFormat.withDelimiter(delimiter.charAt(0));
-        }
-    }
+    public ActionExecuteAfter executeAfter= ActionExecuteAfter.preloads;
+    public String executeAfterName="";
 
     public static List<List<Object>> jsonToListOfListsArray(JSONArray lines) {
         if (lines == null) {

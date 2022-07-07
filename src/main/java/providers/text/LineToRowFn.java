@@ -1,4 +1,4 @@
-package com.google.cloud.teleport.v2.neo4j.providers.text;
+package providers.text;
 
 import com.google.cloud.teleport.v2.neo4j.common.model.enums.SourceType;
 import com.google.cloud.teleport.v2.neo4j.common.model.job.Source;

@@ -5,10 +5,7 @@ import com.google.cloud.teleport.v2.neo4j.common.model.enums.PropertyType;
 import com.google.cloud.teleport.v2.neo4j.common.model.enums.RoleType;
 import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
-import org.apache.beam.repackaged.core.org.apache.commons.lang3.StringUtils;
-import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,6 +26,7 @@ public class Mapping implements Serializable {
     public boolean unique = false;
     public boolean indexed = true;
     public FragmentType fragmentType = FragmentType.node;
+    public Mapping(){}
 
     public Mapping(FragmentType fragmentType, RoleType type, FieldNameTuple fieldNameTuple) {
         this.role = type;
@@ -38,36 +36,6 @@ public class Mapping implements Serializable {
         this.constant = fieldNameTuple.constant;
     }
 
-    public Mapping(final JSONObject mappingObj) {
-
-        this.labels = Arrays.asList(mappingObj.has("label") ? mappingObj.getString("label") : "");
-        this.constant = mappingObj.has("constant") ? mappingObj.getString("constant") : "";
-        this.role = mappingObj.has("role") ? RoleType.valueOf(mappingObj.getString("role")) : role;
-        this.fragmentType = mappingObj.has("fragment") ? FragmentType.valueOf(mappingObj.getString("fragment")) : fragmentType;
-
-        this.field = mappingObj.has("field") ? mappingObj.getString("field") : "";
-        this.name = mappingObj.has("name") ? mappingObj.getString("name") : "";
-        if (StringUtils.isNotEmpty(this.field) && StringUtils.isEmpty(this.name)) {
-            throw new RuntimeException("Invalid target.  Every field must include a 'name' attribute.");
-        }
-        // source value is required.
-        this.description = mappingObj.has("description") ? mappingObj.getString("description") : "";
-        this.unique = mappingObj.has("unique") && mappingObj.getBoolean("unique");
-        this.indexed = mappingObj.has("indexed") && mappingObj.getBoolean("indexed");
-        if (this.role == RoleType.key) {
-            this.unique = true;
-            this.indexed = true;
-        }
-        if (mappingObj.has("type")) {
-            this.type = PropertyType.valueOf(mappingObj.getString("type"));
-        } else {
-            // check to see if data type is defined in fields...
-            this.type = PropertyType.String;
-        }
-        this.mandatory = mappingObj.has("mandatory") && mappingObj.getBoolean("mandatory");
-        this.defaultValue = mappingObj.has("default") ? mappingObj.get("default") + "" : "";
-
-    }
 
 
 }

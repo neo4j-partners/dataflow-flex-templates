@@ -1,13 +1,13 @@
-package com.google.cloud.teleport.v2.neo4j.providers.bq;
+package providers.bq;
 
 import com.google.cloud.teleport.v2.neo4j.common.model.helpers.SourceQuerySpec;
 import com.google.cloud.teleport.v2.neo4j.common.model.helpers.SqlQuerySpec;
 import com.google.cloud.teleport.v2.neo4j.common.model.helpers.TargetQuerySpec;
-import com.google.cloud.teleport.v2.neo4j.common.model.job.JobSpecRequest;
+import com.google.cloud.teleport.v2.neo4j.common.model.job.JobSpec;
 import com.google.cloud.teleport.v2.neo4j.common.model.job.OptionsParams;
 import com.google.cloud.teleport.v2.neo4j.common.model.job.Source;
 import com.google.cloud.teleport.v2.neo4j.common.utils.ModelUtils;
-import com.google.cloud.teleport.v2.neo4j.providers.IProvider;
+import providers.IProvider;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import java.util.ArrayList;
@@ -29,14 +29,14 @@ public class BigQueryImpl implements IProvider {
 
     private static final Gson gson = new GsonBuilder().setPrettyPrinting().create();
 
-    private JobSpecRequest jobSpec;
+    private JobSpec jobSpec;
     private OptionsParams optionsParams;
 
     public BigQueryImpl() {
     }
 
     @Override
-    public void configure(OptionsParams optionsParams, JobSpecRequest jobSpecRequest) {
+    public void configure(OptionsParams optionsParams, JobSpec jobSpecRequest) {
         this.jobSpec = jobSpecRequest;
         this.optionsParams = optionsParams;
     }

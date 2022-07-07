@@ -41,7 +41,7 @@ pushd ../../../
      --region=$REGION \
      --workerMachineType=$MACHINE_TYPE \
      --maxNumWorkers=2 \
-     --jobSpecUri=gs://neo4j-dataflow/job-specs/testing/new/bq-northwind-jobspec.json \
+     --jobSpecUri=gs://neo4j-dataflow/job-specs/testing/bigquery/bq-northwind-jobspec.json \
      --neo4jConnectionUri=gs://neo4j-dataflow/job-specs/testing/common/auradb-free-connection.json"
  ```
 

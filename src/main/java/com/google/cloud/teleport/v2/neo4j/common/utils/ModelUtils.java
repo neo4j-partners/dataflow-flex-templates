@@ -63,7 +63,7 @@ public class ModelUtils {
         return "";
     }
 
-    public static boolean singleSourceSpec(JobSpecRequest jobSpec) {
+    public static boolean singleSourceSpec(JobSpec jobSpec) {
         boolean singleSourceQuery = true;
         for (Target target : jobSpec.targets) {
             if (target.active) {
@@ -76,7 +76,7 @@ public class ModelUtils {
         return singleSourceQuery;
     }
 
-    public static boolean targetsHaveTransforms(JobSpecRequest jobSpec, Source source) {
+    public static boolean targetsHaveTransforms(JobSpec jobSpec, Source source) {
         for (Target target : jobSpec.targets) {
             if (target.active) {
                 if (target.source.equals(source.name)) {
@@ -90,7 +90,7 @@ public class ModelUtils {
         return false;
     }
 
-    public static boolean nodesOnly(JobSpecRequest jobSpec) {
+    public static boolean nodesOnly(JobSpec jobSpec) {
         for (Target target : jobSpec.targets) {
             if (target.active) {
                 if (target.type == TargetType.edge) {
@@ -101,7 +101,7 @@ public class ModelUtils {
         return true;
     }
 
-    public static boolean relationshipsOnly(JobSpecRequest jobSpec) {
+    public static boolean relationshipsOnly(JobSpec jobSpec) {
         for (Target target : jobSpec.targets) {
             if (target.active) {
                 if (target.type == TargetType.node) {

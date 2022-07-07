@@ -17,13 +17,13 @@ package com.google.cloud.teleport.v2.neo4j;
 
 import com.google.cloud.teleport.v2.neo4j.common.model.InputValidator;
 import com.google.cloud.teleport.v2.neo4j.common.model.connection.ConnectionParams;
-import com.google.cloud.teleport.v2.neo4j.common.model.job.JobSpecRequest;
+import com.google.cloud.teleport.v2.neo4j.common.model.job.JobSpec;
 import com.google.cloud.teleport.v2.neo4j.common.model.job.OptionsParams;
 import com.google.cloud.teleport.v2.neo4j.common.model.job.Source;
 import com.google.cloud.teleport.v2.neo4j.common.utils.ModelUtils;
-import com.google.cloud.teleport.v2.neo4j.providers.IProvider;
-import com.google.cloud.teleport.v2.neo4j.providers.ProviderFactory;
-import com.google.cloud.teleport.v2.neo4j.providers.text.TextImpl;
+import providers.IProvider;
+import providers.ProviderFactory;
+import providers.text.TextImpl;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import java.io.IOException;
@@ -51,7 +51,7 @@ public class GoogleToNeo4jTest {
     private transient PCollection<Row> textRows;
     private static IProvider providerImpl;
     private static ConnectionParams neo4jConnection;
-    private static JobSpecRequest jobSpec;
+    private static JobSpec jobSpec;
     private static OptionsParams optionsParams;
 
     private static final Logger LOG = LoggerFactory.getLogger(GoogleToNeo4jTest.class);
@@ -64,7 +64,7 @@ public class GoogleToNeo4jTest {
         if (jobSpec == null) {
             LOG.info("Initializing...");
             neo4jConnection = new ConnectionParams("gs://neo4j-dataflow/job-specs/testing/common/auradb-free-connection.json");
-            jobSpec = new JobSpecRequest("gs://neo4j-dataflow/job-specs/testing/new/text-northwind-jobspec.json");
+            jobSpec = new JobSpec("gs://neo4j-dataflow/job-specs/testing/new/text-northwind-jobspec.json");
             providerImpl = ProviderFactory.of(jobSpec.getSourceList().get(0).sourceType);
             optionsParams = new OptionsParams();
             optionsParams.overlayTokens("{\"limit\":7}");

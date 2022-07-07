@@ -1,9 +1,9 @@
-package com.google.cloud.teleport.v2.neo4j.common.model.job;
+package com.google.cloud.teleport.v2.neo4j.common.model.helpers;
 
-import com.google.cloud.teleport.v2.neo4j.common.model.enums.FragmentType;
-import com.google.cloud.teleport.v2.neo4j.common.model.enums.MappingType;
-import com.google.cloud.teleport.v2.neo4j.common.model.enums.PropertyType;
-import com.google.cloud.teleport.v2.neo4j.common.model.enums.RoleType;
+import com.google.cloud.teleport.v2.neo4j.common.model.enums.*;
+import com.google.cloud.teleport.v2.neo4j.common.model.job.FieldNameTuple;
+import com.google.cloud.teleport.v2.neo4j.common.model.job.Mapping;
+import com.google.cloud.teleport.v2.neo4j.common.model.job.Target;
 import com.google.cloud.teleport.v2.neo4j.common.utils.ModelUtils;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -19,15 +19,15 @@ import org.slf4j.LoggerFactory;
 /**
  * Helper object for parsing transposed field mappings (ie. strings, indexed, longs, etc.).
  */
-public class MappingTransposed {
+public class TransposedMappingMapper {
 
     private static final Gson gson = new GsonBuilder().setPrettyPrinting().create();
-    private static final Logger LOG = LoggerFactory.getLogger(MappingTransposed.class);
+    private static final Logger LOG = LoggerFactory.getLogger(TransposedMappingMapper.class);
 
-    public static List<Mapping> parseMappings(MappingType mappingType, final JSONObject mappingsObject) {
-        if (mappingType == MappingType.node) {
+    public static List<Mapping> parseMappings(Target target, final JSONObject mappingsObject) {
+        if (target.type == TargetType.node.node) {
             return parseNode(mappingsObject);
-        } else if (mappingType == MappingType.edge) {
+        } else if (target.type == TargetType.edge.edge) {
             return parseEdge(mappingsObject);
         } else {
             return new ArrayList();
@@ -43,20 +43,20 @@ public class MappingTransposed {
         if (nodeMappingsObject.has("label")) {
             FieldNameTuple labelTuple = createFieldNameTuple(nodeMappingsObject.getString("label"));
             Mapping mapping = new Mapping(FragmentType.node, RoleType.label, labelTuple);
-            mappings.add(mapping);
+            addMapping(mappings, mapping);
         }
         if (nodeMappingsObject.has("labels")) {
             List<FieldNameTuple> labels = getFieldAndNameTuples(nodeMappingsObject.get("labels"));
             for (FieldNameTuple f : labels) {
                 Mapping mapping = new Mapping(FragmentType.node, RoleType.label, f);
                 mapping.indexed = true;
-                mappings.add(mapping);
+                addMapping(mappings, mapping);
             }
         }
         if (nodeMappingsObject.has("key")) {
             FieldNameTuple labelTuple = createFieldNameTuple(nodeMappingsObject.getString("key"));
             Mapping mapping = new Mapping(FragmentType.node, RoleType.key, labelTuple);
-            mappings.add(mapping);
+            addMapping(mappings, mapping);
         }
         // keys
         // "field": "customer_id",
@@ -71,7 +71,7 @@ public class MappingTransposed {
             for (FieldNameTuple f : keys) {
                 Mapping mapping = new Mapping(FragmentType.node, RoleType.key, f);
                 mapping.indexed = true;
-                mappings.add(mapping);
+                addMapping(mappings, mapping);
             }
         }
 
@@ -85,7 +85,7 @@ public class MappingTransposed {
         if (edgeMappingsObject.has("type")) {
             FieldNameTuple typeTuple = createFieldNameTuple(edgeMappingsObject.getString("type"), edgeMappingsObject.getString("type"));
             Mapping mapping = new Mapping(FragmentType.rel, RoleType.type, typeTuple);
-            mappings.add(mapping);
+            addMapping(mappings, mapping);
         }
         // source
         // "label": "\"Customer\"",
@@ -141,12 +141,12 @@ public class MappingTransposed {
 
         for (FieldNameTuple f : uniques) {
             Mapping mapping = new Mapping(fragmentType, RoleType.property, f);
-            mappings.add(mapping);
+            addMapping(mappings, mapping);
             mapping.indexed = indexed.contains(f);
         }
         for (FieldNameTuple f : indexed) {
             Mapping mapping = new Mapping(fragmentType, RoleType.property, f);
-            mappings.add(mapping);
+            addMapping(mappings, mapping);
             mapping.unique = uniques.contains(f);
         }
         if (propertyMappingsObject.has("dates")) {
@@ -156,7 +156,8 @@ public class MappingTransposed {
                 mapping.type = PropertyType.Date;
                 mapping.indexed = indexed.contains(f);
                 mapping.unique = uniques.contains(f);
-                mappings.add(mapping);
+                addMapping(mappings, mapping);
+                
             }
         }
 
@@ -169,7 +170,7 @@ public class MappingTransposed {
                 mapping.indexed = indexed.contains(f);
                 mapping.unique = uniques.contains(f);
                 //LOG.info("double mappings: "+gson.toJson(mapping));
-                mappings.add(mapping);
+                addMapping(mappings, mapping);
             }
         }
         if (propertyMappingsObject.has("longs")) {
@@ -181,7 +182,7 @@ public class MappingTransposed {
                 mapping.indexed = indexed.contains(f);
                 mapping.unique = uniques.contains(f);
                 //LOG.info("longs mappings: "+gson.toJson(mapping));
-                mappings.add(mapping);
+                addMapping(mappings, mapping);
             }
         }
         if (propertyMappingsObject.has("strings")) {
@@ -191,7 +192,7 @@ public class MappingTransposed {
                 mapping.type = PropertyType.String;
                 mapping.indexed = indexed.contains(f);
                 mapping.unique = uniques.contains(f);
-                mappings.add(mapping);
+                addMapping(mappings, mapping);
             }
         }
 
@@ -284,10 +285,10 @@ public class MappingTransposed {
         return fieldSet;
     }
 
-    private void addMapping(List<Mapping> mappings, Mapping mapping) {
+    private static void addMapping(List<Mapping> mappings, Mapping mapping) {
         if (!StringUtils.isEmpty(mapping.field)) {
             for (Mapping existingMapping : mappings) {
-                if (existingMapping.field.equals(mapping.field)) {
+                if (existingMapping.field!=null && existingMapping.field.equals(mapping.field)) {
                     throw new RuntimeException("Duplicate mapping: " + gson.toJson(mapping));
                 }
             }

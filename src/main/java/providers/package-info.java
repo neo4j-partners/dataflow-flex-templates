@@ -6,4 +6,4 @@
  * @since 1.0
  */
 
-package com.google.cloud.teleport.v2.neo4j.providers;
+package providers;

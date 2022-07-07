@@ -1,9 +1,9 @@
-package com.google.cloud.teleport.v2.neo4j.providers;
+package providers;
 
 
 import com.google.cloud.teleport.v2.neo4j.common.model.helpers.SourceQuerySpec;
 import com.google.cloud.teleport.v2.neo4j.common.model.helpers.TargetQuerySpec;
-import com.google.cloud.teleport.v2.neo4j.common.model.job.JobSpecRequest;
+import com.google.cloud.teleport.v2.neo4j.common.model.job.JobSpec;
 import com.google.cloud.teleport.v2.neo4j.common.model.job.OptionsParams;
 import com.google.cloud.teleport.v2.neo4j.common.model.job.Source;
 import java.util.List;
@@ -16,7 +16,7 @@ import org.apache.beam.sdk.values.Row;
  * Provider interface, implemented for every source.
  */
 public interface IProvider {
-    void configure(OptionsParams optionsParams, JobSpecRequest jobSpecRequest);
+    void configure(OptionsParams optionsParams, JobSpec jobSpecRequest);
 
     /**
      * Push down capability determine whether groupings and aggregations are executed as SQL queries.

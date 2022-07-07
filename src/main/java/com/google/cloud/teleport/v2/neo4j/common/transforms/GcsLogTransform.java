@@ -1,7 +1,7 @@
 package com.google.cloud.teleport.v2.neo4j.common.transforms;
 
 import com.google.cloud.teleport.v2.neo4j.common.model.enums.AvroType;
-import com.google.cloud.teleport.v2.neo4j.common.model.job.JobSpecRequest;
+import com.google.cloud.teleport.v2.neo4j.common.model.job.JobSpec;
 import com.google.cloud.teleport.v2.neo4j.common.model.job.Target;
 import com.google.cloud.teleport.v2.neo4j.common.utils.AvroSinkWithJodaDatesConversion;
 import org.apache.avro.generic.GenericRecord;
@@ -25,10 +25,10 @@ public class GcsLogTransform extends PTransform<PCollection<Row>, POutput> {
 
     private static final Logger LOG = LoggerFactory.getLogger(GcsLogTransform.class);
 
-    JobSpecRequest jobSpec;
+    JobSpec jobSpec;
     Target target;
 
-    public GcsLogTransform(JobSpecRequest jobSpecRequest, Target target) {
+    public GcsLogTransform(JobSpec jobSpecRequest, Target target) {
         this.target = target;
         this.jobSpec = jobSpecRequest;
     }

@@ -15,31 +15,39 @@
  */
 package com.google.cloud.teleport.v2.neo4j;
 
+import com.google.cloud.teleport.v2.neo4j.actions.ActionFactory;
 import com.google.cloud.teleport.v2.neo4j.common.database.Neo4jConnection;
 import com.google.cloud.teleport.v2.neo4j.common.model.InputRefactoring;
 import com.google.cloud.teleport.v2.neo4j.common.model.InputValidator;
 import com.google.cloud.teleport.v2.neo4j.common.model.connection.ConnectionParams;
+import com.google.cloud.teleport.v2.neo4j.common.model.enums.ActionExecuteAfter;
+import com.google.cloud.teleport.v2.neo4j.common.model.enums.ArtifactType;
+import com.google.cloud.teleport.v2.neo4j.common.model.helpers.JobSpecMapper;
+import com.google.cloud.teleport.v2.neo4j.common.model.helpers.OptionsParamsMapper;
 import com.google.cloud.teleport.v2.neo4j.common.model.helpers.SourceQuerySpec;
 import com.google.cloud.teleport.v2.neo4j.common.model.helpers.TargetQuerySpec;
-import com.google.cloud.teleport.v2.neo4j.common.model.job.JobSpecRequest;
-import com.google.cloud.teleport.v2.neo4j.common.model.job.OptionsParams;
-import com.google.cloud.teleport.v2.neo4j.common.model.job.Source;
-import com.google.cloud.teleport.v2.neo4j.common.model.job.Target;
+import com.google.cloud.teleport.v2.neo4j.common.model.job.*;
 import com.google.cloud.teleport.v2.neo4j.common.transforms.GcsLogTransform;
 import com.google.cloud.teleport.v2.neo4j.common.transforms.Neo4jRowWriterTransform;
 import com.google.cloud.teleport.v2.neo4j.common.utils.BeamBlock;
 import com.google.cloud.teleport.v2.neo4j.common.utils.ModelUtils;
-import com.google.cloud.teleport.v2.neo4j.providers.IProvider;
-import com.google.cloud.teleport.v2.neo4j.providers.ProviderFactory;
+import providers.IProvider;
+import providers.ProviderFactory;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import java.util.List;
 import org.apache.beam.repackaged.core.org.apache.commons.lang3.StringUtils;
 import org.apache.beam.sdk.Pipeline;
+import org.apache.beam.sdk.coders.RowCoder;
 import org.apache.beam.sdk.io.FileSystems;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
 import org.apache.beam.sdk.schemas.Schema;
+import org.apache.beam.sdk.transforms.Create;
+import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.transforms.Wait;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.Row;
+import org.apache.beam.sdk.values.TypeDescriptor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,9 +58,12 @@ import org.slf4j.LoggerFactory;
 public class GcpToNeo4j {
 
     private static final Logger LOG = LoggerFactory.getLogger(GcpToNeo4j.class);
+
+    private static final Gson gson = new GsonBuilder().setPrettyPrinting().create();
+
     public OptionsParams optionsParams;
     ConnectionParams neo4jConnection;
-    JobSpecRequest jobSpec;
+    JobSpec jobSpec;
     Pipeline pipeline;
 
     /**
@@ -65,24 +76,24 @@ public class GcpToNeo4j {
         // We need to initialize pipeline in order to create context for Gs and Bq file system
         final String jobName = pipelineOptions.getJobName() + "-" + System.currentTimeMillis();
         pipelineOptions.setJobName(jobName);
+
+        // Set pipeline options
         this.pipeline = Pipeline.create(pipelineOptions);
         FileSystems.setDefaultPipelineOptions(pipelineOptions);
-        this.optionsParams = new OptionsParams(pipelineOptions);
+        this.optionsParams = OptionsParamsMapper.fromPipelineOptions(pipelineOptions);
+        // Validate pipeline
+        processValidations(InputValidator.validateNeo4jPipelineOptions(pipelineOptions));
 
-        List<String> validationMessages = InputValidator.validateNeo4jPipelineOptions(pipelineOptions);
-        StringBuffer sb = new StringBuffer();
-        if (validationMessages.size() > 0) {
-            for (String msg : validationMessages) {
-                LOG.error(msg);
-                sb.append(msg);
-            }
-            throw new RuntimeException("Errors found validating pipeline input.  Please see logs for more details: " + sb);
-        }
         this.neo4jConnection = new ConnectionParams(pipelineOptions.getNeo4jConnectionUri());
-        this.jobSpec = new JobSpecRequest(pipelineOptions.getJobSpecUri());
-        validationMessages.addAll(InputValidator.validateNeo4jConnection(this.neo4jConnection));
-        validationMessages.addAll(InputValidator.validateJobSpec(this.jobSpec));
+        // Validate connection
+        processValidations(InputValidator.validateNeo4jConnection(this.neo4jConnection));
 
+        this.jobSpec = JobSpecMapper.fromUri(pipelineOptions.getJobSpecUri());
+        // Validate job spec
+        processValidations(InputValidator.validateJobSpec(this.jobSpec));
+
+        ///////////////////////////////////
+        // Refactor job spec
         InputRefactoring inputRefactoring = new InputRefactoring(this.optionsParams);
         // Variable substitution
         inputRefactoring.refactorJobSpec(this.jobSpec);
@@ -101,13 +112,25 @@ public class GcpToNeo4j {
             //get provider implementation for source
             IProvider providerImpl = ProviderFactory.of(source.sourceType);
             providerImpl.configure(optionsParams, jobSpec);
-            List<String> sourceValidationMessages = providerImpl.validateJobSpec();
-            if (sourceValidationMessages.size() > 0) {
-                for (String msg : validationMessages) {
-                    LOG.error(msg);
-                }
-                throw new RuntimeException("Errors found validating pipeline input for " + source.name + ".  Please see logs for more details.");
+            processValidations(providerImpl.validateJobSpec());
+        }
+
+        LOG.info(gson.toJson(jobSpec));
+    }
+
+    /**
+     * Raises RuntimeExceptions for validation errors.
+     *
+     * @param validationMessages
+     */
+    private void processValidations(List<String> validationMessages) {
+        StringBuffer sb = new StringBuffer();
+        if (validationMessages.size() > 0) {
+            for (String msg : validationMessages) {
+                LOG.error(msg);
+                sb.append(msg);
             }
+            throw new RuntimeException("Errors found validating pipeline input.  Please see logs for more details: " + sb);
         }
     }
 
@@ -116,7 +139,6 @@ public class GcpToNeo4j {
      *
      * @param args arguments to the pipeline
      */
-
     public static void main(final String[] args) {
         final Neo4jFlexTemplateOptions options =
                 PipelineOptionsFactory.fromArgs(args).withValidation()
@@ -129,8 +151,6 @@ public class GcpToNeo4j {
 
     public void run() {
 
-        Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
-
         ////////////////////////////
         // Reset db
         if (jobSpec.config.resetDb) {
@@ -138,14 +158,26 @@ public class GcpToNeo4j {
             directConnect.resetDatabase();
         }
 
-        BeamBlock blockingQueue = BeamBlock.create("Serial");
+        ////////////////////////////
+        // Initialize wait-on collection queue...
+        RowCoder fooCoder = RowCoder.of(Schema.of(Schema.Field.of("foo", Schema.FieldType.STRING)));
+        PCollection<Row> seedCollection = pipeline.apply("Floating Queue", Create.empty(TypeDescriptor.of(Row.class)).withCoder(fooCoder));
+
+        // Creating serialization handle
+        BeamBlock blockingQueue = new BeamBlock(seedCollection);
+
+        ////////////////////////////
+        // Process sources
         for (Source source : jobSpec.getSourceList()) {
 
             //get provider implementation for source
             IProvider providerImpl = ProviderFactory.of(source.sourceType);
             providerImpl.configure(optionsParams, jobSpec);
-            PCollection<Row> sourceMetadata = pipeline.apply("Source metadata", providerImpl.queryMetadata(source));
+            //TODO: delay source query until preloads are complete
+            //PBegin begin = pipeline.apply("Querying " +source.name, Wait.on(blockingQueue.waitOnCollection(source.executeAfter, source.executeAfterName, source.name + " query")));
+            PCollection<Row> sourceMetadata=pipeline.apply("Source metadata", providerImpl.queryMetadata(source));
             Schema sourceBeamSchema = sourceMetadata.getSchema();
+            blockingQueue.addToQueue(ArtifactType.source, false, source.name, seedCollection, sourceMetadata);
             PCollection nullableSourceBeamRows = null;
 
             ////////////////////////////
@@ -173,17 +205,29 @@ public class GcpToNeo4j {
                         .build();
                 PCollection<Row> preInsertBeamRows;
                 if (ModelUtils.targetHasTransforms(target)) {
-                    preInsertBeamRows = pipeline.apply(target.sequence + ": Target nodes query " + target.name, providerImpl.queryTargetBeamRows(targetQuerySpec));
+                    preInsertBeamRows = pipeline.apply(target.sequence + ": Nodes query " + target.name, providerImpl.queryTargetBeamRows(targetQuerySpec));
                 } else {
                     preInsertBeamRows = nullableSourceBeamRows;
                 }
                 Neo4jRowWriterTransform targetWriterTransform = new Neo4jRowWriterTransform(jobSpec, neo4jConnection, target);
-                PCollection<Row> emptyReturn = preInsertBeamRows.apply(target.sequence + ": Writing Neo4j " + target.name, targetWriterTransform);
+
+                PCollection<Row> emptyReturn = null;
+                // We don't need to add an explicit queue step under these conditions.
+                // Implicitly, the job will queue until after its source is complete.
+                if (target.executeAfter == ActionExecuteAfter.start
+                        || target.executeAfter == ActionExecuteAfter.sources
+                        || target.executeAfter == ActionExecuteAfter.async) {
+                    emptyReturn = preInsertBeamRows.apply(target.sequence + ": Writing Neo4j " + target.name, targetWriterTransform);
+                } else {
+                    emptyReturn = preInsertBeamRows
+                            .apply(target.sequence + ": Unblocking " + target.name, Wait.on(blockingQueue.waitOnCollection(target.executeAfter, target.executeAfterName, source.name + " nodes"))).setCoder(preInsertBeamRows.getCoder())
+                            .apply(target.sequence + ": Writing Neo4j " + target.name, targetWriterTransform);
+                }
                 if (!StringUtils.isEmpty(jobSpec.config.auditGsUri)) {
                     GcsLogTransform logTransform = new GcsLogTransform(jobSpec, target);
                     preInsertBeamRows.apply(target.sequence + ": Logging " + target.name, logTransform);
                 }
-                blockingQueue.addEmptyBlockingCollection(emptyReturn);
+                blockingQueue.addToQueue(ArtifactType.node, false, target.name, emptyReturn, preInsertBeamRows);
             }
 
             ////////////////////////////
@@ -198,26 +242,65 @@ public class GcpToNeo4j {
                         .build();
                 PCollection<Row> preInsertBeamRows;
                 if (ModelUtils.targetHasTransforms(target)) {
-                    preInsertBeamRows = pipeline.apply(target.sequence + ": Target edges query " + target.name, providerImpl.queryTargetBeamRows(targetQuerySpec));
+                    preInsertBeamRows = pipeline.apply(target.sequence + ": Edges query " + target.name, providerImpl.queryTargetBeamRows(targetQuerySpec));
                 } else {
                     preInsertBeamRows = nullableSourceBeamRows;
                 }
                 Neo4jRowWriterTransform targetWriterTransform = new Neo4jRowWriterTransform(jobSpec, neo4jConnection, target);
-                PCollection<Row> emptyReturn = preInsertBeamRows
-                        .apply(target.sequence + ": Unblocking " + target.name,Wait.on(blockingQueue.waitOnCollection(source.name+" nodes"))).setCoder(preInsertBeamRows.getCoder())
-                        .apply(target.sequence + ": Writing Neo4j " + target.name, targetWriterTransform);
+                PCollection<Row> emptyReturn = null;
+                // We don't need to add an explicit queue step under these conditions
+                // Implicitly, the job will queue until after its source is complete.
+                if (target.executeAfter == ActionExecuteAfter.start
+                        || target.executeAfter == ActionExecuteAfter.sources
+                        || target.executeAfter == ActionExecuteAfter.async) {
+
+                    emptyReturn = preInsertBeamRows
+                            .apply(target.sequence + ": Writing Neo4j " + target.name, targetWriterTransform);
+
+                } else {
+                    emptyReturn = preInsertBeamRows
+                            .apply(target.sequence + ": Unblocking " + target.name, Wait.on(blockingQueue.waitOnCollection(target.executeAfter, target.executeAfterName, source.name + " nodes"))).setCoder(preInsertBeamRows.getCoder())
+                            .apply(target.sequence + ": Writing Neo4j " + target.name, targetWriterTransform);
+                }
                 if (!StringUtils.isEmpty(jobSpec.config.auditGsUri)) {
                     GcsLogTransform logTransform = new GcsLogTransform(jobSpec, target);
                     preInsertBeamRows.apply(target.sequence + ": Logging " + target.name, logTransform);
                 }
                 //serialize relationships
-                blockingQueue.addEmptyBlockingCollection(emptyReturn);
+                blockingQueue.addToQueue(ArtifactType.edge, false, target.name, emptyReturn, preInsertBeamRows);
             }
         }
+
+        ////////////////////////////
+        // Process actions (first pass)
+        runActions(seedCollection, jobSpec.actions, blockingQueue);
 
         // For a Dataflow Flex Template, do NOT waitUntilFinish().
         pipeline.run();
 
+    }
+
+    private void runActions(PCollection<Row> seedCollection, List<Action> actions, BeamBlock blockingQueue) {
+        for (Action action : actions) {
+            LOG.info("Registering action: " + gson.toJson(action));
+            ArtifactType artifactType = ArtifactType.action;
+            if (action.executeAfter == ActionExecuteAfter.source) {
+                artifactType = ArtifactType.source;
+            } else if (action.executeAfter == ActionExecuteAfter.node) {
+                artifactType = ArtifactType.node;
+            } else if (action.executeAfter == ActionExecuteAfter.edge) {
+                artifactType = ArtifactType.edge;
+            }
+            LOG.info("Executing delayed action: " + action.name);
+            // Get targeted execution context
+            PCollection<Row> executionContext = blockingQueue.getContextCollection(artifactType, action.executeAfterName);
+            PTransform<PCollection<Row>, PCollection<Row>> actionImpl = ActionFactory.of(action, executionContext);
+            PCollection<Row> finished = executionContext.apply(action.name + ": Unblocking", Wait.on(
+                            blockingQueue.waitOnCollection(action.executeAfter, action.executeAfterName, action.name)
+                    )).setCoder(executionContext.getCoder())
+                    .apply("Action " + action.name, actionImpl);
+            blockingQueue.addToQueue(ArtifactType.action, action.executeAfter==ActionExecuteAfter.start, action.name, seedCollection, finished);
+        }
     }
 
 }

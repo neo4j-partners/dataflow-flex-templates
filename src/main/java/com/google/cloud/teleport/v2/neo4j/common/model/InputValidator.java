@@ -2,6 +2,7 @@ package com.google.cloud.teleport.v2.neo4j.common.model;
 
 import com.google.cloud.teleport.v2.neo4j.Neo4jFlexTemplateOptions;
 import com.google.cloud.teleport.v2.neo4j.common.model.connection.ConnectionParams;
+import com.google.cloud.teleport.v2.neo4j.common.model.enums.ActionType;
 import com.google.cloud.teleport.v2.neo4j.common.model.enums.FragmentType;
 import com.google.cloud.teleport.v2.neo4j.common.model.enums.RoleType;
 import com.google.cloud.teleport.v2.neo4j.common.model.enums.TargetType;
@@ -33,9 +34,9 @@ public class InputValidator {
             "relationship.target.node.properties",
             "relationship.target.save.mode");
 
-     private static final Pattern ORDER_BY_PATTERN = Pattern.compile(".*ORDER\\sBY.*");
-     private static final Gson gson = new GsonBuilder().setPrettyPrinting().create();
-     private static final Logger LOG = LoggerFactory.getLogger(InputValidator.class);
+    private static final Pattern ORDER_BY_PATTERN = Pattern.compile(".*ORDER\\sBY.*");
+    private static final Gson gson = new GsonBuilder().setPrettyPrinting().create();
+    private static final Logger LOG = LoggerFactory.getLogger(InputValidator.class);
 
     public static List<String> validateNeo4jPipelineOptions(Neo4jFlexTemplateOptions pipelineOptions) {
 
@@ -67,10 +68,11 @@ public class InputValidator {
         return validationMessages;
     }
 
-    public static List<String> validateJobSpec(JobSpecRequest jobSpec) {
+    public static List<String> validateJobSpec(JobSpec jobSpec) {
 
         List<String> validationMessages = new ArrayList<>();
 
+        //Source validation
         for (Source source : jobSpec.getSourceList()) {
             String sourceName = source.name;
             if (StringUtils.isBlank(sourceName)) {
@@ -86,7 +88,7 @@ public class InputValidator {
             }
         }
 
-        //VALIDATION
+        //Target validation
         for (Target target : jobSpec.targets) {
             // Check that all targets have names
             if (StringUtils.isBlank(target.name)) {
@@ -168,6 +170,35 @@ public class InputValidator {
                 String option = optionIt.next();
                 if (!validOptions.contains(option)) {
                     validationMessages.add("Invalid option specified: " + option);
+                }
+            }
+        }
+
+        if (jobSpec.actions.size() > 0) {
+            // check valid options
+            for (Action action : jobSpec.actions) {
+                String actionName = action.name;
+                if (StringUtils.isBlank(actionName)) {
+                    validationMessages.add("Action is not named");
+                }
+                // Check that SQL does not have order by...
+                if (action.type == ActionType.cypher) {
+                    if (!action.options.containsKey("cypher")) {
+                        validationMessages.add("Parameter 'cypher' is required for cypher-style actions.");
+                    }
+                }
+                if (action.type == ActionType.http_get || action.type == ActionType.http_post) {
+                    if (!action.options.containsKey("url")) {
+                        validationMessages.add("Parameter 'url' is required for http-style actions.");
+                    }
+                }
+                if (action.type == ActionType.query) {
+                    if (!action.options.containsKey("sql")) {
+                        validationMessages.add("Parameter 'sql' is required for query-style actions.");
+                    }
+                    if (!action.options.containsKey("source")) {
+                        validationMessages.add("Parameter 'source' is required for query-style actions.");
+                    }
                 }
             }
         }

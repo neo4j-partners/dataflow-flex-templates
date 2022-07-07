@@ -5,7 +5,7 @@ import com.google.cloud.teleport.v2.neo4j.common.database.Neo4jConnection;
 import com.google.cloud.teleport.v2.neo4j.common.model.connection.ConnectionParams;
 import com.google.cloud.teleport.v2.neo4j.common.model.enums.TargetType;
 import com.google.cloud.teleport.v2.neo4j.common.model.job.Config;
-import com.google.cloud.teleport.v2.neo4j.common.model.job.JobSpecRequest;
+import com.google.cloud.teleport.v2.neo4j.common.model.job.JobSpec;
 import com.google.cloud.teleport.v2.neo4j.common.model.job.Target;
 import com.google.cloud.teleport.v2.neo4j.common.utils.DataCastingUtils;
 import java.util.List;
@@ -23,11 +23,11 @@ import org.slf4j.LoggerFactory;
  */
 public class Neo4jRowWriterTransform extends PTransform<PCollection<Row>, PCollection<Row>> {
     private static final Logger LOG = LoggerFactory.getLogger(Neo4jRowWriterTransform.class);
-    JobSpecRequest jobSpec;
+    JobSpec jobSpec;
     ConnectionParams neoConnection;
     Target target;
 
-    public Neo4jRowWriterTransform(JobSpecRequest jobSpec, ConnectionParams neoConnection, Target target) {
+    public Neo4jRowWriterTransform(JobSpec jobSpec, ConnectionParams neoConnection, Target target) {
         this.jobSpec = jobSpec;
         this.neoConnection = neoConnection;
         this.target = target;

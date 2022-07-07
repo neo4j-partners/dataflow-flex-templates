@@ -1,6 +1,6 @@
 package com.google.cloud.teleport.v2.neo4j.common.model;
 
-import com.google.cloud.teleport.v2.neo4j.common.model.job.JobSpecRequest;
+import com.google.cloud.teleport.v2.neo4j.common.model.job.JobSpec;
 import com.google.cloud.teleport.v2.neo4j.common.model.job.OptionsParams;
 import com.google.cloud.teleport.v2.neo4j.common.model.job.Source;
 import com.google.cloud.teleport.v2.neo4j.common.model.job.Target;
@@ -33,7 +33,7 @@ public class InputRefactoring {
         this.optionsParams = optionsParams;
     }
 
-    public void refactorJobSpec(JobSpecRequest jobSpec) {
+    public void refactorJobSpec(JobSpec jobSpec) {
 
         //Create or enrich targets from options
         if (jobSpec.targets.size() == 0) {
@@ -63,7 +63,7 @@ public class InputRefactoring {
 
     }
 
-    public void optimizeJobSpec(JobSpecRequest jobSpec) {
+    public void optimizeJobSpec(JobSpec jobSpec) {
 
         // NODES first then relationships
         // This does not actually change execution order, just numbering

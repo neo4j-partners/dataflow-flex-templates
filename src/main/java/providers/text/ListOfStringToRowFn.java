@@ -1,4 +1,4 @@
-package com.google.cloud.teleport.v2.neo4j.providers.text;
+package providers.text;
 
 import java.util.List;
 import org.apache.beam.repackaged.core.org.apache.commons.lang3.StringUtils;

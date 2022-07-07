@@ -1,8 +1,8 @@
-package com.google.cloud.teleport.v2.neo4j.providers;
+package providers;
 
 import com.google.cloud.teleport.v2.neo4j.common.model.enums.SourceType;
-import com.google.cloud.teleport.v2.neo4j.providers.bq.BigQueryImpl;
-import com.google.cloud.teleport.v2.neo4j.providers.text.TextImpl;
+import providers.bq.BigQueryImpl;
+import providers.text.TextImpl;
 
 /**
  * Factory for binding implementation adapters into framework.

@@ -1,4 +1,4 @@
-package com.google.cloud.teleport.v2.neo4j.providers.bq;
+package providers.bq;
 
 import com.google.api.services.bigquery.model.TableRow;
 import com.google.cloud.teleport.v2.neo4j.common.model.helpers.SqlQuerySpec;

@@ -192,9 +192,14 @@ public class InputValidator {
                         validationMessages.add("Parameter 'url' is required for http-style actions.");
                     }
                 }
-                if (action.type == ActionType.bigquery) {
+                if (action.type == ActionType.bigquery || action.type == ActionType.spanner) {
                     if (!action.options.containsKey("sql")) {
                         validationMessages.add("Parameter 'sql' is required for query-style actions.");
+                    }
+                }
+                if (action.type == ActionType.parquet) {
+                    if (!action.options.containsKey("gcs")) {
+                        validationMessages.add("Parameter 'gcs' destination is required for parquet.");
                     }
                 }
             }

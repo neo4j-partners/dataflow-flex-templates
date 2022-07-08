@@ -7,5 +7,7 @@ public enum ActionType {
     cypher,
     http_get,
     http_post,
-    bigquery
+    bigquery,
+    parquet,
+    spanner
 }

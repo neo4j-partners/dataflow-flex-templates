@@ -224,6 +224,15 @@
         {"header1": "value1"},
         {"header2": "value2"}
       ]
+    },
+    {
+      "name": "Product nodes to parquet",
+      "execute_after": "node",
+      "execute_after_name": "Products",
+      "type": "parquet",
+      "options": [
+        {"gcs": "gs://neo4j-sandbox/northwind_parquets/nodes"}
+      ]
     }
   ]
 }

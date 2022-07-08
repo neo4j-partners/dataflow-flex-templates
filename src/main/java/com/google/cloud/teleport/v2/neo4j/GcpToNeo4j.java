@@ -178,9 +178,7 @@ public class GcpToNeo4j {
             //get provider implementation for source
             IProvider providerImpl = ProviderFactory.of(source.sourceType);
             providerImpl.configure(optionsParams, jobSpec);
-            //TODO: delay source query until preloads are complete
-            //PBegin begin = pipeline.apply("Querying " +source.name, Wait.on(blockingQueue.waitOnCollection(source.executeAfter, source.executeAfterName, source.name + " query")));
-            PCollection<Row> sourceMetadata = pipeline.apply("Source metadata", providerImpl.queryMetadata(source));
+                 PCollection<Row> sourceMetadata = pipeline.apply("Source metadata", providerImpl.queryMetadata(source));
             Schema sourceBeamSchema = sourceMetadata.getSchema();
             blockingQueue.addToQueue(ArtifactType.source, false, source.name, emptySeedCollection, sourceMetadata);
             PCollection nullableSourceBeamRows = null;
@@ -225,7 +223,7 @@ public class GcpToNeo4j {
                     emptyReturn = preInsertBeamRows.apply(target.sequence + ": Writing Neo4j " + target.name, targetWriterTransform);
                 } else {
                     emptyReturn = preInsertBeamRows
-                            .apply(target.sequence + ": Unblocking " + target.name, Wait.on(blockingQueue.waitOnCollection(target.executeAfter, target.executeAfterName, source.name + " nodes"))).setCoder(preInsertBeamRows.getCoder())
+                            .apply("Waiting on " +target.executeAfter+" ("+target.name+")", Wait.on(blockingQueue.waitOnCollection(target.executeAfter, target.executeAfterName, source.name + " nodes"))).setCoder(preInsertBeamRows.getCoder())
                             .apply(target.sequence + ": Writing Neo4j " + target.name, targetWriterTransform);
                 }
                 if (!StringUtils.isEmpty(jobSpec.config.auditGsUri)) {
@@ -264,7 +262,7 @@ public class GcpToNeo4j {
 
                 } else {
                     emptyReturn = preInsertBeamRows
-                            .apply(target.sequence + ": Unblocking " + target.name, Wait.on(blockingQueue.waitOnCollection(target.executeAfter, target.executeAfterName, source.name + " nodes"))).setCoder(preInsertBeamRows.getCoder())
+                            .apply("Waiting on " +target.executeAfter+" ("+target.name+")", Wait.on(blockingQueue.waitOnCollection(target.executeAfter, target.executeAfterName, source.name + " nodes"))).setCoder(preInsertBeamRows.getCoder())
                             .apply(target.sequence + ": Writing Neo4j " + target.name, targetWriterTransform);
                 }
                 if (!StringUtils.isEmpty(jobSpec.config.auditGsUri)) {
@@ -323,7 +321,7 @@ public class GcpToNeo4j {
             context.neo4jConnection = this.neo4jConnection;
             PTransform<PCollection<Row>, PCollection<Row>> actionImpl = ActionBeamFactory.of(action, context);
             // Action execution context will be be rendered as "Default Context"
-            PCollection<Row> finished = executionContext.apply(action.name + ": Unblocking", Wait.on(
+            PCollection<Row> finished = executionContext.apply("Waiting on "+action.executeAfter+" ("+action.name + ")", Wait.on(
                             blockingQueue.waitOnCollection(action.executeAfter, action.executeAfterName, action.name)
                     )).setCoder(executionContext.getCoder())
                     .apply("Action " + action.name, actionImpl);

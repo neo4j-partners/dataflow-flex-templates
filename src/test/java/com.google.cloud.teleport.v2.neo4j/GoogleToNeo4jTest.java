@@ -15,16 +15,17 @@
  */
 package com.google.cloud.teleport.v2.neo4j;
 
-import com.google.cloud.teleport.v2.neo4j.common.model.InputValidator;
-import com.google.cloud.teleport.v2.neo4j.common.model.connection.ConnectionParams;
-import com.google.cloud.teleport.v2.neo4j.common.model.helpers.JobSpecMapper;
-import com.google.cloud.teleport.v2.neo4j.common.model.job.JobSpec;
-import com.google.cloud.teleport.v2.neo4j.common.model.job.OptionsParams;
-import com.google.cloud.teleport.v2.neo4j.common.model.job.Source;
-import com.google.cloud.teleport.v2.neo4j.common.utils.ModelUtils;
-import providers.IProvider;
-import providers.ProviderFactory;
-import providers.text.TextImpl;
+import com.google.cloud.teleport.v2.neo4j.GcpToNeo4j;
+import com.google.cloud.teleport.v2.neo4j.model.InputValidator;
+import com.google.cloud.teleport.v2.neo4j.model.connection.ConnectionParams;
+import com.google.cloud.teleport.v2.neo4j.model.helpers.JobSpecMapper;
+import com.google.cloud.teleport.v2.neo4j.model.job.JobSpec;
+import com.google.cloud.teleport.v2.neo4j.model.job.OptionsParams;
+import com.google.cloud.teleport.v2.neo4j.model.job.Source;
+import com.google.cloud.teleport.v2.neo4j.providers.IProvider;
+import com.google.cloud.teleport.v2.neo4j.providers.ProviderFactory;
+import com.google.cloud.teleport.v2.neo4j.providers.text.TextImpl;
+import com.google.cloud.teleport.v2.neo4j.utils.ModelUtils;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import java.io.IOException;
@@ -46,7 +47,8 @@ import org.slf4j.LoggerFactory;
 @RunWith(JUnit4.class)
 public class GoogleToNeo4jTest {
 
-    final static Gson gson = new GsonBuilder().setPrettyPrinting().create();
+    private static final Logger LOG = LoggerFactory.getLogger(GoogleToNeo4jTest.class);
+    private static final Gson gson = new GsonBuilder().setPrettyPrinting().create();
 
     public transient TestPipeline pipeline = TestPipeline.create();
     private transient PCollection<Row> textRows;
@@ -54,8 +56,6 @@ public class GoogleToNeo4jTest {
     private static ConnectionParams neo4jConnection;
     private static JobSpec jobSpec;
     private static OptionsParams optionsParams;
-
-    private static final Logger LOG = LoggerFactory.getLogger(GoogleToNeo4jTest.class);
 
     //Exception examples:
     // https://github.com/GoogleCloudPlatform/DataflowTemplates/blob/main/v2/pubsub-binary-to-bigquery/src/test/java/com/google/cloud/teleport/v2/templates/PubsubProtoToBigQueryTest.java

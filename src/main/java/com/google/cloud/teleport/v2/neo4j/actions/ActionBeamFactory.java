@@ -1,12 +1,12 @@
 package com.google.cloud.teleport.v2.neo4j.actions;
 
+import com.google.cloud.teleport.v2.neo4j.actions.transforms.BigQueryActionTransform;
 import com.google.cloud.teleport.v2.neo4j.actions.transforms.CypherActionTransform;
 import com.google.cloud.teleport.v2.neo4j.actions.transforms.HttpGetActionTransform;
 import com.google.cloud.teleport.v2.neo4j.actions.transforms.HttpPostActionTransform;
-import com.google.cloud.teleport.v2.neo4j.actions.transforms.QueryActionTransform;
-import com.google.cloud.teleport.v2.neo4j.common.model.enums.ActionType;
-import com.google.cloud.teleport.v2.neo4j.common.model.job.Action;
-import com.google.cloud.teleport.v2.neo4j.common.model.job.ActionContext;
+import com.google.cloud.teleport.v2.neo4j.model.enums.ActionType;
+import com.google.cloud.teleport.v2.neo4j.model.job.Action;
+import com.google.cloud.teleport.v2.neo4j.model.job.ActionContext;
 import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.Row;
@@ -17,8 +17,8 @@ import org.apache.beam.sdk.values.Row;
 public class ActionBeamFactory {
     public static PTransform<PCollection<Row>, PCollection<Row>> of(Action action, ActionContext context) {
         ActionType actionType = action.type;
-        if (actionType == ActionType.query) {
-            return new QueryActionTransform(action, context);
+        if (actionType == ActionType.bigquery) {
+            return new BigQueryActionTransform(action, context);
         } else if (actionType == ActionType.cypher) {
             return new CypherActionTransform(action, context);
         } else if (actionType == ActionType.http_post) {

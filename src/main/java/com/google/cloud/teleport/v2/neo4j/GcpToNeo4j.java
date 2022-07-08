@@ -17,28 +17,30 @@ package com.google.cloud.teleport.v2.neo4j;
 
 import com.google.cloud.teleport.v2.neo4j.actions.ActionBeamFactory;
 import com.google.cloud.teleport.v2.neo4j.actions.ActionFactory;
-import com.google.cloud.teleport.v2.neo4j.actions.pojos.IAction;
-import com.google.cloud.teleport.v2.neo4j.common.database.Neo4jConnection;
-import com.google.cloud.teleport.v2.neo4j.common.model.InputRefactoring;
-import com.google.cloud.teleport.v2.neo4j.common.model.InputValidator;
-import com.google.cloud.teleport.v2.neo4j.common.model.connection.ConnectionParams;
-import com.google.cloud.teleport.v2.neo4j.common.model.enums.ActionExecuteAfter;
-import com.google.cloud.teleport.v2.neo4j.common.model.enums.ArtifactType;
-import com.google.cloud.teleport.v2.neo4j.common.model.helpers.JobSpecMapper;
-import com.google.cloud.teleport.v2.neo4j.common.model.helpers.OptionsParamsMapper;
-import com.google.cloud.teleport.v2.neo4j.common.model.helpers.SourceQuerySpec;
-import com.google.cloud.teleport.v2.neo4j.common.model.helpers.TargetQuerySpec;
-import com.google.cloud.teleport.v2.neo4j.common.model.job.*;
-import com.google.cloud.teleport.v2.neo4j.common.transforms.GcsLogTransform;
-import com.google.cloud.teleport.v2.neo4j.common.transforms.Neo4jRowWriterTransform;
-import com.google.cloud.teleport.v2.neo4j.common.utils.BeamBlock;
-import com.google.cloud.teleport.v2.neo4j.common.utils.ModelUtils;
+import com.google.cloud.teleport.v2.neo4j.actions.preload.IPreloadAction;
+import com.google.cloud.teleport.v2.neo4j.database.Neo4jConnection;
+import com.google.cloud.teleport.v2.neo4j.model.InputRefactoring;
+import com.google.cloud.teleport.v2.neo4j.model.InputValidator;
+import com.google.cloud.teleport.v2.neo4j.model.connection.ConnectionParams;
+import com.google.cloud.teleport.v2.neo4j.model.enums.ActionExecuteAfter;
+import com.google.cloud.teleport.v2.neo4j.model.enums.ArtifactType;
+import com.google.cloud.teleport.v2.neo4j.model.helpers.JobSpecMapper;
+import com.google.cloud.teleport.v2.neo4j.model.helpers.OptionsParamsMapper;
+import com.google.cloud.teleport.v2.neo4j.model.helpers.SourceQuerySpec;
+import com.google.cloud.teleport.v2.neo4j.model.helpers.TargetQuerySpec;
+import com.google.cloud.teleport.v2.neo4j.model.job.*;
+import com.google.cloud.teleport.v2.neo4j.providers.IProvider;
+import com.google.cloud.teleport.v2.neo4j.providers.ProviderFactory;
+import com.google.cloud.teleport.v2.neo4j.transforms.GcsLogTransform;
+import com.google.cloud.teleport.v2.neo4j.transforms.Neo4jRowWriterTransform;
+import com.google.cloud.teleport.v2.neo4j.utils.BeamBlock;
+import com.google.cloud.teleport.v2.neo4j.utils.ModelUtils;
+import com.google.cloud.teleport.v2.neo4j.utils.ProcessingCoder;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import java.util.List;
 import org.apache.beam.repackaged.core.org.apache.commons.lang3.StringUtils;
 import org.apache.beam.sdk.Pipeline;
-import org.apache.beam.sdk.coders.RowCoder;
 import org.apache.beam.sdk.io.FileSystems;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
 import org.apache.beam.sdk.schemas.Schema;
@@ -50,8 +52,6 @@ import org.apache.beam.sdk.values.Row;
 import org.apache.beam.sdk.values.TypeDescriptor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import providers.IProvider;
-import providers.ProviderFactory;
 
 /**
  * Dataflow template which reads BigQuery data and writes it to Neo4j. The source data can be
@@ -165,11 +165,11 @@ public class GcpToNeo4j {
 
         ////////////////////////////
         // Initialize wait-on collection queue...
-        RowCoder fooCoder = RowCoder.of(Schema.of(Schema.Field.of("foo", Schema.FieldType.STRING)));
-        PCollection<Row> emptySeedCollection = pipeline.apply("Default Context", Create.empty(TypeDescriptor.of(Row.class)).withCoder(fooCoder));
+        PCollection<Row> processingSeedCollection = pipeline.apply("Default Context", Create.empty(TypeDescriptor.of(Row.class))
+                .withCoder(ProcessingCoder.getProcessingRowCoder()));
 
         // Creating serialization handle
-        BeamBlock blockingQueue = new BeamBlock(emptySeedCollection);
+        BeamBlock processingQueue = new BeamBlock(processingSeedCollection);
 
         ////////////////////////////
         // Process sources
@@ -178,9 +178,9 @@ public class GcpToNeo4j {
             //get provider implementation for source
             IProvider providerImpl = ProviderFactory.of(source.sourceType);
             providerImpl.configure(optionsParams, jobSpec);
-                 PCollection<Row> sourceMetadata = pipeline.apply("Source metadata", providerImpl.queryMetadata(source));
+            PCollection<Row> sourceMetadata = pipeline.apply("Source metadata", providerImpl.queryMetadata(source));
             Schema sourceBeamSchema = sourceMetadata.getSchema();
-            blockingQueue.addToQueue(ArtifactType.source, false, source.name, emptySeedCollection, sourceMetadata);
+            processingQueue.addToQueue(ArtifactType.source, false, source.name, processingSeedCollection, sourceMetadata);
             PCollection nullableSourceBeamRows = null;
 
             ////////////////////////////
@@ -223,14 +223,14 @@ public class GcpToNeo4j {
                     emptyReturn = preInsertBeamRows.apply(target.sequence + ": Writing Neo4j " + target.name, targetWriterTransform);
                 } else {
                     emptyReturn = preInsertBeamRows
-                            .apply("Waiting on " +target.executeAfter+" ("+target.name+")", Wait.on(blockingQueue.waitOnCollection(target.executeAfter, target.executeAfterName, source.name + " nodes"))).setCoder(preInsertBeamRows.getCoder())
+                            .apply("Executing " + target.executeAfter + " (" + target.name + ")", Wait.on(processingQueue.waitOnCollection(target.executeAfter, target.executeAfterName, source.name + " nodes"))).setCoder(preInsertBeamRows.getCoder())
                             .apply(target.sequence + ": Writing Neo4j " + target.name, targetWriterTransform);
                 }
                 if (!StringUtils.isEmpty(jobSpec.config.auditGsUri)) {
                     GcsLogTransform logTransform = new GcsLogTransform(jobSpec, target);
                     preInsertBeamRows.apply(target.sequence + ": Logging " + target.name, logTransform);
                 }
-                blockingQueue.addToQueue(ArtifactType.node, false, target.name, emptyReturn, preInsertBeamRows);
+                processingQueue.addToQueue(ArtifactType.node, false, target.name, emptyReturn, preInsertBeamRows);
             }
 
             ////////////////////////////
@@ -262,7 +262,7 @@ public class GcpToNeo4j {
 
                 } else {
                     emptyReturn = preInsertBeamRows
-                            .apply("Waiting on " +target.executeAfter+" ("+target.name+")", Wait.on(blockingQueue.waitOnCollection(target.executeAfter, target.executeAfterName, source.name + " nodes"))).setCoder(preInsertBeamRows.getCoder())
+                            .apply("Executing " + target.executeAfter + " (" + target.name + ")", Wait.on(processingQueue.waitOnCollection(target.executeAfter, target.executeAfterName, source.name + " nodes"))).setCoder(preInsertBeamRows.getCoder())
                             .apply(target.sequence + ": Writing Neo4j " + target.name, targetWriterTransform);
                 }
                 if (!StringUtils.isEmpty(jobSpec.config.auditGsUri)) {
@@ -270,13 +270,13 @@ public class GcpToNeo4j {
                     preInsertBeamRows.apply(target.sequence + ": Logging " + target.name, logTransform);
                 }
                 //serialize relationships
-                blockingQueue.addToQueue(ArtifactType.edge, false, target.name, emptyReturn, preInsertBeamRows);
+                processingQueue.addToQueue(ArtifactType.edge, false, target.name, emptyReturn, preInsertBeamRows);
             }
         }
 
         ////////////////////////////
         // Process actions (first pass)
-        runBeamActions(emptySeedCollection, jobSpec.getPostloadActions(), blockingQueue);
+        runBeamActions(processingSeedCollection, jobSpec.getPostloadActions(), processingQueue);
 
         // For a Dataflow Flex Template, do NOT waitUntilFinish().
         pipeline.run();
@@ -291,7 +291,7 @@ public class GcpToNeo4j {
             ActionContext context = new ActionContext();
             context.jobSpec = this.jobSpec;
             context.neo4jConnection = this.neo4jConnection;
-            IAction actionImpl = ActionFactory.of(action, context);
+            IPreloadAction actionImpl = ActionFactory.of(action, context);
             List<String> msgs = actionImpl.execute();
             for (String msg : msgs) {
                 LOG.info("Preload action " + action.name + ": " + msg);
@@ -313,7 +313,9 @@ public class GcpToNeo4j {
             LOG.info("Executing delayed action: " + action.name);
             // Get targeted execution context
             PCollection<Row> executionContext = blockingQueue.getContextCollection(artifactType, action.executeAfterName);
-            if (executionContext == null) executionContext = initSeedCollection;
+            if (executionContext == null) {
+                executionContext = initSeedCollection;
+            }
             ActionContext context = new ActionContext();
             context.dataContext = executionContext;
             context.emptyReturn = initSeedCollection;
@@ -321,7 +323,7 @@ public class GcpToNeo4j {
             context.neo4jConnection = this.neo4jConnection;
             PTransform<PCollection<Row>, PCollection<Row>> actionImpl = ActionBeamFactory.of(action, context);
             // Action execution context will be be rendered as "Default Context"
-            PCollection<Row> finished = executionContext.apply("Waiting on "+action.executeAfter+" ("+action.name + ")", Wait.on(
+            PCollection<Row> finished = executionContext.apply("Executing " + action.executeAfter + " (" + action.name + ")", Wait.on(
                             blockingQueue.waitOnCollection(action.executeAfter, action.executeAfterName, action.name)
                     )).setCoder(executionContext.getCoder())
                     .apply("Action " + action.name, actionImpl);

@@ -1,8 +1,9 @@
 package com.google.cloud.teleport.v2.neo4j.actions.transforms;
 
-import com.google.cloud.teleport.v2.neo4j.common.model.job.Action;
-import com.google.cloud.teleport.v2.neo4j.common.model.job.ActionContext;
-import com.google.cloud.teleport.v2.neo4j.common.utils.HttpUtils;
+import com.google.cloud.teleport.v2.neo4j.model.job.Action;
+import com.google.cloud.teleport.v2.neo4j.model.job.ActionContext;
+import com.google.cloud.teleport.v2.neo4j.utils.HttpUtils;
+import org.apache.beam.repackaged.core.org.apache.commons.lang3.StringUtils;
 import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.Row;
@@ -25,10 +26,13 @@ public class HttpGetActionTransform extends PTransform<PCollection<Row>, PCollec
 
     @Override
     public PCollection<Row> expand(PCollection<Row> input) {
-
+        String uri = action.options.get("url");
+        if (StringUtils.isEmpty(uri)){
+            throw new RuntimeException("Options 'uri' not provided for preload http_get action.");
+        }
         try {
             CloseableHttpResponse response = HttpUtils.getHttpRespoonse(false,
-                    action.options.get("uri"),
+                    uri,
                     action.options,
                     action.headers);
             LOG.info("Request returned: " + HttpUtils.getResponseContent(response));

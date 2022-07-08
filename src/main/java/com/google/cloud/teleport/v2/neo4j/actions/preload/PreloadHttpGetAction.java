@@ -1,39 +1,38 @@
-package com.google.cloud.teleport.v2.neo4j.actions.transforms;
+package com.google.cloud.teleport.v2.neo4j.actions.preload;
 
 import com.google.cloud.teleport.v2.neo4j.model.job.Action;
 import com.google.cloud.teleport.v2.neo4j.model.job.ActionContext;
 import com.google.cloud.teleport.v2.neo4j.utils.HttpUtils;
+import java.util.ArrayList;
+import java.util.List;
 import org.apache.beam.repackaged.core.org.apache.commons.lang3.StringUtils;
-import org.apache.beam.sdk.transforms.PTransform;
-import org.apache.beam.sdk.values.PCollection;
-import org.apache.beam.sdk.values.Row;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Http POST action handler.
+ * Http GET action handler.
  */
-public class HttpPostActionTransform extends PTransform<PCollection<Row>, PCollection<Row>> {
+public class PreloadHttpGetAction implements IPreloadAction {
+    private static final Logger LOG = LoggerFactory.getLogger(PreloadHttpGetAction.class);
 
-    private static final Logger LOG = LoggerFactory.getLogger(HttpPostActionTransform.class);
     Action action;
     ActionContext context;
 
-    public HttpPostActionTransform(Action action, ActionContext context) {
+    public void configure(Action action, ActionContext context) {
         this.action = action;
         this.context = context;
     }
 
-    @Override
-    public PCollection<Row> expand(PCollection<Row> input) {
+    public List<String> execute() {
+        List<String> msgs = new ArrayList<>();
         String uri = action.options.get("url");
         if (StringUtils.isEmpty(uri)){
-            throw new RuntimeException("Options 'uri' not provided for preload http_post action.");
+            throw new RuntimeException("Options 'uri' not provided for preload http_get action.");
         }
         try {
-            CloseableHttpResponse response = HttpUtils.getHttpRespoonse(true,
-                    uri,
+            CloseableHttpResponse response = HttpUtils.getHttpRespoonse(false,
+                    action.options.get("url"),
                     action.options,
                     action.headers);
             LOG.info("Request returned: " + HttpUtils.getResponseContent(response));
@@ -41,6 +40,8 @@ public class HttpPostActionTransform extends PTransform<PCollection<Row>, PColle
         } catch (Exception e) {
             LOG.error("Exception making http get request: " + e.getMessage());
         }
-        return this.context.emptyReturn;
+
+        return msgs;
     }
 }
+

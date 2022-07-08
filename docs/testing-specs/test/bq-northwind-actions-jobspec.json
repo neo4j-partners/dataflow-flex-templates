@@ -138,17 +138,37 @@
   ],
   "actions": [
     {
-      "name": "Post FOO cypher",
-      "execute_after": "loads",
+      "name": "Pre Action cypher, node count",
+      "execute_after": "start",
       "type": "cypher",
       "options": [
-        {"cypher": "FOO"}
+        {"cypher": "MATCH (n)\nRETURN count(n)"}
       ]
     },
     {
-      "name": "Pre FOO url",
+      "name": "Post Action cypher, node count",
+      "execute_after": "loads",
+      "type": "cypher",
+      "options": [
+        {"cypher": "MATCH (n)\nRETURN count(n)"}
+      ]
+    },
+    {
+      "name": "Pre Action GET test url",
       "execute_after": "start",
-      "type": "http_post",
+      "type": "http_get",
+      "options": [
+        {"url": "https://httpbin.org/get"}
+      ],
+      "headers": [
+        {"header1": "value1"},
+        {"header2": "value2"}
+      ]
+    },
+    {
+      "name": "Pre Action GET test url",
+      "execute_after": "start",
+      "type": "http_get",
       "options": [
         {"url": "foo"}
       ],
@@ -158,12 +178,47 @@
       ]
     },
     {
-      "name": "Pre Query",
+      "name": "Pre Action POST test url",
       "execute_after": "start",
-      "type": "query",
+      "type": "http_post",
       "options": [
-        {"sql": "SELECT * FROM FOO"},
-        {"source": "1k orders"}
+        {"url": "https://httpbin.org/post"}
+      ],
+      "headers": [
+        {"header1": "value1"},
+        {"header2": "value2"}
+      ]
+    },
+    {
+      "name": "Pre Action POST test url",
+      "execute_after": "start",
+      "type": "http_post",
+      "options": [
+        {"url": "https://httpbin.org/post"}
+      ],
+      "headers": [
+        {"header1": "value1"},
+        {"header2": "value2"}
+      ]
+    },
+    {
+      "name": "Pre Action BigQuery",
+      "execute_after": "start",
+      "type": "bigquery",
+      "options": [
+        {"sql": "SELECT count(*) FROM neo4jbusinessdev.northwind.V_CUSTOMER_ORDERS"}
+      ],
+      "headers": [
+        {"header1": "value1"},
+        {"header2": "value2"}
+      ]
+    },
+    {
+      "name": "Post Action BigQuery",
+      "execute_after": "start",
+      "type": "bigquery",
+      "options": [
+        {"sql": "SELECT count(*) FROM neo4jbusinessdev.northwind.V_CUSTOMER_ORDERS"}
       ],
       "headers": [
         {"header1": "value1"},

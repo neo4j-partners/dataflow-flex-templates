@@ -17,6 +17,7 @@ package com.google.cloud.teleport.v2.neo4j;
 
 import com.google.cloud.teleport.v2.neo4j.common.model.InputValidator;
 import com.google.cloud.teleport.v2.neo4j.common.model.connection.ConnectionParams;
+import com.google.cloud.teleport.v2.neo4j.common.model.helpers.JobSpecMapper;
 import com.google.cloud.teleport.v2.neo4j.common.model.job.JobSpec;
 import com.google.cloud.teleport.v2.neo4j.common.model.job.OptionsParams;
 import com.google.cloud.teleport.v2.neo4j.common.model.job.Source;
@@ -64,7 +65,7 @@ public class GoogleToNeo4jTest {
         if (jobSpec == null) {
             LOG.info("Initializing...");
             neo4jConnection = new ConnectionParams("gs://neo4j-dataflow/job-specs/testing/common/auradb-free-connection.json");
-            jobSpec = new JobSpec("gs://neo4j-dataflow/job-specs/testing/new/text-northwind-jobspec.json");
+            jobSpec = JobSpecMapper.fromUri("gs://neo4j-dataflow/job-specs/testing/new/text-northwind-jobspec.json");
             providerImpl = ProviderFactory.of(jobSpec.getSourceList().get(0).sourceType);
             optionsParams = new OptionsParams();
             optionsParams.overlayTokens("{\"limit\":7}");

@@ -6,12 +6,14 @@ import java.nio.channels.ReadableByteChannel;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import org.apache.beam.sdk.io.FileSystems;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Utilities for reading local and remote file resources.
  */
 public class FileSystemUtils {
-
+    private static final Logger LOG = LoggerFactory.getLogger(FileSystemUtils.class);
     public static String getPathContents(String gsPath) {
         StringBuilder textBuilder = new StringBuilder();
 

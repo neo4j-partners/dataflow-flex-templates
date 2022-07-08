@@ -16,7 +16,7 @@ export REGION=us-central1
 gcloud dataflow flex-template run "test-bq-cli-`date +%Y%m%d-%H%M%S`" \
     --template-file-gcs-location="$TEMPLATE_GCS_LOCATION" \
     --region "$REGION" \
-    --parameters jobSpecUri="gs://neo4j-dataflow/job-specs/testing/new/bq-northwind-jobspec.json" \
+    --parameters jobSpecUri="gs://neo4j-dataflow/job-specs/testing/bigquery/bq-northwind-jobspec.json" \
     --parameters neo4jConnectionUri="gs://neo4j-dataflow/job-specs/testing/common/auradb-free-connection.json"
  ```
 
@@ -30,7 +30,7 @@ curl -X POST "https://dataflow.googleapis.com/v1b3/projects/neo4jbusinessdev/loc
    "launch_parameter": {
       "jobName": "test-bq-rest-'$(date +%Y%m%d-%H%M%S)'",
       "parameters": {
-         "jobSpecUri": "gs://neo4j-dataflow/job-specs/testing/new/bq-northwind-jobspec.json",
+         "jobSpecUri": "gs://neo4j-dataflow/job-specs/testing/bigquery/bq-northwind-jobspec.json",
          "neo4jConnectionUri": "gs://neo4j-dataflow/job-specs/testing/common/auradb-free-connection.json"
       },
    "containerSpecGcsPath": "gs://neo4j-dataflow/flex-templates/images/gcp-to-neo4j-image-spec.json"

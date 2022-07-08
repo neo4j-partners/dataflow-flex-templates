@@ -1,7 +1,7 @@
 package com.google.cloud.teleport.v2.neo4j.common.model.job;
 
-import com.google.cloud.teleport.v2.neo4j.common.model.enums.ActionType;
 import com.google.cloud.teleport.v2.neo4j.common.model.enums.ActionExecuteAfter;
+import com.google.cloud.teleport.v2.neo4j.common.model.enums.ActionType;
 import java.io.Serializable;
 import java.util.HashMap;
 
@@ -13,13 +13,14 @@ public class Action implements Serializable {
     // TODO: add run-log as input to actions.
     // Extent providers to emit structured run-log.
 
-    public String name="";
-    public ActionType type=ActionType.cypher;
-    public HashMap<String,String> options =new HashMap<>();
-    public HashMap<String,String> headers=new HashMap<>();
+    public String name = "";
+    public ActionType type = ActionType.cypher;
+    public HashMap<String, String> options = new HashMap<>();
+    public HashMap<String, String> headers = new HashMap<>();
 
-    public ActionExecuteAfter executeAfter= ActionExecuteAfter.edges;
-    public String executeAfterName="";
+    public ActionExecuteAfter executeAfter = ActionExecuteAfter.edges;
+    public String executeAfterName = "";
+
     /*
     Currently supported actions: source, target, action
      */

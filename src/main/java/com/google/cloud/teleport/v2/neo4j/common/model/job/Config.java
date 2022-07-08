@@ -3,6 +3,7 @@ package com.google.cloud.teleport.v2.neo4j.common.model.job;
 import com.google.cloud.teleport.v2.neo4j.common.model.enums.AvroType;
 import java.io.Serializable;
 import org.json.JSONObject;
+
 /**
  * Global configuration options.
  */

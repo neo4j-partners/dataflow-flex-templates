@@ -16,6 +16,8 @@
 package com.google.cloud.teleport.v2.neo4j;
 
 import com.google.cloud.teleport.v2.neo4j.actions.ActionBeamFactory;
+import com.google.cloud.teleport.v2.neo4j.actions.ActionFactory;
+import com.google.cloud.teleport.v2.neo4j.actions.pojos.IAction;
 import com.google.cloud.teleport.v2.neo4j.common.database.Neo4jConnection;
 import com.google.cloud.teleport.v2.neo4j.common.model.InputRefactoring;
 import com.google.cloud.teleport.v2.neo4j.common.model.InputValidator;
@@ -31,8 +33,6 @@ import com.google.cloud.teleport.v2.neo4j.common.transforms.GcsLogTransform;
 import com.google.cloud.teleport.v2.neo4j.common.transforms.Neo4jRowWriterTransform;
 import com.google.cloud.teleport.v2.neo4j.common.utils.BeamBlock;
 import com.google.cloud.teleport.v2.neo4j.common.utils.ModelUtils;
-import providers.IProvider;
-import providers.ProviderFactory;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import java.util.List;
@@ -50,6 +50,8 @@ import org.apache.beam.sdk.values.Row;
 import org.apache.beam.sdk.values.TypeDescriptor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import providers.IProvider;
+import providers.ProviderFactory;
 
 /**
  * Dataflow template which reads BigQuery data and writes it to Neo4j. The source data can be
@@ -119,6 +121,21 @@ public class GcpToNeo4j {
     }
 
     /**
+     * Runs a pipeline which reads data from various sources and writes it to Neo4j.
+     *
+     * @param args arguments to the pipeline
+     */
+    public static void main(final String[] args) {
+        final Neo4jFlexTemplateOptions options =
+                PipelineOptionsFactory.fromArgs(args).withValidation()
+                        .as(Neo4jFlexTemplateOptions.class);
+
+        LOG.info("Job: " + options.getJobSpecUri());
+        final GcpToNeo4j bqToNeo4jTemplate = new GcpToNeo4j(options);
+        bqToNeo4jTemplate.run();
+    }
+
+    /**
      * Raises RuntimeExceptions for validation errors.
      *
      * @param validationMessages
@@ -134,21 +151,6 @@ public class GcpToNeo4j {
         }
     }
 
-    /**
-     * Runs a pipeline which reads data from various sources and writes it to Neo4j.
-     *
-     * @param args arguments to the pipeline
-     */
-    public static void main(final String[] args) {
-        final Neo4jFlexTemplateOptions options =
-                PipelineOptionsFactory.fromArgs(args).withValidation()
-                        .as(Neo4jFlexTemplateOptions.class);
-
-        LOG.info("Job: " + options.getJobSpecUri());
-        final GcpToNeo4j bqToNeo4jTemplate = new GcpToNeo4j(options);
-        bqToNeo4jTemplate.run();
-    }
-
     public void run() {
 
         ////////////////////////////
@@ -157,11 +159,14 @@ public class GcpToNeo4j {
             Neo4jConnection directConnect = new Neo4jConnection(this.neo4jConnection);
             directConnect.resetDatabase();
         }
+        ////////////////////////////
+        // Run preload actions
+        runPreloadActions(jobSpec.getPreloadActions());
 
         ////////////////////////////
         // Initialize wait-on collection queue...
         RowCoder fooCoder = RowCoder.of(Schema.of(Schema.Field.of("foo", Schema.FieldType.STRING)));
-        PCollection<Row> emptySeedCollection = pipeline.apply("Floating Queue", Create.empty(TypeDescriptor.of(Row.class)).withCoder(fooCoder));
+        PCollection<Row> emptySeedCollection = pipeline.apply("Default Context", Create.empty(TypeDescriptor.of(Row.class)).withCoder(fooCoder));
 
         // Creating serialization handle
         BeamBlock blockingQueue = new BeamBlock(emptySeedCollection);
@@ -175,7 +180,7 @@ public class GcpToNeo4j {
             providerImpl.configure(optionsParams, jobSpec);
             //TODO: delay source query until preloads are complete
             //PBegin begin = pipeline.apply("Querying " +source.name, Wait.on(blockingQueue.waitOnCollection(source.executeAfter, source.executeAfterName, source.name + " query")));
-            PCollection<Row> sourceMetadata=pipeline.apply("Source metadata", providerImpl.queryMetadata(source));
+            PCollection<Row> sourceMetadata = pipeline.apply("Source metadata", providerImpl.queryMetadata(source));
             Schema sourceBeamSchema = sourceMetadata.getSchema();
             blockingQueue.addToQueue(ArtifactType.source, false, source.name, emptySeedCollection, sourceMetadata);
             PCollection nullableSourceBeamRows = null;
@@ -273,14 +278,30 @@ public class GcpToNeo4j {
 
         ////////////////////////////
         // Process actions (first pass)
-        runActions(emptySeedCollection, jobSpec.actions, blockingQueue);
+        runBeamActions(emptySeedCollection, jobSpec.getPostloadActions(), blockingQueue);
 
         // For a Dataflow Flex Template, do NOT waitUntilFinish().
         pipeline.run();
 
     }
 
-    private void runActions(PCollection<Row> initSeedCollection, List<Action> actions, BeamBlock blockingQueue) {
+
+    private void runPreloadActions(List<Action> actions) {
+        for (Action action : actions) {
+            LOG.info("Executing preload action: " + action.name);
+            // Get targeted execution context
+            ActionContext context = new ActionContext();
+            context.jobSpec = this.jobSpec;
+            context.neo4jConnection = this.neo4jConnection;
+            IAction actionImpl = ActionFactory.of(action, context);
+            List<String> msgs = actionImpl.execute();
+            for (String msg : msgs) {
+                LOG.info("Preload action " + action.name + ": " + msg);
+            }
+        }
+    }
+
+    private void runBeamActions(PCollection<Row> initSeedCollection, List<Action> actions, BeamBlock blockingQueue) {
         for (Action action : actions) {
             //LOG.info("Registering action: " + gson.toJson(action));
             ArtifactType artifactType = ArtifactType.action;
@@ -294,17 +315,18 @@ public class GcpToNeo4j {
             LOG.info("Executing delayed action: " + action.name);
             // Get targeted execution context
             PCollection<Row> executionContext = blockingQueue.getContextCollection(artifactType, action.executeAfterName);
-            if (executionContext==null) executionContext=initSeedCollection;
+            if (executionContext == null) executionContext = initSeedCollection;
             ActionContext context = new ActionContext();
             context.dataContext = executionContext;
             context.emptyReturn = initSeedCollection;
             context.jobSpec = this.jobSpec;
             context.neo4jConnection = this.neo4jConnection;
             PTransform<PCollection<Row>, PCollection<Row>> actionImpl = ActionBeamFactory.of(action, context);
-                PCollection<Row> finished = executionContext.apply(action.name + ": Unblocking", Wait.on(
-                                blockingQueue.waitOnCollection(action.executeAfter, action.executeAfterName, action.name)
-                        )).setCoder(executionContext.getCoder())
-                        .apply("Action " + action.name, actionImpl);
+            // Action execution context will be be rendered as "Default Context"
+            PCollection<Row> finished = executionContext.apply(action.name + ": Unblocking", Wait.on(
+                            blockingQueue.waitOnCollection(action.executeAfter, action.executeAfterName, action.name)
+                    )).setCoder(executionContext.getCoder())
+                    .apply("Action " + action.name, actionImpl);
             blockingQueue.addToQueue(ArtifactType.action, action.executeAfter == ActionExecuteAfter.start, action.name, initSeedCollection, finished);
         }
     }

@@ -30,7 +30,7 @@ public class ModelUtils {
     private static final Pattern variablePattern = Pattern.compile("(\\$([a-zA-Z0-9_]+))");
     private static final Logger LOG = LoggerFactory.getLogger(ModelUtils.class);
 
-    public static Target generateDefaultTarget(Source source)  {
+    public static Target generateDefaultTarget(Source source) {
         if (source.sourceType == SourceType.text) {
             Target target = new Target();
 
@@ -38,7 +38,7 @@ public class ModelUtils {
 
             return target;
         } else {
-            LOG.error("Unhandled source type: "+source.sourceType);
+            LOG.error("Unhandled source type: " + source.sourceType);
             throw new RuntimeException("Unhandled source type: " + source.sourceType);
         }
     }

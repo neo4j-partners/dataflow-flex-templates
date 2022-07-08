@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory;
  */
 public class GcpSecretUtils {
     private static final Logger LOG = LoggerFactory.getLogger(GcpSecretUtils.class);
+
     private static String resolveSecret(String secretName) {
         try (SecretManagerServiceClient client = SecretManagerServiceClient.create()) {
             AccessSecretVersionResponse response = client.accessSecretVersion(secretName);

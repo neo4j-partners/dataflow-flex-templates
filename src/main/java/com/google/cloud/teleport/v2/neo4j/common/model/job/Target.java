@@ -32,8 +32,8 @@ public class Target implements Serializable, Comparable {
     public Map<String, Mapping> mappingByFieldMap = new HashMap();
     public List<String> fieldNames = new ArrayList<>();
     public int sequence = 0;
-    public ActionExecuteAfter executeAfter=null;
-    public String executeAfterName="";
+    public ActionExecuteAfter executeAfter = null;
+    public String executeAfterName = "";
 
     public Target() {
     }

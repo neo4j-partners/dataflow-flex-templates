@@ -14,6 +14,7 @@ import org.slf4j.LoggerFactory;
  */
 public class FileSystemUtils {
     private static final Logger LOG = LoggerFactory.getLogger(FileSystemUtils.class);
+
     public static String getPathContents(String gsPath) {
         StringBuilder textBuilder = new StringBuilder();
 

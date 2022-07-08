@@ -22,7 +22,8 @@ import org.slf4j.LoggerFactory;
 
 public class HttpUtils {
 
-        private static final Logger LOG = LoggerFactory.getLogger(HttpUtils.class);
+    private static final Logger LOG = LoggerFactory.getLogger(HttpUtils.class);
+
     public static CloseableHttpResponse getHttpRespoonse(boolean post, String uri, Map<String, String> options, Map<String, String> headers) throws IOException, URISyntaxException {
 
         CloseableHttpClient httpclient = HttpClients.createDefault();
@@ -43,8 +44,8 @@ public class HttpUtils {
             }
             return httpclient.execute(httpPost);
         } else {
-                URIBuilder builder = new URIBuilder(uri);
-                builder.addParameters(paramPairs);
+            URIBuilder builder = new URIBuilder(uri);
+            builder.addParameters(paramPairs);
             HttpGet httpGet = new HttpGet(builder.build());
             for (NameValuePair t : headerPairs) {
                 httpGet.addHeader(t.getName(), t.getValue());
@@ -54,26 +55,26 @@ public class HttpUtils {
     }
 
     public static String getResponseContent(CloseableHttpResponse httpResponse) throws IOException {
-            LOG.info("GET Response Status:: "
-                    + httpResponse.getStatusLine().getStatusCode());
+        LOG.info("GET Response Status:: "
+                + httpResponse.getStatusLine().getStatusCode());
 
-            BufferedReader reader = new BufferedReader(new InputStreamReader(
-                    httpResponse.getEntity().getContent()));
+        BufferedReader reader = new BufferedReader(new InputStreamReader(
+                httpResponse.getEntity().getContent()));
 
-            String inputLine;
-            StringBuffer response = new StringBuffer();
+        String inputLine;
+        StringBuffer response = new StringBuffer();
 
-            while ((inputLine = reader.readLine()) != null) {
-                    response.append(inputLine);
-            }
-            reader.close();
-            try {
-                httpResponse.close();
-            } catch (Exception e){
-                LOG.error("Exception closing connection.");
-            }
+        while ((inputLine = reader.readLine()) != null) {
+            response.append(inputLine);
+        }
+        reader.close();
+        try {
+            httpResponse.close();
+        } catch (Exception e) {
+            LOG.error("Exception closing connection.");
+        }
 
-            return response.toString();
+        return response.toString();
     }
 
 

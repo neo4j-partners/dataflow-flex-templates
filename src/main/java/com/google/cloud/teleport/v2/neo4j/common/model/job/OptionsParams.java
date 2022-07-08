@@ -23,8 +23,9 @@ public class OptionsParams implements Serializable {
 
     public OptionsParams() {
     }
+
     @JsonIgnore
-    public void overlayTokens( String optionsJsonStr) {
+    public void overlayTokens(String optionsJsonStr) {
         if (!StringUtils.isEmpty(optionsJsonStr)) {
             LOG.info("Pipeline options: " + optionsJsonStr);
             final JSONObject optionsJson = new JSONObject(optionsJsonStr);

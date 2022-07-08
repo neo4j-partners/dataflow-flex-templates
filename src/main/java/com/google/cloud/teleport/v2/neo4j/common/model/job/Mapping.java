@@ -26,7 +26,9 @@ public class Mapping implements Serializable {
     public boolean unique = false;
     public boolean indexed = true;
     public FragmentType fragmentType = FragmentType.node;
-    public Mapping(){}
+
+    public Mapping() {
+    }
 
     public Mapping(FragmentType fragmentType, RoleType type, FieldNameTuple fieldNameTuple) {
         this.role = type;
@@ -35,7 +37,6 @@ public class Mapping implements Serializable {
         this.field = fieldNameTuple.field;
         this.constant = fieldNameTuple.constant;
     }
-
 
 
 }

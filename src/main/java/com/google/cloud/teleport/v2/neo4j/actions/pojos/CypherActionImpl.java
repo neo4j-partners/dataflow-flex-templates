@@ -12,7 +12,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Cypher runner action handler.
  */
-public class CypherActionImpl  implements IAction {
+public class CypherActionImpl implements IAction {
     private static final Logger LOG = LoggerFactory.getLogger(CypherActionImpl.class);
 
     Action action;
@@ -24,15 +24,15 @@ public class CypherActionImpl  implements IAction {
     }
 
     public List<String> execute() {
-        List<String> msgs=new ArrayList<>();
+        List<String> msgs = new ArrayList<>();
 
         Neo4jConnection directConnect = new Neo4jConnection(this.context.neo4jConnection);
-        String cypher=action.options.get("cypher");
-        LOG.info("Executing cypher: "+cypher);
+        String cypher = action.options.get("cypher");
+        LOG.info("Executing cypher: " + cypher);
         try {
             directConnect.executeCypher(cypher);
-        } catch (Exception e){
-            LOG.error("Exception running cypher, "+cypher+": "+e.getMessage());
+        } catch (Exception e) {
+            LOG.error("Exception running cypher, " + cypher + ": " + e.getMessage());
         }
 
         return msgs;

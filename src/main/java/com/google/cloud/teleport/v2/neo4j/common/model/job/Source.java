@@ -33,8 +33,8 @@ public class Source implements Serializable {
     public Map<String, Integer> fieldPosByName = new HashMap();
     public List<List<Object>> inline = new ArrayList<>();
 
-    public ActionExecuteAfter executeAfter= ActionExecuteAfter.preloads;
-    public String executeAfterName="";
+    public ActionExecuteAfter executeAfter = ActionExecuteAfter.preloads;
+    public String executeAfterName = "";
 
     public static List<List<Object>> jsonToListOfListsArray(JSONArray lines) {
         if (lines == null) {

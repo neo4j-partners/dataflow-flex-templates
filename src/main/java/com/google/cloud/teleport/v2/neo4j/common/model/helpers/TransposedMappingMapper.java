@@ -1,6 +1,9 @@
 package com.google.cloud.teleport.v2.neo4j.common.model.helpers;
 
-import com.google.cloud.teleport.v2.neo4j.common.model.enums.*;
+import com.google.cloud.teleport.v2.neo4j.common.model.enums.FragmentType;
+import com.google.cloud.teleport.v2.neo4j.common.model.enums.PropertyType;
+import com.google.cloud.teleport.v2.neo4j.common.model.enums.RoleType;
+import com.google.cloud.teleport.v2.neo4j.common.model.enums.TargetType;
 import com.google.cloud.teleport.v2.neo4j.common.model.job.FieldNameTuple;
 import com.google.cloud.teleport.v2.neo4j.common.model.job.Mapping;
 import com.google.cloud.teleport.v2.neo4j.common.model.job.Target;
@@ -157,7 +160,7 @@ public class TransposedMappingMapper {
                 mapping.indexed = indexed.contains(f);
                 mapping.unique = uniques.contains(f);
                 addMapping(mappings, mapping);
-                
+
             }
         }
 
@@ -288,7 +291,7 @@ public class TransposedMappingMapper {
     private static void addMapping(List<Mapping> mappings, Mapping mapping) {
         if (!StringUtils.isEmpty(mapping.field)) {
             for (Mapping existingMapping : mappings) {
-                if (existingMapping.field!=null && existingMapping.field.equals(mapping.field)) {
+                if (existingMapping.field != null && existingMapping.field.equals(mapping.field)) {
                     throw new RuntimeException("Duplicate mapping: " + gson.toJson(mapping));
                 }
             }

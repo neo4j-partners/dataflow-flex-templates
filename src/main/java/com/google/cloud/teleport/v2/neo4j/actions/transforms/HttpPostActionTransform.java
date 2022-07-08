@@ -28,14 +28,14 @@ public class HttpPostActionTransform extends PTransform<PCollection<Row>, PColle
     public PCollection<Row> expand(PCollection<Row> input) {
 
         try {
-            CloseableHttpResponse response= HttpUtils.getHttpRespoonse(true,
+            CloseableHttpResponse response = HttpUtils.getHttpRespoonse(true,
                     action.options.get("uri"),
                     action.options,
                     action.headers);
-            LOG.info("Request returned: "+HttpUtils.getResponseContent(response));
+            LOG.info("Request returned: " + HttpUtils.getResponseContent(response));
 
-        } catch (Exception e){
-            LOG.error("Exception making http get request: "+e.getMessage());
+        } catch (Exception e) {
+            LOG.error("Exception making http get request: " + e.getMessage());
         }
         return this.context.emptyReturn;
     }

@@ -44,6 +44,7 @@ public class Neo4jConnection implements Serializable {
 
     /**
      * Constructor.
+     *
      * @param connectionParams
      */
     public Neo4jConnection(ConnectionParams connectionParams) {
@@ -62,6 +63,7 @@ public class Neo4jConnection implements Serializable {
 
     /**
      * Constructor.
+     *
      * @param serverUrl
      * @param database
      * @param username
@@ -113,6 +115,7 @@ public class Neo4jConnection implements Serializable {
 
     /**
      * Execute cypher.
+     *
      * @param cypher statement
      */
     public void executeCypher(String cypher) throws Exception {
@@ -123,6 +126,7 @@ public class Neo4jConnection implements Serializable {
 
     /**
      * Write transaction.
+     *
      * @param transactionWork
      * @param transactionConfig
      */

@@ -12,7 +12,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Http GET action handler.
  */
-public class HttpGetActionImpl  implements IAction {
+public class HttpGetActionImpl implements IAction {
     private static final Logger LOG = LoggerFactory.getLogger(HttpGetActionImpl.class);
 
     Action action;
@@ -24,17 +24,17 @@ public class HttpGetActionImpl  implements IAction {
     }
 
     public List<String> execute() {
-        List<String> msgs=new ArrayList<>();
+        List<String> msgs = new ArrayList<>();
 
         try {
-            CloseableHttpResponse response= HttpUtils.getHttpRespoonse(false,
+            CloseableHttpResponse response = HttpUtils.getHttpRespoonse(false,
                     action.options.get("uri"),
                     action.options,
                     action.headers);
-            LOG.info("Request returned: "+HttpUtils.getResponseContent(response));
+            LOG.info("Request returned: " + HttpUtils.getResponseContent(response));
 
-        } catch (Exception e){
-            LOG.error("Exception making http get request: "+e.getMessage());
+        } catch (Exception e) {
+            LOG.error("Exception making http get request: " + e.getMessage());
         }
 
         return msgs;

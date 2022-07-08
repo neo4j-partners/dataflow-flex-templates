@@ -1,5 +1,9 @@
 package com.google.cloud.teleport.v2.neo4j.actions.pojos;
 
+import com.google.cloud.bigquery.BigQuery;
+import com.google.cloud.bigquery.BigQueryOptions;
+import com.google.cloud.bigquery.QueryJobConfiguration;
+import com.google.cloud.bigquery.TableResult;
 import com.google.cloud.teleport.v2.neo4j.common.model.job.Action;
 import com.google.cloud.teleport.v2.neo4j.common.model.job.ActionContext;
 import java.util.ArrayList;
@@ -22,8 +26,20 @@ public class QueryActionImpl implements IAction {
     }
 
     public List<String> execute() {
-        List<String> msgs=new ArrayList<>();
+        List<String> msgs = new ArrayList<>();
+        String sql = action.options.get("sql");
 
+        try {
+
+            BigQuery bigquery = BigQueryOptions.getDefaultInstance().getService();
+            QueryJobConfiguration queryConfig = QueryJobConfiguration.newBuilder(sql).build();
+            msgs.add("Query: " + sql);
+            TableResult queryResult = bigquery.query(queryConfig);
+            msgs.add("Result rows: " + queryResult.getTotalRows());
+
+        } catch (Exception e) {
+            LOG.error("Exception running sql " + sql + ": " + e.getMessage());
+        }
 
         return msgs;
     }

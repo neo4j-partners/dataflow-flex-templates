@@ -14,22 +14,22 @@ import org.json.JSONObject;
 public class TargetMapper {
 
     public static Target fromJson(final JSONObject targetObj) {
-        Target target=new Target();
+        Target target = new Target();
         if (targetObj.has("node")) {
-            target.type=TargetType.node;
+            target.type = TargetType.node;
             parseMappingsObject(target, targetObj.getJSONObject("node"));
         } else if (targetObj.has("edge")) {
-            target.type=TargetType.edge;
+            target.type = TargetType.edge;
             parseMappingsObject(target, targetObj.getJSONObject("edge"));
         } else {
-            target.type=TargetType.valueOf(targetObj.getString("type"));
+            target.type = TargetType.valueOf(targetObj.getString("type"));
             parseMappingsArray(target, targetObj);
         }
         return target;
     }
 
     private static void parseMappingsObject(Target target, final JSONObject targetObj) {
-        parseHeader(target,targetObj);
+        parseHeader(target, targetObj);
         List<Mapping> mappings = TransposedMappingMapper.parseMappings(target, targetObj.getJSONObject("mappings"));
         for (Mapping mapping : mappings) {
             addMapping(target, mapping);
@@ -38,7 +38,7 @@ public class TargetMapper {
 
     public static void parseMappingsArray(Target target, final JSONObject targetObj) {
 
-        parseHeader(target,targetObj);
+        parseHeader(target, targetObj);
         JSONArray mappingsArray = targetObj.getJSONArray("mappings");
         for (int i = 0; i < mappingsArray.length(); i++) {
             final JSONObject mappingObj = mappingsArray.getJSONObject(i);
@@ -63,14 +63,14 @@ public class TargetMapper {
         if (targetObj.has("execute_after")) {
             target.executeAfter = ActionExecuteAfter.valueOf(targetObj.getString("execute_after"));
         } else {
-            if (target.type==TargetType.node){
+            if (target.type == TargetType.node) {
                 //this will not wait for anything...
-                target.executeAfter= ActionExecuteAfter.sources;
-            } else if (target.type==TargetType.edge){
-                target.executeAfter= ActionExecuteAfter.nodes;
+                target.executeAfter = ActionExecuteAfter.sources;
+            } else if (target.type == TargetType.edge) {
+                target.executeAfter = ActionExecuteAfter.nodes;
             }
         }
-        target.executeAfterName = targetObj.has("execute_after_name")?targetObj.getString("execute_after_name"):"";
+        target.executeAfterName = targetObj.has("execute_after_name") ? targetObj.getString("execute_after_name") : "";
 
         if (targetObj.has("transform")) {
             final JSONObject queryObj = targetObj.getJSONObject("transform");

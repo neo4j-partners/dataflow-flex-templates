@@ -16,15 +16,15 @@ import org.apache.beam.sdk.values.Row;
  */
 public class ActionBeamFactory {
     public static PTransform<PCollection<Row>, PCollection<Row>> of(Action action, ActionContext context) {
-        ActionType actionType=action.type;
+        ActionType actionType = action.type;
         if (actionType == ActionType.query) {
-            return new QueryActionTransform(action,context);
+            return new QueryActionTransform(action, context);
         } else if (actionType == ActionType.cypher) {
-            return new CypherActionTransform(action,context);
+            return new CypherActionTransform(action, context);
         } else if (actionType == ActionType.http_post) {
-            return new HttpPostActionTransform(action,context);
+            return new HttpPostActionTransform(action, context);
         } else if (actionType == ActionType.http_get) {
-            return new HttpGetActionTransform(action,context);
+            return new HttpGetActionTransform(action, context);
         } else {
             throw new RuntimeException("Unhandled action type: " + actionType);
         }

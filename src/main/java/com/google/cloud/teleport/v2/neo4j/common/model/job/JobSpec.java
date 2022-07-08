@@ -1,5 +1,6 @@
 package com.google.cloud.teleport.v2.neo4j.common.model.job;
 
+import com.google.cloud.teleport.v2.neo4j.common.model.enums.ActionExecuteAfter;
 import com.google.cloud.teleport.v2.neo4j.common.model.enums.TargetType;
 import java.io.Serializable;
 import java.util.*;
@@ -71,6 +72,26 @@ public class JobSpec implements Serializable {
             fieldNameList.addAll(target.fieldNames);
         }
         return fieldNameList;
+    }
+
+    public List<Action> getPreloadActions() {
+        List<Action> actions = new ArrayList<>();
+        for (Action action : this.actions) {
+            if (action.executeAfter == ActionExecuteAfter.start) {
+                actions.add(action);
+            }
+        }
+        return actions;
+    }
+
+    public List<Action> getPostloadActions() {
+        List<Action> actions = new ArrayList<>();
+        for (Action action : this.actions) {
+            if (action.executeAfter != ActionExecuteAfter.start) {
+                actions.add(action);
+            }
+        }
+        return actions;
     }
 
 }

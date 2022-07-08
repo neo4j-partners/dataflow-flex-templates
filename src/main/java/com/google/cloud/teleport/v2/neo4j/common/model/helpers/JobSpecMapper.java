@@ -19,7 +19,7 @@ public class JobSpecMapper {
 
     public static JobSpec fromUri(final String jobSpecUri) {
 
-        JobSpec jobSpecRequest=new JobSpec();
+        JobSpec jobSpecRequest = new JobSpec();
 
         String jobSpecJsonStr = "{}";
         try {
@@ -86,7 +86,7 @@ public class JobSpecMapper {
                 final JSONArray optionsArray = jobSpecObj.getJSONArray("actions");
                 for (int i = 0; i < optionsArray.length(); i++) {
                     JSONObject jsonObject = optionsArray.getJSONObject(i);
-                    Action action=ActionMapper.fromJson(jsonObject);
+                    Action action = ActionMapper.fromJson(jsonObject);
                     jobSpecRequest.actions.add(action);
                 }
             }

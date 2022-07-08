@@ -12,11 +12,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class SourceMapper {
-    private static final Logger LOG = LoggerFactory.getLogger(SourceMapper.class);
     static final Pattern NEWLINE_PATTERN = Pattern.compile("\\R");
-    
-    public  static Source fromJson(final JSONObject sourceObj) { 
-        Source source=new Source();
+    private static final Logger LOG = LoggerFactory.getLogger(SourceMapper.class);
+
+    public static Source fromJson(final JSONObject sourceObj) {
+        Source source = new Source();
         source.name = sourceObj.getString("name");
         //TODO: avro, parquet, etc.
         source.sourceType = sourceObj.has("type") ? SourceType.valueOf(sourceObj.getString("type")) : SourceType.text;

@@ -9,8 +9,8 @@ import org.apache.beam.repackaged.core.org.apache.commons.lang3.StringUtils;
 import org.json.JSONObject;
 
 public class VerboseMappingMapper {
-    public static Mapping fromJsonObject(final JSONObject mappingObj){
-        Mapping mapping=new Mapping();
+    public static Mapping fromJsonObject(final JSONObject mappingObj) {
+        Mapping mapping = new Mapping();
         mapping.labels = Arrays.asList(mappingObj.has("label") ? mappingObj.getString("label") : "");
         mapping.constant = mappingObj.has("constant") ? mappingObj.getString("constant") : "";
         mapping.role = mappingObj.has("role") ? RoleType.valueOf(mappingObj.getString("role")) : mapping.role;

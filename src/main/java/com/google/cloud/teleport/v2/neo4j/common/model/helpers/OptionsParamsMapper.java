@@ -11,7 +11,7 @@ public class OptionsParamsMapper {
     private static final Logger LOG = LoggerFactory.getLogger(OptionsParamsMapper.class);
 
     public static OptionsParams fromPipelineOptions(Neo4jFlexTemplateOptions pipelineOptions) {
-        OptionsParams optionsParams=new OptionsParams();
+        OptionsParams optionsParams = new OptionsParams();
         try {
 
             if (StringUtils.isNotEmpty(pipelineOptions.getReadQuery())) {
@@ -27,7 +27,6 @@ public class OptionsParamsMapper {
         }
         return optionsParams;
     }
-
 
 
 }

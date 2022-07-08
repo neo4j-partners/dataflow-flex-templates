@@ -17,6 +17,7 @@ public class CypherActionTransform extends PTransform<PCollection<Row>, PCollect
     private static final Logger LOG = LoggerFactory.getLogger(CypherActionTransform.class);
     Action action;
     ActionContext context;
+
     public CypherActionTransform(Action action, ActionContext context) {
         this.action = action;
         this.context = context;
@@ -25,12 +26,12 @@ public class CypherActionTransform extends PTransform<PCollection<Row>, PCollect
     @Override
     public PCollection<Row> expand(PCollection<Row> input) {
         Neo4jConnection directConnect = new Neo4jConnection(this.context.neo4jConnection);
-        String cypher=action.options.get("cypher");
-        LOG.info("Executing cypher: "+cypher);
+        String cypher = action.options.get("cypher");
+        LOG.info("Executing cypher: " + cypher);
         try {
             directConnect.executeCypher(cypher);
-        } catch (Exception e){
-            LOG.error("Exception running cypher, "+cypher+": "+e.getMessage());
+        } catch (Exception e) {
+            LOG.error("Exception running cypher, " + cypher + ": " + e.getMessage());
         }
         return this.context.emptyReturn;
     }

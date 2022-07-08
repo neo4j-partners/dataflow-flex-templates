@@ -6,5 +6,6 @@ import java.util.List;
 
 public interface IAction {
     public void configure(Action action, ActionContext context);
+
     public List<String> execute();
 }

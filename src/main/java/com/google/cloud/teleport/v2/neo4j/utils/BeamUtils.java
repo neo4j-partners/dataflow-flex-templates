@@ -6,8 +6,8 @@ import com.google.cloud.teleport.v2.neo4j.model.job.Mapping;
 import com.google.cloud.teleport.v2.neo4j.model.job.Target;
 import java.util.ArrayList;
 import java.util.List;
-import org.apache.beam.repackaged.core.org.apache.commons.lang3.StringUtils;
 import org.apache.beam.sdk.schemas.Schema;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

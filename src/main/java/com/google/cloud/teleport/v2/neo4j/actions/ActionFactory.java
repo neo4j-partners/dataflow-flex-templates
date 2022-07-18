@@ -9,7 +9,7 @@ import com.google.cloud.teleport.v2.neo4j.model.job.ActionContext;
  * Factory providing indirection to action handler.
  */
 public class ActionFactory {
-    public static IPreloadAction of(Action action, ActionContext context) {
+    public static PreloadAction of(Action action, ActionContext context) {
         ActionType actionType = action.type;
         if (actionType == ActionType.bigquery) {
             PreloadBigQueryAction impl = new PreloadBigQueryAction();

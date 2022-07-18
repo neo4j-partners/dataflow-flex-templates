@@ -15,7 +15,7 @@ import org.apache.beam.sdk.values.Row;
 /**
  * Provider interface, implemented for every source.
  */
-public interface IProvider {
+public interface Provider {
     void configure(OptionsParams optionsParams, JobSpec jobSpecRequest);
 
     /**

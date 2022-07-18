@@ -13,8 +13,8 @@ import com.google.gson.GsonBuilder;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import org.apache.beam.repackaged.core.org.apache.commons.lang3.StringUtils;
 import org.apache.beam.sdk.schemas.Schema;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -140,7 +140,7 @@ public class ModelUtils {
     }
 
     public static String getTargetSql(Set<String> fieldNameMap, Target target, boolean generateSqlSort, String baseSql) {
-        StringBuffer sb = new StringBuffer();
+        StringBuilder sb = new StringBuilder();
 
         String orderByClause = "";
         if (target.type == TargetType.edge) {
@@ -238,7 +238,7 @@ public class ModelUtils {
 
 
     public static List<String> getStaticOrDynamicRelationshipType(String dynamicRowPrefix, Target target) {
-        StringBuffer sb = new StringBuffer();
+        StringBuilder sb = new StringBuilder();
         List<String> relationships = new ArrayList<>();
         for (Mapping m : target.mappings) {
             if (m.fragmentType == FragmentType.rel) {
@@ -330,12 +330,12 @@ public class ModelUtils {
         //populate the replacements map ...
         StringBuilder builder = new StringBuilder();
         int i = 0;
-        LOG.info("Replacing variable tokens: " + text);
         while (matcher.find()) {
-            String replacement = replacements.get(matcher.group(1));
+            LOG.info("Matcher group: " + matcher.group(1));
+            String replacement = replacements.get(matcher.group(2));
             builder.append(text, i, matcher.start());
             if (replacement == null) {
-                builder.append(matcher.group(0));
+                builder.append(matcher.group(1));
             } else {
                 builder.append(replacement);
             }

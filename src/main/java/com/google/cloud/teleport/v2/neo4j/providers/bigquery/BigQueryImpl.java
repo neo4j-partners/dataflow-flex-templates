@@ -6,25 +6,25 @@ import com.google.cloud.teleport.v2.neo4j.model.helpers.TargetQuerySpec;
 import com.google.cloud.teleport.v2.neo4j.model.job.JobSpec;
 import com.google.cloud.teleport.v2.neo4j.model.job.OptionsParams;
 import com.google.cloud.teleport.v2.neo4j.model.job.Source;
-import com.google.cloud.teleport.v2.neo4j.providers.IProvider;
+import com.google.cloud.teleport.v2.neo4j.providers.Provider;
 import com.google.cloud.teleport.v2.neo4j.utils.ModelUtils;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
-import org.apache.beam.repackaged.core.org.apache.commons.lang3.StringUtils;
 import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.values.PBegin;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.Row;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Provider implementation for reading and writing BigQuery.
  */
-public class BigQueryImpl implements IProvider {
+public class BigQueryImpl implements Provider {
     private static final Logger LOG = LoggerFactory.getLogger(BigQueryImpl.class);
 
     private static final Gson gson = new GsonBuilder().setPrettyPrinting().create();

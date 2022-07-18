@@ -10,7 +10,7 @@ import com.google.cloud.teleport.v2.neo4j.providers.text.TextImpl;
  */
 
 public class ProviderFactory {
-    public static IProvider of(SourceType sourceType) {
+    public static Provider of(SourceType sourceType) {
         if (sourceType == SourceType.bigquery) {
             return new BigQueryImpl();
         } else if (sourceType == SourceType.text) {

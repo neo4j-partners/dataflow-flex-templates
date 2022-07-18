@@ -5,7 +5,7 @@ import com.google.cloud.teleport.v2.neo4j.model.helpers.TargetQuerySpec;
 import com.google.cloud.teleport.v2.neo4j.model.job.JobSpec;
 import com.google.cloud.teleport.v2.neo4j.model.job.OptionsParams;
 import com.google.cloud.teleport.v2.neo4j.model.job.Source;
-import com.google.cloud.teleport.v2.neo4j.providers.IProvider;
+import com.google.cloud.teleport.v2.neo4j.providers.Provider;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.beam.sdk.transforms.PTransform;
@@ -18,7 +18,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Provider implementation for reading and writing Text files.
  */
-public class TextImpl implements IProvider {
+public class TextImpl implements Provider {
 
     private static final Logger LOG = LoggerFactory.getLogger(TextImpl.class);
     private JobSpec jobSpec;

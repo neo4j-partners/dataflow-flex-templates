@@ -5,7 +5,7 @@ import com.google.cloud.teleport.v2.neo4j.model.enums.PropertyType;
 import com.google.cloud.teleport.v2.neo4j.model.enums.RoleType;
 import com.google.cloud.teleport.v2.neo4j.model.job.Mapping;
 import java.util.Arrays;
-import org.apache.beam.repackaged.core.org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.json.JSONObject;
 
 /**

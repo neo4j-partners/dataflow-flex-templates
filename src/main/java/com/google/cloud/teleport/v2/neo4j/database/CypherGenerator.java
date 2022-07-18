@@ -11,8 +11,8 @@ import com.google.cloud.teleport.v2.neo4j.utils.ModelUtils;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import org.apache.beam.repackaged.core.org.apache.commons.lang3.RandomStringUtils;
-import org.apache.beam.repackaged.core.org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.RandomStringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,7 +26,7 @@ public class CypherGenerator {
     private static final String CONST_ROW_VARIABLE_NAME = "rows";
 
     public static String getUnwindCreateCypher(Target target) {
-        StringBuffer sb = new StringBuffer();
+        StringBuilder sb = new StringBuilder();
         // Model node creation statement
         //  "UNWIND $rows AS row CREATE(c:Customer { id : row.id, name: row.name, firstName: row.firstName })
         String nodeAlias = "N_" + RandomStringUtils.randomAlphanumeric(8);
@@ -82,7 +82,7 @@ public class CypherGenerator {
     }
 
     public static String getLabelsPropertiesListCypherFragment(String alias, boolean onlyIndexedProperties, FragmentType entityType, List<RoleType> roleTypes, Target target) {
-        StringBuffer sb = new StringBuffer();
+        StringBuilder sb = new StringBuilder();
         List<String> labels = ModelUtils.getStaticOrDynamicLabels(CONST_ROW_VARIABLE_NAME, entityType, target);
         String propertiesKeyListStr = getPropertiesListCypherFragment(entityType, onlyIndexedProperties, roleTypes, target);
         // Labels
@@ -104,7 +104,7 @@ public class CypherGenerator {
     }
 
     public static String getPropertiesListCypherFragment(FragmentType entityType, boolean onlyIndexedProperties, List<RoleType> roleTypes, Target target) {
-        StringBuffer sb = new StringBuffer();
+        StringBuilder sb = new StringBuilder();
         int targetColCount = 0;
         for (Mapping m : target.mappings) {
             if (m.fragmentType == entityType) {
@@ -158,7 +158,7 @@ public class CypherGenerator {
     }
 
     public static String getRelationshipTypePropertiesListFragment(String prefix, boolean onlyIndexedProperties, Target target) {
-        StringBuffer sb = new StringBuffer();
+        StringBuilder sb = new StringBuilder();
         List<String> relType = ModelUtils.getStaticOrDynamicRelationshipType(CONST_ROW_VARIABLE_NAME, target);
         sb.append(prefix + ":" + StringUtils.join(relType, ":"));
         sb.append(" " + getPropertiesListCypherFragment(FragmentType.rel, onlyIndexedProperties, Arrays.asList(RoleType.key, RoleType.property), target));

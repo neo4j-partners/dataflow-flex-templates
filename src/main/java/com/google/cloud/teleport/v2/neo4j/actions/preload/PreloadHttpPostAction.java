@@ -5,7 +5,7 @@ import com.google.cloud.teleport.v2.neo4j.model.job.ActionContext;
 import com.google.cloud.teleport.v2.neo4j.utils.HttpUtils;
 import java.util.ArrayList;
 import java.util.List;
-import org.apache.beam.repackaged.core.org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,7 +13,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Http POST action handler.
  */
-public class PreloadHttpPostAction implements IPreloadAction {
+public class PreloadHttpPostAction implements PreloadAction {
     private static final Logger LOG = LoggerFactory.getLogger(PreloadHttpPostAction.class);
 
     Action action;

@@ -61,7 +61,7 @@ public class Source implements Serializable {
         String[] rows = new String[lines.length()];
         for (int i = 0; i < lines.length(); i++) {
             JSONArray rowArr = lines.getJSONArray(i);
-            StringBuffer sb = new StringBuffer();
+            StringBuilder sb = new StringBuilder();
             for (int j = 0; j < rowArr.length(); j++) {
                 if (j > 0) {
                     sb.append(delimiter);

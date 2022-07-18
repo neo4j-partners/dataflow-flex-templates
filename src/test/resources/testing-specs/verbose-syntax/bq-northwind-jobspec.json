@@ -2,8 +2,7 @@
   "config": {
     "reset_db": true,
     "node_write_batch_size": 5000,
-    "edge_write_batch_size": 1000,
-    "audit_gcs_uri": "gs://neo4j-sandbox/audit_parquet/"
+    "edge_write_batch_size": 1000
   },
   "source": {
     "type": "bigquery",
@@ -43,7 +42,7 @@
           "type": "String",
           "unique": false,
           "indexed": true
-        }, 
+        },
         {
           "field": "company_name",
           "name": "CompanyName",

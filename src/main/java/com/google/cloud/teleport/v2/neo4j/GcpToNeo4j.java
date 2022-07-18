@@ -17,7 +17,7 @@ package com.google.cloud.teleport.v2.neo4j;
 
 import com.google.cloud.teleport.v2.neo4j.actions.ActionBeamFactory;
 import com.google.cloud.teleport.v2.neo4j.actions.ActionFactory;
-import com.google.cloud.teleport.v2.neo4j.actions.preload.IPreloadAction;
+import com.google.cloud.teleport.v2.neo4j.actions.preload.PreloadAction;
 import com.google.cloud.teleport.v2.neo4j.database.Neo4jConnection;
 import com.google.cloud.teleport.v2.neo4j.model.InputRefactoring;
 import com.google.cloud.teleport.v2.neo4j.model.InputValidator;
@@ -29,7 +29,7 @@ import com.google.cloud.teleport.v2.neo4j.model.helpers.OptionsParamsMapper;
 import com.google.cloud.teleport.v2.neo4j.model.helpers.SourceQuerySpec;
 import com.google.cloud.teleport.v2.neo4j.model.helpers.TargetQuerySpec;
 import com.google.cloud.teleport.v2.neo4j.model.job.*;
-import com.google.cloud.teleport.v2.neo4j.providers.IProvider;
+import com.google.cloud.teleport.v2.neo4j.providers.Provider;
 import com.google.cloud.teleport.v2.neo4j.providers.ProviderFactory;
 import com.google.cloud.teleport.v2.neo4j.transforms.GcsLogTransform;
 import com.google.cloud.teleport.v2.neo4j.transforms.Neo4jRowWriterTransform;
@@ -39,7 +39,6 @@ import com.google.cloud.teleport.v2.neo4j.utils.ProcessingCoder;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import java.util.List;
-import org.apache.beam.repackaged.core.org.apache.commons.lang3.StringUtils;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.io.FileSystems;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
@@ -50,6 +49,7 @@ import org.apache.beam.sdk.transforms.Wait;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.Row;
 import org.apache.beam.sdk.values.TypeDescriptor;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -74,31 +74,37 @@ public class GcpToNeo4j {
      * @pipelineOptions framework supplied arguments
      */
     public GcpToNeo4j(final Neo4jFlexTemplateOptions pipelineOptions) {
+
         ////////////////////////////
-        // We need to initialize pipeline in order to create context for Gs and Bq file system
-        final String jobName = pipelineOptions.getJobName() + "-" + System.currentTimeMillis();
-        pipelineOptions.setJobName(jobName);
+        // Job name gets a date on it when running within the container, but not with DirectRunner
+        // final String jobName = pipelineOptions.getJobName() + "-" + System.currentTimeMillis();
+        // pipelineOptions.setJobName(jobName);
 
         // Set pipeline options
         this.pipeline = Pipeline.create(pipelineOptions);
         FileSystems.setDefaultPipelineOptions(pipelineOptions);
         this.optionsParams = OptionsParamsMapper.fromPipelineOptions(pipelineOptions);
+
         // Validate pipeline
         processValidations(InputValidator.validateNeo4jPipelineOptions(pipelineOptions));
 
         this.neo4jConnection = new ConnectionParams(pipelineOptions.getNeo4jConnectionUri());
+
         // Validate connection
         processValidations(InputValidator.validateNeo4jConnection(this.neo4jConnection));
 
         this.jobSpec = JobSpecMapper.fromUri(pipelineOptions.getJobSpecUri());
+
         // Validate job spec
         processValidations(InputValidator.validateJobSpec(this.jobSpec));
 
         ///////////////////////////////////
         // Refactor job spec
         InputRefactoring inputRefactoring = new InputRefactoring(this.optionsParams);
+
         // Variable substitution
         inputRefactoring.refactorJobSpec(this.jobSpec);
+
         // Optimizations
         inputRefactoring.optimizeJobSpec(this.jobSpec);
 
@@ -112,7 +118,7 @@ public class GcpToNeo4j {
         // Source specific validations
         for (Source source : jobSpec.getSourceList()) {
             //get provider implementation for source
-            IProvider providerImpl = ProviderFactory.of(source.sourceType);
+            Provider providerImpl = ProviderFactory.of(source.sourceType);
             providerImpl.configure(optionsParams, jobSpec);
             processValidations(providerImpl.validateJobSpec());
         }
@@ -130,6 +136,10 @@ public class GcpToNeo4j {
                 PipelineOptionsFactory.fromArgs(args).withValidation()
                         .as(Neo4jFlexTemplateOptions.class);
 
+        // TODO: not sure how to set disabled alogirithms here
+        // CommonTemplateOptions commonPipelineOptions = options.as(CommonTemplateOptions.class);
+        // commonPipelineOptions.setDisabledAlgorithms("SSLv3, RC4, DES, MD5withRSA, DH keySize < 1024, EC keySize < 224, 3DES_EDE_CBC, anon, NULL");
+
         LOG.info("Job: " + options.getJobSpecUri());
         final GcpToNeo4j bqToNeo4jTemplate = new GcpToNeo4j(options);
         bqToNeo4jTemplate.run();
@@ -141,10 +151,9 @@ public class GcpToNeo4j {
      * @param validationMessages
      */
     private void processValidations(List<String> validationMessages) {
-        StringBuffer sb = new StringBuffer();
+        StringBuilder sb = new StringBuilder();
         if (validationMessages.size() > 0) {
             for (String msg : validationMessages) {
-                LOG.error(msg);
                 sb.append(msg);
             }
             throw new RuntimeException("Errors found validating pipeline input.  Please see logs for more details: " + sb);
@@ -166,7 +175,7 @@ public class GcpToNeo4j {
         ////////////////////////////
         // Initialize wait-on collection queue...
         PCollection<Row> processingSeedCollection = pipeline.apply("Default Context", Create.empty(TypeDescriptor.of(Row.class))
-                .withCoder(ProcessingCoder.getProcessingRowCoder()));
+                .withCoder(ProcessingCoder.of()));
 
         // Creating serialization handle
         BeamBlock processingQueue = new BeamBlock(processingSeedCollection);
@@ -176,7 +185,7 @@ public class GcpToNeo4j {
         for (Source source : jobSpec.getSourceList()) {
 
             //get provider implementation for source
-            IProvider providerImpl = ProviderFactory.of(source.sourceType);
+            Provider providerImpl = ProviderFactory.of(source.sourceType);
             providerImpl.configure(optionsParams, jobSpec);
             PCollection<Row> sourceMetadata = pipeline.apply("Source metadata", providerImpl.queryMetadata(source));
             Schema sourceBeamSchema = sourceMetadata.getSchema();
@@ -291,7 +300,7 @@ public class GcpToNeo4j {
             ActionContext context = new ActionContext();
             context.jobSpec = this.jobSpec;
             context.neo4jConnection = this.neo4jConnection;
-            IPreloadAction actionImpl = ActionFactory.of(action, context);
+            PreloadAction actionImpl = ActionFactory.of(action, context);
             List<String> msgs = actionImpl.execute();
             for (String msg : msgs) {
                 LOG.info("Preload action " + action.name + ": " + msg);

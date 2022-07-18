@@ -3,7 +3,7 @@ package com.google.cloud.teleport.v2.neo4j.model.helpers;
 import com.google.cloud.teleport.v2.neo4j.model.job.*;
 import com.google.cloud.teleport.v2.neo4j.utils.FileSystemUtils;
 import java.util.Iterator;
-import org.apache.beam.repackaged.core.org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.slf4j.Logger;

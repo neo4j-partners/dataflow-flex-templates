@@ -8,7 +8,7 @@ import java.util.List;
  * Interface for running preload Actions.
  * Before the pipeline loads, PCollections are not available.
  */
-public interface IPreloadAction {
+public interface PreloadAction {
     void configure(Action action, ActionContext context);
     List<String> execute();
 }

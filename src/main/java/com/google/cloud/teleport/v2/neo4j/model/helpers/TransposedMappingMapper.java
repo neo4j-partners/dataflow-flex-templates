@@ -13,7 +13,7 @@ import com.google.gson.GsonBuilder;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import org.apache.beam.repackaged.core.org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.slf4j.Logger;

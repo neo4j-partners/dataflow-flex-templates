@@ -7,7 +7,7 @@ import org.apache.beam.sdk.schemas.Schema;
  * Utils for streamlining creation of processing records.
  */
 public class ProcessingCoder {
-   public static Schema getProcessingSchema() {
+   private static Schema getProcessingSchema() {
        return Schema.of(
                Schema.Field.of("JOB", Schema.FieldType.STRING),
                Schema.Field.of("TS", Schema.FieldType.DATETIME),
@@ -17,7 +17,7 @@ public class ProcessingCoder {
                Schema.Field.of("AMOUNT", Schema.FieldType.DOUBLE)
        );
    }
-   public static RowCoder getProcessingRowCoder(){
+   public static RowCoder of(){
        return  RowCoder.of(getProcessingSchema());
    }
 }

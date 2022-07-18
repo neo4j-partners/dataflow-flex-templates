@@ -14,7 +14,7 @@ import com.google.gson.GsonBuilder;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import org.apache.beam.repackaged.core.org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -192,14 +192,9 @@ public class InputValidator {
                         validationMessages.add("Parameter 'url' is required for http-style actions.");
                     }
                 }
-                if (action.type == ActionType.bigquery || action.type == ActionType.spanner) {
+                if (action.type == ActionType.bigquery) {
                     if (!action.options.containsKey("sql")) {
                         validationMessages.add("Parameter 'sql' is required for query-style actions.");
-                    }
-                }
-                if (action.type == ActionType.parquet) {
-                    if (!action.options.containsKey("gcs")) {
-                        validationMessages.add("Parameter 'gcs' destination is required for parquet.");
                     }
                 }
             }

@@ -1,14 +1,12 @@
 package com.google.cloud.teleport.v2.neo4j.model;
 
-import com.google.cloud.teleport.v2.neo4j.model.job.JobSpec;
-import com.google.cloud.teleport.v2.neo4j.model.job.OptionsParams;
-import com.google.cloud.teleport.v2.neo4j.model.job.Source;
-import com.google.cloud.teleport.v2.neo4j.model.job.Target;
+import com.google.cloud.teleport.v2.neo4j.model.job.*;
 import com.google.cloud.teleport.v2.neo4j.utils.ModelUtils;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import java.util.Collections;
-import org.apache.beam.repackaged.core.org.apache.commons.lang3.StringUtils;
+import java.util.Iterator;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,9 +44,15 @@ public class InputRefactoring {
             }
         }
 
+        LOG.info("Options params: " + gson.toJson(optionsParams));
+
         //replace URI and SQL with run-time options
         for (Source source : jobSpec.getSourceList()) {
             rewriteSource(source);
+        }
+
+        for (Action action : jobSpec.actions) {
+            rewriteAction(action);
         }
 
         //number and name targets
@@ -73,8 +77,6 @@ public class InputRefactoring {
 
     private void rewriteSource(Source source) {
 
-        LOG.info("Options params: " + gson.toJson(optionsParams));
-
         //rewrite file URI
         String dataFileUri = source.uri;
         if (StringUtils.isNotEmpty(optionsParams.inputFilePattern)) {
@@ -90,7 +92,15 @@ public class InputRefactoring {
             sql = optionsParams.readQuery;
         }
         source.query = ModelUtils.replaceVariableTokens(sql, optionsParams.tokenMap);
+    }
 
+    private void rewriteAction(Action action) {
+        Iterator<String> optionIt = action.options.keySet().iterator();
+        while (optionIt.hasNext()) {
+            String key = optionIt.next();
+            String value=action.options.get(key);
+            action.options.put( key,ModelUtils.replaceVariableTokens(value, optionsParams.tokenMap));
+        }
     }
 
 }

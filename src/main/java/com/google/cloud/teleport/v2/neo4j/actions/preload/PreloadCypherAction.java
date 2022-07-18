@@ -5,7 +5,7 @@ import com.google.cloud.teleport.v2.neo4j.model.job.Action;
 import com.google.cloud.teleport.v2.neo4j.model.job.ActionContext;
 import java.util.ArrayList;
 import java.util.List;
-import org.apache.beam.repackaged.core.org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -13,7 +13,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Cypher runner action handler.
  */
-public class PreloadCypherAction implements IPreloadAction {
+public class PreloadCypherAction implements PreloadAction {
     private static final Logger LOG = LoggerFactory.getLogger(PreloadCypherAction.class);
 
     Action action;

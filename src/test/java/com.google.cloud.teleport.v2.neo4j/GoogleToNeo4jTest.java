@@ -15,14 +15,13 @@
  */
 package com.google.cloud.teleport.v2.neo4j;
 
-import com.google.cloud.teleport.v2.neo4j.GcpToNeo4j;
 import com.google.cloud.teleport.v2.neo4j.model.InputValidator;
 import com.google.cloud.teleport.v2.neo4j.model.connection.ConnectionParams;
 import com.google.cloud.teleport.v2.neo4j.model.helpers.JobSpecMapper;
 import com.google.cloud.teleport.v2.neo4j.model.job.JobSpec;
 import com.google.cloud.teleport.v2.neo4j.model.job.OptionsParams;
 import com.google.cloud.teleport.v2.neo4j.model.job.Source;
-import com.google.cloud.teleport.v2.neo4j.providers.IProvider;
+import com.google.cloud.teleport.v2.neo4j.providers.Provider;
 import com.google.cloud.teleport.v2.neo4j.providers.ProviderFactory;
 import com.google.cloud.teleport.v2.neo4j.providers.text.TextImpl;
 import com.google.cloud.teleport.v2.neo4j.utils.ModelUtils;
@@ -52,7 +51,7 @@ public class GoogleToNeo4jTest {
 
     public transient TestPipeline pipeline = TestPipeline.create();
     private transient PCollection<Row> textRows;
-    private static IProvider providerImpl;
+    private static Provider providerImpl;
     private static ConnectionParams neo4jConnection;
     private static JobSpec jobSpec;
     private static OptionsParams optionsParams;
@@ -64,8 +63,8 @@ public class GoogleToNeo4jTest {
     public void setUp() throws InterruptedException, IOException {
         if (jobSpec == null) {
             LOG.info("Initializing...");
-            neo4jConnection = new ConnectionParams("gs://neo4j-dataflow/job-specs/testing/common/auradb-free-connection.json");
-            jobSpec = JobSpecMapper.fromUri("gs://neo4j-dataflow/job-specs/testing/new/text-northwind-jobspec.json");
+            neo4jConnection = new ConnectionParams("src/test/resources/testing-specs/auradb-free-connection.json");
+            jobSpec = JobSpecMapper.fromUri("src/test/resources/testing-specs/text-northwind-jobspec.json");
             providerImpl = ProviderFactory.of(jobSpec.getSourceList().get(0).sourceType);
             optionsParams = new OptionsParams();
             optionsParams.overlayTokens("{\"limit\":7}");
@@ -87,6 +86,14 @@ public class GoogleToNeo4jTest {
     @Test
     public void testResolvedVariable() {
         Assert.assertTrue("7".equals(optionsParams.tokenMap.get("limit")));
+    }
+
+    @Test
+    public void testResolvedSqlVariable(){
+        String uri="SELECT * FROM TEST LIMIT $limit";
+        String uri_replaced=ModelUtils.replaceVariableTokens(uri, optionsParams.tokenMap);
+        LOG.info("uri: "+uri+", uri_replaced: "+uri_replaced);
+        Assert.assertTrue(uri_replaced.contains("LIMIT 7"));
     }
 
     @Test

@@ -6,8 +6,6 @@ import org.apache.beam.sdk.metrics.Counter;
 import org.apache.beam.sdk.metrics.Metrics;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.SerializableFunction;
-import org.apache.beam.sdk.transforms.windowing.BoundedWindow;
-import org.apache.beam.sdk.transforms.windowing.GlobalWindow;
 import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.Row;
 import org.neo4j.driver.Result;
@@ -24,7 +22,6 @@ public class Neo4jBlockingUnwindFn extends DoFn<KV<Integer, Row>, Row> {
     private static final Logger LOG = LoggerFactory.getLogger(Neo4jBlockingUnwindFn.class);
     private final Counter numRecords = Metrics.counter(Neo4jBlockingUnwindFn.class, "norecords");
     protected TransactionConfig transactionConfig = TransactionConfig.empty();
-    private Row returnEmpty;
     private String cypher;
     private SerializableFunction<Row, Map<String, Object>> parametersFunction = null;
     private boolean logCypher;
@@ -52,7 +49,6 @@ public class Neo4jBlockingUnwindFn extends DoFn<KV<Integer, Row>, Row> {
         this.logCypher = logCypher;
         this.batchSize = batchSize;
         this.unwindMapName = unwindMapName;
-        this.returnEmpty = returnEmpty;
 
         unwindList = new ArrayList<>();
         elementsInput = 0;
@@ -85,7 +81,6 @@ public class Neo4jBlockingUnwindFn extends DoFn<KV<Integer, Row>, Row> {
     @FinishBundle
     public void finishBundle(FinishBundleContext context) {
         executeCypherUnwindStatement();
-        context.output(returnEmpty, BoundedWindow.TIMESTAMP_MIN_VALUE, GlobalWindow.INSTANCE);
     }
 
     private void executeCypherUnwindStatement() {

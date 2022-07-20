@@ -92,6 +92,8 @@ public class BeamUtils {
             if (mapping.type == PropertyType.Integer || mapping.type == PropertyType.Long) {
                 //avoid truncation by making it long
                 schemaField = Schema.Field.nullable(fieldName, Schema.FieldType.INT64);
+            } else if (mapping.type == PropertyType.BigDecimal) {
+                schemaField = Schema.Field.nullable(fieldName, Schema.FieldType.DECIMAL);
             } else if (mapping.type == PropertyType.Float) {
                 schemaField = Schema.Field.nullable(fieldName, Schema.FieldType.FLOAT);
             } else if (mapping.type == PropertyType.Boolean) {

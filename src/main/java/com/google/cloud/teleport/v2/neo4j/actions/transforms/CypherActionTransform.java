@@ -37,6 +37,7 @@ public class CypherActionTransform extends PTransform<PCollection<Row>, PCollect
         } catch (Exception e) {
             LOG.error("Exception running cypher, " + cypher + ": " + e.getMessage());
         }
-        return this.context.emptyReturn;
+        // we are not running anything that generates an output, so can return an input.
+        return input;
     }
 }

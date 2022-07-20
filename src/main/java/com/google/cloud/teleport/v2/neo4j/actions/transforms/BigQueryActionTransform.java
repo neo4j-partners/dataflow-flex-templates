@@ -44,7 +44,7 @@ public class BigQueryActionTransform extends PTransform<PCollection<Row>, PColle
         } catch (Exception e) {
             LOG.error("Exception running sql " + sql + ": " + e.getMessage());
         }
-
-        return this.context.emptyReturn;
+        // we are not running anything that generates an output, so can return an input for next transform
+        return input;
     }
 }

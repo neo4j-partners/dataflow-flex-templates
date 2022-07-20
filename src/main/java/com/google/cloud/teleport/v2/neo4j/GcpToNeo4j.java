@@ -86,17 +86,17 @@ public class GcpToNeo4j {
         this.optionsParams = OptionsParamsMapper.fromPipelineOptions(pipelineOptions);
 
         // Validate pipeline
-        processValidations(InputValidator.validateNeo4jPipelineOptions(pipelineOptions));
+        processValidations("Errors found validating pipeline options: ",InputValidator.validateNeo4jPipelineOptions(pipelineOptions));
 
         this.neo4jConnection = new ConnectionParams(pipelineOptions.getNeo4jConnectionUri());
 
         // Validate connection
-        processValidations(InputValidator.validateNeo4jConnection(this.neo4jConnection));
+        processValidations("Errors found validating Neo4j connection: ",InputValidator.validateNeo4jConnection(this.neo4jConnection));
 
         this.jobSpec = JobSpecMapper.fromUri(pipelineOptions.getJobSpecUri());
 
         // Validate job spec
-        processValidations(InputValidator.validateJobSpec(this.jobSpec));
+        processValidations("Errors found validating job specification: ",InputValidator.validateJobSpec(this.jobSpec));
 
         ///////////////////////////////////
         // Refactor job spec
@@ -120,10 +120,8 @@ public class GcpToNeo4j {
             //get provider implementation for source
             Provider providerImpl = ProviderFactory.of(source.sourceType);
             providerImpl.configure(optionsParams, jobSpec);
-            processValidations(providerImpl.validateJobSpec());
         }
 
-        //LOG.info(gson.toJson(jobSpec));
     }
 
     /**
@@ -136,9 +134,10 @@ public class GcpToNeo4j {
                 PipelineOptionsFactory.fromArgs(args).withValidation()
                         .as(Neo4jFlexTemplateOptions.class);
 
-        // TODO: not sure how to set disabled alogirithms here
-        // CommonTemplateOptions commonPipelineOptions = options.as(CommonTemplateOptions.class);
-        // commonPipelineOptions.setDisabledAlgorithms("SSLv3, RC4, DES, MD5withRSA, DH keySize < 1024, EC keySize < 224, 3DES_EDE_CBC, anon, NULL");
+        // Allow users to supply their own list of disabled algorithms if necessary
+        if (!StringUtils.isBlank(options.getDisabledAlgorithms())) {
+            options.setDisabledAlgorithms("SSLv3, RC4, DES, MD5withRSA, DH keySize < 1024, EC keySize < 224, 3DES_EDE_CBC, anon, NULL");
+        }
 
         LOG.info("Job: " + options.getJobSpecUri());
         final GcpToNeo4j bqToNeo4jTemplate = new GcpToNeo4j(options);
@@ -150,13 +149,14 @@ public class GcpToNeo4j {
      *
      * @param validationMessages
      */
-    private void processValidations(List<String> validationMessages) {
+    private void processValidations(String description, List<String> validationMessages) {
         StringBuilder sb = new StringBuilder();
         if (validationMessages.size() > 0) {
             for (String msg : validationMessages) {
                 sb.append(msg);
+                sb.append(System.lineSeparator());
             }
-            throw new RuntimeException("Errors found validating pipeline input.  Please see logs for more details: " + sb);
+            throw new RuntimeException(description+" " + sb.toString());
         }
     }
 
@@ -173,12 +173,12 @@ public class GcpToNeo4j {
         runPreloadActions(jobSpec.getPreloadActions());
 
         ////////////////////////////
-        // Initialize wait-on collection queue...
-        PCollection<Row> processingSeedCollection = pipeline.apply("Default Context", Create.empty(TypeDescriptor.of(Row.class))
+        // If an action transformation has no upstream PCollection, it iwll use this default context
+        PCollection<Row> defaultActionContext = pipeline.apply("Default Context", Create.empty(TypeDescriptor.of(Row.class))
                 .withCoder(ProcessingCoder.of()));
 
         // Creating serialization handle
-        BeamBlock processingQueue = new BeamBlock(processingSeedCollection);
+        BeamBlock processingQueue = new BeamBlock(defaultActionContext);
 
         ////////////////////////////
         // Process sources
@@ -189,7 +189,7 @@ public class GcpToNeo4j {
             providerImpl.configure(optionsParams, jobSpec);
             PCollection<Row> sourceMetadata = pipeline.apply("Source metadata", providerImpl.queryMetadata(source));
             Schema sourceBeamSchema = sourceMetadata.getSchema();
-            processingQueue.addToQueue(ArtifactType.source, false, source.name, processingSeedCollection, sourceMetadata);
+            processingQueue.addToQueue(ArtifactType.source, false, source.name, defaultActionContext, sourceMetadata);
             PCollection nullableSourceBeamRows = null;
 
             ////////////////////////////
@@ -202,7 +202,7 @@ public class GcpToNeo4j {
 
             ////////////////////////////
             // Optimization: if we're not mixing nodes and edges, then run in parallel
-            // For relationship updates, max workers should be max 2.
+            // For relationship updates, max workers should be max 2.  This parameter is job configurable.
 
             ////////////////////////////
             // No optimization possible so write nodes then edges.
@@ -285,7 +285,7 @@ public class GcpToNeo4j {
 
         ////////////////////////////
         // Process actions (first pass)
-        runBeamActions(processingSeedCollection, jobSpec.getPostloadActions(), processingQueue);
+        runBeamActions( jobSpec.getPostloadActions(), processingQueue);
 
         // For a Dataflow Flex Template, do NOT waitUntilFinish().
         pipeline.run();
@@ -308,7 +308,7 @@ public class GcpToNeo4j {
         }
     }
 
-    private void runBeamActions(PCollection<Row> initSeedCollection, List<Action> actions, BeamBlock blockingQueue) {
+    private void runBeamActions(List<Action> actions, BeamBlock blockingQueue) {
         for (Action action : actions) {
             //LOG.info("Registering action: " + gson.toJson(action));
             ArtifactType artifactType = ArtifactType.action;
@@ -322,21 +322,17 @@ public class GcpToNeo4j {
             LOG.info("Executing delayed action: " + action.name);
             // Get targeted execution context
             PCollection<Row> executionContext = blockingQueue.getContextCollection(artifactType, action.executeAfterName);
-            if (executionContext == null) {
-                executionContext = initSeedCollection;
-            }
             ActionContext context = new ActionContext();
             context.dataContext = executionContext;
-            context.emptyReturn = initSeedCollection;
             context.jobSpec = this.jobSpec;
             context.neo4jConnection = this.neo4jConnection;
             PTransform<PCollection<Row>, PCollection<Row>> actionImpl = ActionBeamFactory.of(action, context);
             // Action execution context will be be rendered as "Default Context"
-            PCollection<Row> finished = executionContext.apply("Executing " + action.executeAfter + " (" + action.name + ")", Wait.on(
+            PCollection<Row> actionTransformed = executionContext.apply("Executing " + action.executeAfter + " (" + action.name + ")", Wait.on(
                             blockingQueue.waitOnCollection(action.executeAfter, action.executeAfterName, action.name)
                     )).setCoder(executionContext.getCoder())
                     .apply("Action " + action.name, actionImpl);
-            blockingQueue.addToQueue(ArtifactType.action, action.executeAfter == ActionExecuteAfter.start, action.name, initSeedCollection, finished);
+            blockingQueue.addToQueue(ArtifactType.action, action.executeAfter == ActionExecuteAfter.start, action.name, actionTransformed, executionContext);
         }
     }
 

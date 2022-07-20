@@ -1,14 +1,14 @@
 package com.google.cloud.teleport.v2.neo4j;
 
+import com.google.cloud.teleport.v2.options.CommonTemplateOptions;
 import org.apache.beam.sdk.options.Default;
 import org.apache.beam.sdk.options.Description;
-import org.apache.beam.sdk.options.PipelineOptions;
 import org.apache.beam.sdk.options.Validation;
 
 /**
  * Extends pipeline options to include abstract parameter options and others that are required by IO connectors (TextIO, BigQuery, etc.).
  */
-public interface Neo4jFlexTemplateOptions extends PipelineOptions {
+public interface Neo4jFlexTemplateOptions extends CommonTemplateOptions {
 
     @Description("Path to job specification")
     @Validation.Required

@@ -62,14 +62,14 @@ public class DataCastingUtils {
             Object objVal = null;
 
             try {
-                objVal = rowOfStrings.getValue(fieldName);
+                objVal = StringUtils.trim(rowOfStrings.getValue(fieldName));
             } catch (Exception e) {
                 //LOG.warn("Error getting value: "+fieldName);
             }
             if (objVal == null) {
                 String constant = findConstantValue(targetMappings, fieldName);
                 if (constant != null) {
-                    castVals.add(constant);
+                    castVals.add(StringUtils.trim(constant));
                     continue;
                 } else {
                     LOG.error("Value for " + fieldName + " not found.");
@@ -110,7 +110,7 @@ public class DataCastingUtils {
                 }
             } catch (Exception e) {
                 castVals.add(null);
-                LOG.warn("Exception casting " + fieldName + ": " + objVal);
+                LOG.warn("Exception casting " + fieldName + " ("+type.getTypeName().toString()+"): " + objVal);
             }
         }
         //LOG.info("Constructing target row: {}, values: {}",targetSchema,StringUtils.join(castVals,","));

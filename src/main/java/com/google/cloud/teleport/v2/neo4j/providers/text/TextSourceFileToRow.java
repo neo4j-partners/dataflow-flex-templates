@@ -40,7 +40,7 @@ public class TextSourceFileToRow extends PTransform<PBegin, PCollection<Row>> {
                     .apply("Read " + source.name + " data: " + dataFileUri, TextIO.read().from(dataFileUri))
                     .apply("Parse lines into string columns.", ParDo.of(new LineToRowFn(source, beamTextSchema, source.csvFormat)))
                     .setRowSchema(beamTextSchema);
-        } else if (source.inline != null) {
+        } else if (source.inline != null && source.inline.size()>0) {
             LOG.info("Processing " + source.inline.size() + " rows inline.");
             return input
                     .apply("Ingest inline dataset: " + source.name, Create.of(source.inline))

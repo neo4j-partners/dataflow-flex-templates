@@ -26,16 +26,16 @@ public class BeamBlock {
     protected List<PCollection<Row>> edgeQueue = new ArrayList<>();
     protected Map<String, PCollection<Row>> namedQueue = new HashMap<>();
     protected Map<String, PCollection<Row>> executionContexts = new HashMap<>();
-    PCollection<Row> seedCollection;
+    PCollection<Row> defaultCollection;
 
     private BeamBlock() {
     }
 
-    public BeamBlock(PCollection<Row> seedCollection) {
-        this.seedCollection = seedCollection;
+    public BeamBlock(PCollection<Row> defaultCollection) {
+        this.defaultCollection = defaultCollection;
     }
 
-    public void addToQueue(ArtifactType artifactType, boolean preload, String name, PCollection<Row> blockingReturn, PCollection<Row> currentContext) {
+    public void addToQueue(ArtifactType artifactType, boolean preload, String name, PCollection<Row> blockingReturn, PCollection<Row> executionContext) {
         if (artifactType == ArtifactType.action) {
             if (preload) {
                 preloadActionQueue.add(blockingReturn);
@@ -50,7 +50,7 @@ public class BeamBlock {
             edgeQueue.add(blockingReturn);
         }
         namedQueue.put(artifactType + ":" + name, blockingReturn);
-        executionContexts.put(artifactType + ":" + name, currentContext);
+        executionContexts.put(artifactType + ":" + name, executionContext);
     }
 
     public PCollection<Row> getContextCollection(ArtifactType artifactType, String name) {
@@ -58,7 +58,7 @@ public class BeamBlock {
             // execution context has been registered
             return executionContexts.get(artifactType + ":" + name);
         }
-        return seedCollection;
+        return defaultCollection;
     }
 
     public PCollection<Row> waitOnCollection(ActionExecuteAfter executeAfter, String dependsOn, String queuingDescription) {
@@ -95,7 +95,7 @@ public class BeamBlock {
             }
         }
         if (allQueues.size() == 0) {
-            allQueues.add(seedCollection);
+            allQueues.add(defaultCollection);
         }
 
         PCollection<Row> combinedQueue = PCollectionList.of(allQueues).apply(" Waiting on " + queuingDescription, Flatten.pCollections());

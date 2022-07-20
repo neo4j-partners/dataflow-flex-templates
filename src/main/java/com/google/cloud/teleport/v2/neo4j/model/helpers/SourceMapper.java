@@ -79,7 +79,9 @@ public class SourceMapper {
             }
         }
         source.query = sourceObj.has("query") ? sourceObj.getString("query") : "";
+        //uri or url accepted
         source.uri = sourceObj.has("url") ? sourceObj.getString("url") : "";
+        source.uri = sourceObj.has("uri") ? sourceObj.getString("uri") : "";
         final String colNamesStr = sourceObj.has("ordered_field_names") ? sourceObj.getString("ordered_field_names") : "";
         if (StringUtils.isNotEmpty(colNamesStr)) {
             source.fieldNames = StringUtils.split(colNamesStr, ",");

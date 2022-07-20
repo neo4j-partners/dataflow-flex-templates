@@ -15,7 +15,7 @@ Run the Apache Beam pipeline locally for development.
  export PROJECT=neo4jbusinessdev
  export GS_WORKING_DIR=gs://neo4j-sandbox/dataflow-working
  export APP_NAME=gcpToNeo4j
- export JOB_NAME=test-inline
+ export JOB_NAME="test-text-inline-`date +%Y%m%d-%H%M%S`"
  export REGION=us-central1
  export MACHINE_TYPE=n2-highmem-8
  ```

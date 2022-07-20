@@ -20,8 +20,8 @@ package com.google.cloud.teleport.v2.neo4j.model.enums;
  *  Currently: async==start==preloads
  */
 public enum ActionExecuteAfter {
-    start,
-    sources,
+    start, // after initialization
+    sources, // after sources
     nodes,
     edges,
     source,

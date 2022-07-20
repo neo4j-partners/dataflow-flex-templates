@@ -41,6 +41,7 @@ public class HttpPostActionTransform extends PTransform<PCollection<Row>, PColle
         } catch (Exception e) {
             LOG.error("Exception making http get request: " + e.getMessage());
         }
-        return this.context.emptyReturn;
+        // we are not running anything that generates an output, so can return an input.
+        return input;
     }
 }

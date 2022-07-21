@@ -64,7 +64,7 @@ public class BigQueryImpl implements Provider {
     }
 
     @Override
-    public PTransform<PBegin, PCollection<Row>> queryMetadata(Source source) {
+    public PTransform<PBegin, PCollection<Row>> queryMetadata(final Source source) {
         return new BqQueryToRow(optionsParams, getMetadataQueryBeamSpec(source));
     }
 
@@ -74,7 +74,7 @@ public class BigQueryImpl implements Provider {
      * @param source
      * @return helper object includes metadata and SQL
      */
-    public SqlQuerySpec getMetadataQueryBeamSpec(Source source) {
+    public SqlQuerySpec getMetadataQueryBeamSpec(final Source source) {
 
         final String baseQuery = getBaseQuery(source);
 

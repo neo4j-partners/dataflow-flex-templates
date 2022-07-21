@@ -170,6 +170,9 @@ public class ModelUtils {
                         }
                     }
                 }
+                if (fieldList.size()==0){
+                    throw new RuntimeException("Could not find mapped fields for target: "+target.name+". Please verify that target fields exist in source query.");
+                }
                 sb.append("SELECT " + StringUtils.join(fieldList, ","));
                 if (query.aggregations.size() > 0) {
                     for (Aggregation agg : query.aggregations) {

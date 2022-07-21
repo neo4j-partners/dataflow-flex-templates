@@ -108,19 +108,15 @@ public class GcpToNeo4j {
         // Optimizations
         inputRefactoring.optimizeJobSpec(this.jobSpec);
 
-        ///////////////////////////////////
-        // Text input specific options and validation
-        if (this.jobSpec.sources.size() == 0) {
-            String errMsg = "JobSpec source is required.";
-            LOG.error(errMsg);
-            throw new RuntimeException(errMsg);
-        }
         // Source specific validations
         for (Source source : jobSpec.getSourceList()) {
             //get provider implementation for source
             Provider providerImpl = ProviderFactory.of(source.sourceType);
             providerImpl.configure(optionsParams, jobSpec);
         }
+
+        // Output debug log spec
+        LOG.info("JobSpec: "+System.lineSeparator()+gson.toJson(this.jobSpec));
 
     }
 
@@ -182,7 +178,7 @@ public class GcpToNeo4j {
 
         ////////////////////////////
         // Process sources
-        for (Source source : jobSpec.getSourceList()) {
+        for (final Source source : jobSpec.getSourceList()) {
 
             //get provider implementation for source
             Provider providerImpl = ProviderFactory.of(source.sourceType);
@@ -217,7 +213,8 @@ public class GcpToNeo4j {
                         .build();
                 PCollection<Row> preInsertBeamRows;
                 if (ModelUtils.targetHasTransforms(target)) {
-                    preInsertBeamRows = pipeline.apply(target.sequence + ": Nodes query " + target.name, providerImpl.queryTargetBeamRows(targetQuerySpec));
+                    preInsertBeamRows = pipeline.apply(target.sequence + ": Nodes query " + target.name,
+                            providerImpl.queryTargetBeamRows(targetQuerySpec));
                 } else {
                     preInsertBeamRows = nullableSourceBeamRows;
                 }

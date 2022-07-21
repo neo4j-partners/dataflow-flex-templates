@@ -38,10 +38,11 @@ public class InputRefactoring {
             if (jobSpec.options.size() > 0) {
                 LOG.info("Targets not found, synthesizing from options");
                 throw new RuntimeException("Not currently synthesizing targets from options.");
-            } else if (jobSpec.getAllFieldNames().size() == 0) {
-                LOG.info("Targets not found, synthesizing from source.  All properties will be indexed.");
-                throw new RuntimeException("Not currently auto-generating targets.");
             }
+            // targets defined but no field names defined.
+        } else if (jobSpec.getAllFieldNames().size() == 0) {
+            LOG.info("Targets not found, synthesizing from source.  All properties will be indexed.");
+            throw new RuntimeException("Not currently auto-generating targets.");
         }
 
         LOG.info("Options params: " + gson.toJson(optionsParams));

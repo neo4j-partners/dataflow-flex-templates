@@ -46,6 +46,6 @@ public interface Provider {
     /**
      * Queries the source to extract metadata.  This transform returns zero rows and a valid schema specification.
      */
-    PTransform<PBegin, PCollection<Row>> queryMetadata(Source source);
+    PTransform<PBegin, PCollection<Row>> queryMetadata(final Source source);
 
 }

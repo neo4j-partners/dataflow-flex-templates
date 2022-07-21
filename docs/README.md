@@ -2,14 +2,10 @@
 
 This project contains FlexTemplates that facilitate loading files within the Google BCloud to the Neo4j graph database
 
-## Introductory Blog
+## Introduction
 
 Neo4j has released flex templates for GCP Dataflow which support complex ETL processes through configuration not code.  
 This capability fills a gap for joint GCP and Neo4j customers who are looking for cloud native data integration without having to manage Spark services.
-<br>
-
-[Neo4j comes to GCP Dataflow Town
-](https://docs.google.com/document/d/1sWZN_lw5p-mhqJglh2Zw-LQYGE9BJ-uUxEvNiO8K8h0/edit?usp=sharing)<br/>
 
 There are many ways to move data into Neo4j.  The most popular approach for bulk loading Neo4j is the LOAD CSV cypher command from any client connection such as Java, Python, Go, .NET, Node, Spring and others.  
 Data scientists tend to favor the Neo4j Spark connector and Data Warehouse connector, which both run on DataProc and are easily incorporated into python notebooks.  

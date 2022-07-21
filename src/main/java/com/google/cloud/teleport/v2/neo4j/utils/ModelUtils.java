@@ -312,6 +312,22 @@ public class ModelUtils {
         return fieldNames;
     }
 
+    public static List<String> getNameOrConstants(FragmentType entityType, List<RoleType> roleTypes, Target target) {
+        List<String> fieldOrConstants = new ArrayList<>();
+        for (Mapping m : target.mappings) {
+            if (m.fragmentType == entityType) {
+                if (roleTypes.contains(m.role)) {
+                    if (StringUtils.isNotBlank(m.constant)) {
+                        fieldOrConstants.add(m.constant);
+                    } else if (StringUtils.isNotBlank(m.name)) {
+                        fieldOrConstants.add(m.name);
+                    }
+                }
+            }
+        }
+        return fieldOrConstants;
+    }
+
     public static List<String> getFieldOrConstants(FragmentType entityType, List<RoleType> roleTypes, Target target) {
         List<String> fieldOrConstants = new ArrayList<>();
         for (Mapping m : target.mappings) {
@@ -356,7 +372,7 @@ public class ModelUtils {
 
             if (m.fragmentType == entityType) {
                 if (m.role == RoleType.key || m.indexed || config.indexAllProperties) {
-                    indexedProperties.add(m.field);
+                    indexedProperties.add(m.name);
                 }
             }
         }
@@ -369,7 +385,7 @@ public class ModelUtils {
 
             if (m.fragmentType == entityType) {
                 if (m.unique || m.role == RoleType.key) {
-                    uniqueProperties.add(m.field);
+                    uniqueProperties.add(m.name);
                 }
             }
         }
@@ -382,7 +398,7 @@ public class ModelUtils {
 
             if (m.fragmentType == entityType) {
                 if (m.mandatory) {
-                    mandatoryProperties.add(m.field);
+                    mandatoryProperties.add(m.name);
                 }
             }
         }
@@ -394,7 +410,7 @@ public class ModelUtils {
         for (Mapping m : target.mappings) {
             if (m.fragmentType == entityType) {
                 if (m.role == RoleType.key) {
-                    nodeKeyProperties.add(m.field);
+                    nodeKeyProperties.add(m.name);
                 }
             }
         }
